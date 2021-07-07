@@ -30,6 +30,7 @@ from mews.errors.exceptions import (EPWMissingDataFromFile, EPWFileReadFailure,
 from matplotlib import pyplot as plt
 from matplotlib import rc
 from datetime import datetime
+import warnings
 
 class Test_Alter(unittest.TestCase):
     @classmethod
@@ -118,44 +119,58 @@ class Test_Alter(unittest.TestCase):
     def test_doe2(self):
         # This won't work unless you put TXT2BIN.EXE and BIN2TXT.EXE 
         # into their respective positions
-        year = 2020
-        hour_in_file = 8760+24
-
-        binfilename = os.path.join(self.test_weather_path,"NM_Albuquerque_Intl_ArptTMY3.bin")
-        start_datetime = datetime(year,1,1,1,0,0,0)
-        DST = [datetime(year,3,8,2,0,0,0), datetime(year,11,1,2,0,0,0)]
-        tz = "America/Denver"
         
-        
-        obj_doe2 = Alter(binfilename,
-              year,
-              True,
-              isdoe2=True,
-              doe2_start_datetime=start_datetime,
-              doe2_tz=tz,
-              doe2_dst=DST,
-              doe2_hour_in_file=hour_in_file)
-        
-        df_pre, df = self._add_cold_hot_and_climate(obj_doe2,'DRY BULB TEMP (DEG F)',2020)
-        
-        if self.plot_results:
-            fix, ax = plt.subplots(1,1,figsize=(10,10))
-        
-        self.assertTrue(df['DRY BULB TEMP (DEG F)'].max() > 100)
-        self.assertTrue(df['DRY BULB TEMP (DEG F)'].min() < 5)
-        
-        if self.plot_results:
-            df_pre['DRY BULB TEMP (DEG F)'].plot(ax=ax)
-            df['DRY BULB TEMP (DEG F)'].plot(ax=ax)
-            ax.set_ylabel('Dry bulb temperature $(^{\\circ}F)$')
-            ax.grid("on")
-            ax.set_title("Test DOE2 BIN Albuquerque, NM TMY3 with extreme sinusoidal heat wave, \ncold snap and exponential climate trend added")
-        
-        obj_doe2.write("erase_me.bin",overwrite=True)
-        
-        self.assertTrue(os.path.exists("erase_me.bin"))
-        
-        os.remove("erase_me.bin")
+        # test to see if DOE-2 utilities are available.
+        if os.path.exists(r"../third_party_software/BIN2TXT.EXE") and os.path.exists(r"../third_party_software/TXT2BIN.EXE"):
+            testDoe2 = True
+        else:
+            testDoe2 = False
+            warnings.warn("The DOE-2 features of MEWS cannot be tested"
+                          +" because the 'third_part_software' folder does not"
+                          +" contain 'BIN2TXT.EXE' and 'TXT2BIN.EXE.' These must"
+                          +" be obtained from James Hirsch and Associates "
+                          +" who can be contacted through www.doe2.com"
+                          +". The utilities are free but require a separate"
+                          +" license agreement.")
+        if testDoe2:
+            year = 2020
+            hour_in_file = 8760+24
+    
+            binfilename = os.path.join(self.test_weather_path,"NM_Albuquerque_Intl_ArptTMY3.bin")
+            start_datetime = datetime(year,1,1,1,0,0,0)
+            DST = [datetime(year,3,8,2,0,0,0), datetime(year,11,1,2,0,0,0)]
+            tz = "America/Denver"
+            
+            
+            obj_doe2 = Alter(binfilename,
+                  year,
+                  True,
+                  isdoe2=True,
+                  doe2_start_datetime=start_datetime,
+                  doe2_tz=tz,
+                  doe2_dst=DST,
+                  doe2_hour_in_file=hour_in_file)
+            
+            df_pre, df = self._add_cold_hot_and_climate(obj_doe2,'DRY BULB TEMP (DEG F)',2020)
+            
+            if self.plot_results:
+                fix, ax = plt.subplots(1,1,figsize=(10,10))
+            
+            self.assertTrue(df['DRY BULB TEMP (DEG F)'].max() > 100)
+            self.assertTrue(df['DRY BULB TEMP (DEG F)'].min() < 5)
+            
+            if self.plot_results:
+                df_pre['DRY BULB TEMP (DEG F)'].plot(ax=ax)
+                df['DRY BULB TEMP (DEG F)'].plot(ax=ax)
+                ax.set_ylabel('Dry bulb temperature $(^{\\circ}F)$')
+                ax.grid("on")
+                ax.set_title("Test DOE2 BIN Albuquerque, NM TMY3 with extreme sinusoidal heat wave, \ncold snap and exponential climate trend added")
+            
+            obj_doe2.write("erase_me.bin",overwrite=True)
+            
+            self.assertTrue(os.path.exists("erase_me.bin"))
+            
+            os.remove("erase_me.bin")
 
         
         
