@@ -47,7 +47,6 @@ SOFTWARE.
 
 import unittest
 from mews.epw import epw
-from pprint import pprint
 import pandas as pd
 import os
 
@@ -67,15 +66,11 @@ class TestEpw(unittest.TestCase):
     def test_epw___init__(self):
         a=epw()
         self.assertIsInstance(a,epw)
-        #print(a)
 
 
     def test_epw_read(self):
         a=epw()
         a.read(r'data_for_testing/new_epw_file.epw')
-        #print(a.headers)
-        #print(a.dataframe.columns)
-        #print(a.dataframe[['Year', 'Month', 'Day', 'Hour', 'Minute','Dry Bulb Temperature']].head())
         
 
     def test_modify(self):
@@ -83,10 +78,8 @@ class TestEpw(unittest.TestCase):
         a.read(r'data_for_testing/new_epw_file.epw')
         
         a.headers['LOCATION'][0]='New_location'
-        #print(a.headers['LOCATION'])
-        
+
         a.dataframe['Dry Bulb Temperature']=a.dataframe['Dry Bulb Temperature']+1.0
-        #print(a.dataframe[['Year', 'Month', 'Day', 'Hour', 'Minute','Dry Bulb Temperature']].head())
         
         a.write(r'data_for_testing/new_epw_file_2.epw')
 

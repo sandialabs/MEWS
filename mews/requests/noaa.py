@@ -43,8 +43,6 @@ class NOAA_API():
         
         r = requests.get(test)
         
-        print(r.text)
-        
         
         pass
     

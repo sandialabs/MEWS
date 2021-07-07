@@ -396,8 +396,7 @@ class Test_Alter(unittest.TestCase):
         obj = Alter(self.test_weather_file_path, 2020, True)
         obj.add_alteration(2020,31,8,10,100,10)
         mystr = str(obj)
-        if self.plot_results:
-            print("\n\n" + mystr)
+
              
             
     def test_all_weather_files(self):

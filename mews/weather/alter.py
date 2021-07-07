@@ -117,12 +117,11 @@ class Alter(object):
                 # add Feb29 by replicating Feb28th
                 indFeb28 = Feb28.index[-1]
                 sdict = {}
+
                 for name,col in Feb28.iteritems():
-                    try:
-                        col.index = np.arange(indFeb28+1,indFeb28+25)
-                    except:
-                        print("oops")
+                    col.index = np.arange(indFeb28+1,indFeb28+25)
                     sdict[name] = col
+
                 Feb29 = pd.DataFrame(sdict)
                 Feb29["Day"] = 29
                 

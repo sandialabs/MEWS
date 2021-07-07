@@ -36,6 +36,7 @@ from time import perf_counter_ns
 import scipy as sp
 from datetime import datetime
 import warnings
+import logging
 rng = default_rng()
 
 
@@ -149,11 +150,11 @@ class Test_Extreme(unittest.TestCase):
         # verify loose convergence.
         self.assertTrue(np.linalg.norm(nn[0] - steady) < 0.01)
         
-        print ("\n\n")
-        print ("For 1e6 random numbers a 3-state Markov"
+        logging.log(0,"\n\n")
+        logging.log(0,"For 1e6 random numbers a 3-state Markov"
                +" Chain in python took: {0:5.3e} seconds".format(
                    (toc_py - tic_py)/1e9))
-        print ("For 1e6 random numbers a 3-state Markov"
+        logging.log(0,"For 1e6 random numbers a 3-state Markov"
                +" Chain in cython took: {0:5.3e} seconds".format(
                    (toc_c - tic_c)/1e9))
         

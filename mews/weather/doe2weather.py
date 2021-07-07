@@ -45,7 +45,7 @@ def bin2txt(binfilename,bin2txtpath):
             pp = Popen(basename(bin2txtpath),stdout=PIPE, stderr=PIPE, shell=True)
             output, errors = pp.communicate()
             if not errors == b'':
-                print("WARNING! An error was recorded by Popen.communicate but this does not mean the BIN2TXT did not work. Investigate further to verify it worked.")
+                warnings.warn("WARNING! An error was recorded by Popen.communicate but this does not mean the BIN2TXT did not work. Investigate further to verify it worked.")
             txtfilename = join(dirname(binfilename2) , basename(binfilename2).split(".")[0] + ".txt")
             cp("WEATHER.FMT",txtfilename)
             cd(curdir)
@@ -81,7 +81,7 @@ def txt2bin(txtfilename,txt2binpath,binfilename):
             p = Popen(basename(txt2binpath),stdout=PIPE, stderr=PIPE, shell=True)
             output, errors = p.communicate()
             if not errors == b'':
-                print("The process produced an error make sure the process worked!\n\n" + str(errors) + "\n\n" + str(output))
+                warnings.warn("The process produced an error make sure the process worked!\n\n" + str(errors) + "\n\n" + str(output))
             cp("WEATHER.BIN",binfilename)
             _rm_file("WEATHER.BIN")
             cd(curdir)
@@ -221,20 +221,7 @@ def df2bin(df, binfilename, start_datetime, hour_in_file, txt2bin_exepath,
         cd(cdir)
         raise DOE2_Weather_Error("The txt2bin.exe utility is not present at: \n\n" + txt2bin_exepath)        
     cd(cdir)    
-    #except:
-    #    try:
-    #        cd(curdir)
-    #        print("Something went wrong!")
-"""    final_df.location = df_tmy3Alb.location
-    final_df.fyear = year
-    final_df.latitude = latitude 
-    final_df.longitude = longitude
-    final_df.timezone = df_tmy3Alb.timezone
-    final_df.iwsz = 2
-    final_df.iftyp = 3
-    final_df.solar_flag = final_df.iwsz + (final_df.iftyp-1) * 2 - 1    # this is IFTYPE = 3 and IWSZ = 2 an indicator of what is expected in input.dat
-    final_df.clearness_number = df_tmy3Alb.clearness_number
-    final_df.ground_temp = df_tmy3Alb.ground_temp  # Need ground temperature data    """    
+  
 
 
 def _check_attrib(df,location,fyear,latitude,longitude,timezone,iwsz,iftyp,clearness_number,ground_temp):
