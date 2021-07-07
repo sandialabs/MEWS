@@ -14,7 +14,7 @@ AUTHOR = 'MEWS Developers'
 MAINTAINER_EMAIL = 'dlvilla@sandia.gov'
 LICENSE = 'Revised BSD'
 URL = 'None'
-DEPENDENCIES = ['numpy', 'pandas', 'epw', 'matplotlib','scipy']
+DEPENDENCIES = ['numpy', 'pandas', 'matplotlib','scipy']
 
 try:
     from Cython.Distutils import build_ext
