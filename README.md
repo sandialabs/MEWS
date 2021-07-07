@@ -28,8 +28,8 @@ The DOE-2 capability is contingent on forming a legal license agreement with
 James Hirsch and Associates (www.doe2.com) and placing the BIN2TXT.EXE and TXT2BIN.EXE
 utilities that come with DOE-2.2 into the 'third_party_software' folder.
 
-
-BEMEWS is currently under development and this is beta version 0.0.0
+MEWS has only been tested on Windows using Python 3.8.5 more robust testing is under development. 
+Documentation will also follow in the near future.
 
 License
 ------------
