@@ -6,7 +6,7 @@ Created on Thu May  6 10:43:12 2021
 """
 
 from mews.stats.extreme import Extremes
-from mews.graphics.plotting2D import plot_realization
+from mews.graphics.plotting2D import Graphics
 from numpy.random import default_rng
 from matplotlib import pyplot as plt
 from matplotlib import rc
@@ -80,7 +80,7 @@ fig,axl = plt.subplots(7,1,sharex=True,sharey=True,figsize=(10,10))
 for realization_number,ax in enumerate(axl):
     if realization_number == len(axl):
         legend_labels = ("extreme","normal")
-    plot_realization(res,"Dry Bulb Temperature",realization_number,ax=ax,legend_labels=("extreme","normal"))
+    Graphics.plot_realization(res,"Dry Bulb Temperature",realization_number,ax=ax,legend_labels=("extreme","normal"))
     ax.set_ylabel('R{0:d}'.format(realization_number))
 
 fig.text(0.01, 0.5, "Dry Bulb Temperature (${^\\circ}C$)", va='center', rotation='vertical')

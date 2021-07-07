@@ -6,7 +6,7 @@ Created on Thu Jul  1 19:47:59 2021
 """
 
 from mews.stats.extreme import Extremes
-from mews.graphics.plotting2D import plot_realization
+from mews.graphics.plotting2D import Graphics
 from numpy.random import default_rng
 from matplotlib import pyplot as plt
 from matplotlib import rc
@@ -110,7 +110,7 @@ def F_to_C(F):
 for realization_number,ax in enumerate(axl):
     if realization_number == len(axl):
         legend_labels = ("extreme","normal")
-    plot_realization(res,'DRY BULB TEMP (DEG F)',realization_number,ax=ax,legend_labels=("extreme","TMY3"))
+    Graphics.plot_realization(res,'DRY BULB TEMP (DEG F)',realization_number,ax=ax,legend_labels=("extreme","TMY3"))
     ax.set_title('R{0:d}'.format(realization_number))
     axtwy = ax.twinx()
     ax.callbacks.connect("ylim_changed",convert_axis(ax,axtwy,lambda x:F_to_C(x)))

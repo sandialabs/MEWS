@@ -21,44 +21,46 @@ must be replicated in any derivative works that use the source code.
 """
 from numpy import zeros
 
-def markov_chain_py(cdf, rand, state0):
-    """
-    markov_chain_py(cdf, rand, state0)
-    
-    evaluate a chain of markov states based on cumulative probability matrix,
-    random numbers and initial state
-    
-    Parameters
-    ----------
-    cfd : np.ndarray : 
-        must be a 2-D square matrix whose elements are the 
-        cumulative sum of a markov right stochastic matrix
-    rand : np.ndarray : 
-        1-D array of random probabilities 0 <= p <= 1
-    state0 : int, np.integer :
-        Integer indicating the initial markov state (determines row of cfd to
-        start on). 0 <= state0 <= cfd.shape[0]
-    
-    This function does not have Type and Value protections and should only
-    be used in the context of such checks having already occured!
-    """
-    
-    # assign initial values
-    num_step = len(rand)
-    yy = zeros(num_step)
-    
-    num_state = cdf.shape[0]
-    
-    
-    for idx in range(num_step):
-        for idy in range(num_state):
-            if cdf[state0,idy] > rand[idx]:
-                yy[idx] = idy
-                state0 = idy
-                break
-            if idy == num_state-1:
-                yy[idx] = idy
-    
-    return yy
+class MarkovPy():
+    @staticmethod
+    def markov_chain_py(cdf, rand, state0):
+        """
+        markov_chain_py(cdf, rand, state0)
+        
+        evaluate a chain of markov states based on cumulative probability matrix,
+        random numbers and initial state
+        
+        Parameters
+        ----------
+        cfd : np.ndarray : 
+            must be a 2-D square matrix whose elements are the 
+            cumulative sum of a markov right stochastic matrix
+        rand : np.ndarray : 
+            1-D array of random probabilities 0 <= p <= 1
+        state0 : int, np.integer :
+            Integer indicating the initial markov state (determines row of cfd to
+            start on). 0 <= state0 <= cfd.shape[0]
+        
+        This function does not have Type and Value protections and should only
+        be used in the context of such checks having already occured!
+        """
+        
+        # assign initial values
+        num_step = len(rand)
+        yy = zeros(num_step)
+        
+        num_state = cdf.shape[0]
+        
+        
+        for idx in range(num_step):
+            for idy in range(num_state):
+                if cdf[state0,idy] > rand[idx]:
+                    yy[idx] = idy
+                    state0 = idy
+                    break
+                if idy == num_state-1:
+                    yy[idx] = idy
+        
+        return yy
     
     

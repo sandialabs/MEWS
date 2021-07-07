@@ -31,7 +31,7 @@ from calendar import isleap
 from copy import deepcopy
 from mews.epw import epw
 from mews.errors import EPWMissingDataFromFile, EPWFileReadFailure, EPWRepeatDateError
-from mews.weather.doe2weather import df2bin, bin2df
+from mews.weather.doe2weather import DOE2Weather
 
 class Alter(object):
     """
@@ -99,6 +99,10 @@ class Alter(object):
         
         
         """
+        obj = DOE2Weather()
+        self.df2bin = obj.df2bin
+        self.bin2df = obj.bin2df
+        
         self.read(weather_file_path,replace_year,check_types,True,isdoe2,
                   doe2_bin2txt_path,doe2_start_datetime,doe2_tz,
                   doe2_hour_in_file,doe2_dst)
@@ -400,7 +404,7 @@ class Alter(object):
             self._doe2_check_types(check_types,weather_file_path,doe2_start_datetime, doe2_hour_in_file,
                         doe2_bin2txt_path,doe2_tz,doe2_dst)
             
-            df = bin2df(weather_file_path,doe2_start_datetime, doe2_hour_in_file,
+            df = self.bin2df(weather_file_path,doe2_start_datetime, doe2_hour_in_file,
                         doe2_bin2txt_path,doe2_tz,doe2_dst)
             
             # add Year column which is expected by the routine
@@ -671,7 +675,7 @@ class Alter(object):
             start_datetime = self.epwobj.dataframe["Date"].iloc[0]
             hour_in_file = len(self.epwobj.dataframe)
             
-            df2bin(self.epwobj.dataframe, out_file_name, start_datetime, 
+            self.df2bin(self.epwobj.dataframe, out_file_name, start_datetime, 
                    hour_in_file, txt2bin_exepath)
         else:
             self.epwobj.write(out_file_name)

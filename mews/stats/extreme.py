@@ -23,9 +23,8 @@ must be replicated in any derivative works that use the source code.
 
 from mews.weather import Alter
 from mews.cython import markov_chain
-from mews.stats.markov import markov_chain_py
+from mews.stats.markov import MarkovPy
 from mews.errors.exceptions import ExtremesIntegrationError
-from mews.graphics.plotting2D import plot_realization
 from numpy.random  import default_rng, seed
 from scipy.optimize import curve_fit
 import pandas as pd
@@ -166,7 +165,7 @@ class DiscreteMarkov():
         if self.use_cython:
             state = markov_chain(cdf,prob,state0)
         else:
-            state = markov_chain_py(cdf,prob,state0)
+            state = MarkovPy.markov_chain_py(cdf,prob,state0)
 
         # translate state into an array of min_step length segments
         state_extended = np.repeat(state,min_steps)

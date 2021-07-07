@@ -22,10 +22,10 @@ must be replicated in any derivative works that use the source code.
 
 from mews.weather import Alter
 from mews.cython import markov_chain
-from mews.stats.markov import markov_chain_py
+from mews.stats.markov import MarkovPy
 from mews.stats.extreme import DiscreteMarkov
 from mews.stats.extreme import Extremes
-from mews.graphics.plotting2D import plot_realization
+from mews.graphics.plotting2D import Graphics
 from numpy.random import default_rng
 import numpy as np
 import unittest
@@ -94,14 +94,14 @@ class Test_Extreme(unittest.TestCase):
         rand = self.rng.random(10000)
 
         value = markov_chain(always0,rand,state0)
-        value_py = markov_chain_py(always0,rand,state0)
+        value_py = MarkovPy.markov_chain_py(always0,rand,state0)
         np.testing.assert_array_equal(value,value_py)
         self.assertTrue(value_py.sum() == 0.0)
         
         two_state_equal = np.array([[0.5,0.5],[0.5,0.5]])
         rand = self.rng.random(100000)
         value = markov_chain(two_state_equal.cumsum(axis=1),rand,state0)
-        value_py = markov_chain_py(two_state_equal.cumsum(axis=1),rand,state0)
+        value_py = MarkovPy.markov_chain_py(two_state_equal.cumsum(axis=1),rand,state0)
         np.testing.assert_array_equal(value,value_py)
         # in the limit, the average value should approach 0.5.
         self.assertTrue(np.abs(value.sum()/100000 - 0.5) < 0.01)
@@ -124,7 +124,7 @@ class Test_Extreme(unittest.TestCase):
         toc_c = perf_counter_ns()
         
         tic_py = perf_counter_ns()
-        value_py = markov_chain_py(three_state.cumsum(axis=1),rand,state0)
+        value_py = MarkovPy.markov_chain_py(three_state.cumsum(axis=1),rand,state0)
         toc_py = perf_counter_ns()
         
         self.assertAlmostEqual((value-value_py).sum(),0.0)
@@ -321,7 +321,7 @@ class Test_Extreme(unittest.TestCase):
             for realization_number,ax in enumerate(axl):
                 if realization_number == len(axl):
                     legend_labels = ("extreme","normal")
-                plot_realization(res,column,realization_number,ax=ax,legend_labels=("extreme","normal"))
+                Graphics.plot_realization(res,column,realization_number,ax=ax,legend_labels=("extreme","normal"))
                 ax.set_ylabel('R{0:d}'.format(realization_number))
             
             if column == "Dry Bulb Temperature":
