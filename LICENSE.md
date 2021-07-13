@@ -90,7 +90,7 @@ PACKAGE BESIDES MEWS.
 The original correspondence is provided 
      # below:
      
- # Wed 7/7/2021 4:10 PM
+ Wed 7/7/2021 4:10 PM
  Yes, you have my permission to distribute your DOE-2 weather file 
  python libraries with TXT2BIN and BIN2TXT executables on Github or 
  also translate the fortran source versions of those apps into python 
@@ -100,8 +100,7 @@ The original correspondence is provided
  ________________________________________
  Jeff Hirsch
  James J. Hirsch & Associates
- Voice mail: (XXX) XXX-XXXX
- mobile: (XXX) XXX-XXXX
+
  -----------------------------------------------------
  From: Villa, Daniel L 
  Sent: Wednesday, July 7, 2021 11:02 AM
