@@ -48,7 +48,9 @@ Third-Party Libraries
 MEWS includes the source code from the following:
 
 
-1. EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files
+1. EPW - Energy Plus Weather 
+============================
+
 EPW is not the EPW downloaded from pypi.org, it must be downloaded
 from https://github.com/building-energy/epw
 
@@ -78,10 +80,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 2. DOE2 BIN2TXT.F and TXT2BIN.F Translations:
+=============================================
 
 METHODS   mews.weather.DOE2Weather.read_doe2_bin and  
           mews.weather.DOE2Weather.write_doe2_bin
- 
+
+
+
 Are translations of parts of BIN2TXT.F and TXT2BIN.F translated with permission
 from James and Jeff Hirsch and Associates (JJH&A). THE LICENSE FOR THESE 
 UTILITIES MUST BE FORMED WITH (JJH&A) BEFORE THEY ARE DISTRIBUTED IN ANY OTHER
