@@ -85,7 +85,6 @@ matplotlib @ file:///C:/ci/matplotlib-base_1603355780617/work
 mccabe==0.6.1
 menuinst==1.4.16
 mercantile @ file:///home/conda/feedstock_root/build_artifacts/mercantile_1598289298975/work
--e git+git@github.com:sandialabs/MEWS.git@e822e36e3ed62a045c78814eaf2dcd7f90f8acc2#egg=mews
 mistune==0.8.4
 mkl-fft==1.2.0
 mkl-random==1.1.1
@@ -210,7 +209,6 @@ Werkzeug==1.0.1
 win-inet-pton @ file:///C:/ci/win_inet_pton_1605306167264/work
 wincertstore==0.2
 # Editable install with no version control (wntr==0.3.1)
--e c:\users\dlvilla\documents\erma\toymodel\repository\github_epw
 wrapt==1.12.1
 xlrd @ file:///home/conda/feedstock_root/build_artifacts/xlrd_1610224409810/work
 yapf @ file:///tmp/build/80754af9/yapf_1593528177422/work
