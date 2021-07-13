@@ -19,6 +19,7 @@ jobs:
            ls
            pwd
            pip install -r requirements.txt
+           python setup.py install
       - name: run tests with pytest
         run: pytest
       - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
