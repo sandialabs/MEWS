@@ -9,11 +9,11 @@ from distutils.extension import Extension
 
 DISTNAME = 'mews'
 PACKAGES = find_packages()
-DESCRIPTION = 'Multi-scenario Extreme Weather Simulator'
+DESCRIPTION = 'Multi-scenario Extreme Weather Simulator (MEWS)'
 AUTHOR = 'MEWS Developers'
 MAINTAINER_EMAIL = 'dlvilla@sandia.gov'
 LICENSE = 'Revised BSD'
-URL = 'None'
+URL = 'https://github.com/sandialabs/MEWS'
 DEPENDENCIES = ['numpy', 'pandas', 'matplotlib','scipy']
 
 try:
@@ -60,12 +60,15 @@ setup(name=DISTNAME,
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
       author=AUTHOR,
+      author_email=MAINTAINER_EMAIL,
       maintainer_email=MAINTAINER_EMAIL,
       license=LICENSE,
       url=URL,
+      download_url='https://github.com/sandialabs/MEWS/archive/refs/tags/v0.0.0.tar.gz',
       zip_safe=False,
       install_requires=DEPENDENCIES,
       scripts=[],
       include_package_data=True,
-      include_dirs = [np.get_include()])
+      include_dirs = [np.get_include()],
+      keywords = ["Building Energy Modeling","Infrastructure","Extreme Weather","Markov","Resilience","Energy Plus","DOE2","DOE-2"])
 

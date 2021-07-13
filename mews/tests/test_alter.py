@@ -27,6 +27,7 @@ import pandas as pd
 from mews.weather.alter import Alter
 from mews.errors.exceptions import (EPWMissingDataFromFile, EPWFileReadFailure,
                                     EPWRepeatDateError)
+from mews.weather.doe2weather import DataFormats
 from matplotlib import pyplot as plt
 from matplotlib import rc
 from datetime import datetime
@@ -115,62 +116,100 @@ class Test_Alter(unittest.TestCase):
             fig,ax = plt.subplots(1,1)
             df_long['Dry Bulb Temperature'].plot(ax=ax)
             ax.set_title("Multi-year leap year file test")
+            
+            
+    def _Alter_config_use_exe(self,use_exe,binfilename,year,DST):
+    
+        if use_exe:
+            hour_in_file = 8760+24
+            start_datetime = datetime(year,1,1,1,0,0,0)
+            tz = "America/Denver"
+
+            obj_doe2 = Alter(binfilename,
+                  year,
+                  True,
+                  isdoe2=True,
+                  use_exe=use_exe,
+                  doe2_start_datetime=start_datetime,
+                  doe2_tz=tz,
+                  doe2_dst=DST,
+                  doe2_hour_in_file=hour_in_file)
+        else:
+            obj_doe2 = Alter(binfilename,
+                  year,
+                  True,
+                  isdoe2=True,
+                  use_exe=use_exe)
+            
+        return obj_doe2
     
     def test_doe2(self):
         # This won't work unless you put TXT2BIN.EXE and BIN2TXT.EXE 
         # into their respective positions
         
-        # test to see if DOE-2 utilities are available.
-        if os.path.exists(r"../third_party_software/BIN2TXT.EXE") and os.path.exists(r"../third_party_software/TXT2BIN.EXE"):
-            testDoe2 = True
-        else:
-            testDoe2 = False
-            warnings.warn("The DOE-2 features of MEWS cannot be tested"
-                          +" because the 'third_part_software' folder does not"
-                          +" contain 'BIN2TXT.EXE' and 'TXT2BIN.EXE.' These must"
-                          +" be obtained from James Hirsch and Associates "
-                          +" who can be contacted through www.doe2.com"
-                          +". The utilities are free but require a separate"
-                          +" license agreement.")
-        if testDoe2:
-            year = 2020
-            hour_in_file = 8760+24
+        # original testing using use_exe = True which is no longer the default
+        
+        use_exe_list = [False,True]
+        binfilename = os.path.join(self.test_weather_path,"NM_Albuquerque_Intl_ArptTMY3.bin")
+        years = [2020,2017]
+        
+        DSTs = [[datetime(years[0],3, 8,2,0,0,0), datetime(years[0],11,1,2,0,0,0)],
+                [datetime(years[1],3,12,2,0,0,0), datetime(years[1],11,5,2,0,0,0)]]
+        
+        # run four tests with leap year and without etc...
+        for use_exe in use_exe_list:
+            for year,DST in zip(years,DSTs): 
+                if use_exe:
+                    # test to see if DOE-2 utilities are available.
+                    if os.path.exists(r"../third_party_software/BIN2TXT.EXE") and os.path.exists(r"../third_party_software/TXT2BIN.EXE"):
+                        testDoe2 = True
+                    else:
+                        testDoe2 = False
+                        warnings.warn("The DOE-2 features of MEWS cannot be tested"
+                                      +" because the 'third_part_software' folder does not"
+                                      +" contain 'BIN2TXT.EXE' and 'TXT2BIN.EXE.' These must"
+                                      +" be obtained from James Hirsch and Associates "
+                                      +" who can be contacted through www.doe2.com"
+                                      +". The utilities are free but require a separate"
+                                      +" license agreement.")
+                else:
+                    testDoe2 = True
+                    
+                if testDoe2:
     
-            binfilename = os.path.join(self.test_weather_path,"NM_Albuquerque_Intl_ArptTMY3.bin")
-            start_datetime = datetime(year,1,1,1,0,0,0)
-            DST = [datetime(year,3,8,2,0,0,0), datetime(year,11,1,2,0,0,0)]
-            tz = "America/Denver"
-            
-            
-            obj_doe2 = Alter(binfilename,
-                  year,
-                  True,
-                  isdoe2=True,
-                  doe2_start_datetime=start_datetime,
-                  doe2_tz=tz,
-                  doe2_dst=DST,
-                  doe2_hour_in_file=hour_in_file)
-            
-            df_pre, df = self._add_cold_hot_and_climate(obj_doe2,'DRY BULB TEMP (DEG F)',2020)
-            
-            if self.plot_results:
-                fix, ax = plt.subplots(1,1,figsize=(10,10))
-            
-            self.assertTrue(df['DRY BULB TEMP (DEG F)'].max() > 100)
-            self.assertTrue(df['DRY BULB TEMP (DEG F)'].min() < 5)
-            
-            if self.plot_results:
-                df_pre['DRY BULB TEMP (DEG F)'].plot(ax=ax)
-                df['DRY BULB TEMP (DEG F)'].plot(ax=ax)
-                ax.set_ylabel('Dry bulb temperature $(^{\\circ}F)$')
-                ax.grid("on")
-                ax.set_title("Test DOE2 BIN Albuquerque, NM TMY3 with extreme sinusoidal heat wave, \ncold snap and exponential climate trend added")
-            
-            obj_doe2.write("erase_me.bin",overwrite=True)
-            
-            self.assertTrue(os.path.exists("erase_me.bin"))
-            
-            os.remove("erase_me.bin")
+                    obj_doe2 = self._Alter_config_use_exe(use_exe,binfilename,year,DST)
+                        
+                    
+                    df_pre, df = self._add_cold_hot_and_climate(obj_doe2,'DRY BULB TEMP (DEG F)',year)
+                    
+                    if self.plot_results:
+                        fix, ax = plt.subplots(1,1,figsize=(10,10))
+                    
+                    self.assertTrue(df['DRY BULB TEMP (DEG F)'].max() > 100)
+                    self.assertTrue(df['DRY BULB TEMP (DEG F)'].min() < 5)
+                    
+                    if self.plot_results:
+                        df_pre['DRY BULB TEMP (DEG F)'].plot(ax=ax)
+                        df['DRY BULB TEMP (DEG F)'].plot(ax=ax)
+                        ax.set_ylabel('Dry bulb temperature $(^{\\circ}F)$')
+                        ax.grid("on")
+                        ax.set_title("Test DOE2 BIN Albuquerque, NM TMY3 with extreme sinusoidal heat wave, \ncold snap and exponential climate trend added")
+                    
+                    obj_doe2.write("erase_me.bin",overwrite=True,use_exe=use_exe)
+                    
+                    self.assertTrue(os.path.exists("erase_me.bin"))
+                    
+                    # double check we can re-read something we just wrote
+                    try:
+                        obj_doe2_2 = self._Alter_config_use_exe(use_exe,"erase_me.bin",year,DST)
+                    except Exception as e:
+                        warnings.warn("The erase_me.bin file we just wrote cannot"+
+                                      " be read. The DOE2Weather functions must "+
+                                      "have a problem!")
+                        raise e
+
+                    os.remove("erase_me.bin")
+        
 
         
         
@@ -430,6 +469,96 @@ class Test_Alter(unittest.TestCase):
         
         obj.read(os.path.join(self.test_weather_path,"URY_Montevideo.865800_IWEC_Feb28_snippet.epw"),
                  replace_year=2020)
+        
+    def test_future_ability_to_translate_epw_to_doe2(self):
+        
+        # this just illustrates that a more work can make this a good
+        # translator between file types, units and some logic are still needed
+        # that are overlooked here.
+        
+        obj = Alter(self.test_weather_file_path, 2020, True)
+        # add a hurricane!
+        obj.add_alteration(2020,10,12,1,48,100,column='Wind Speed')
+        
+        
+        # For this to work you have to add headers
+        
+        # np.dtype([('location_IWDID','a20'),
+        #                                     ('year_IWYR', 'i4'),
+        #                                     ('latitude_WLAT','f4'),
+        #                                     ('longitude_WLONG','f4'),
+        #                                     ('timezone_IWTZN','i4'),
+        #                                     ('record_length_LRECX','i4'),
+        #                                     ('number_days_NUMDAY','i4'),
+        #                                     ('clearness_number_CLN_IM1','f4'),
+        #                                     ('ground_temperature_GT_IM1','f4'),
+        #                                     ('solar_flag_IWSOL','i4')])        
+        
+        
+        clearness_number = np.ones(12)
+        
+        # TODO - need to produce wetbulb from humidity, dry bulb and others available
+        
+        # TODO - calculate humidity ratio from relative humidity and dry-bulb or other props,
+                 #calculate enthalpy
+                 #calculate density of air
+                 
+                 # calculate correct radiation for DOE2.2
+        
+        # TODO - tranlsate between SI and IP
+        
+        
+        # THIS HAS ERRORs because the mapping is NOT direct
+        translation_map = {'MONTH (1-12)':"Month", 'DAY OF MONTH':"Day",
+                          'HOUR OF DAY':"Hour", 'WET BULB TEMP (DEG F)':"Dew Point Temperature", 
+                          'DRY BULB TEMP (DEG F)':"Dry Bulb Temperature",
+                          'PRESSURE (INCHES OF HG)':"Atmospheric Station Pressure",
+                          'CLOUD AMOUNT (0 - 10)':"Total Sky Cover",
+                          'SNOW FLAG (1 = SNOWFALL)':"Snow Depth",
+                          'RAIN FLAG (1 = RAINFALL)':"Precipitable Water",
+                          'WIND DIRECTION (0 - 15; 0=N, 1=NNE, ETC)':"Wind Direction",
+                          'HUMIDITY RATIO (LB H2O/LB AIR)':"Relative Humidity", 
+                          'DENSITY OF AIR (LB/CU FT)': "Liquid Precipitation Quantity",
+                          'SPECIFIC ENTHALPY (BTU/LB)':"Snow Depth", 
+                          'TOTAL HOR. SOLAR (BTU/HR-SQFT)': "Horizontal Infrared Radiation Intensity",
+                          'DIR. NORMAL SOLAR (BTU/HR-SQFT)':'Direct Normal Radiation', 
+                          'CLOUD TYPE (0 - 2)':'Albedo', 
+                          'WIND SPEED (KNOTS)':"Wind Speed"}
+        
+        obj.reindex_2_datetime() 
+        
+        df = pd.DataFrame(data=None,index=obj.epwobj.dataframe.index)
+        df["Date"] = obj.epwobj.dataframe.index
+        for key,val in translation_map.items():
+            df[key] = obj.epwobj.dataframe[val]
+        
+        ground_temps = np.ones(12) * 500.0
+        description = "This is a test"
+        headers = []
+        month = 0
+        for num,temp in zip(clearness_number,ground_temps):
+            header_list = [(description,
+                                 np.int32(1901),
+                                 np.float32(36.0),
+                                 np.float32(-111.0),
+                                 np.int32(7.0),
+                                 np.int32(1),
+                                 np.int32(31),
+                                 np.float32(clearness_number[month]),
+                                 np.float32(ground_temps[month]),
+                                 np.int32(5))]
+            lheaders = np.array(header_list,dtype=DataFormats.header_dtype)
+ 
+            headers.append(lheaders)
+            month += 1
+        
+        obj.isdoe2 = True  # switching this 
+        df.headers = headers
+
+        obj.epwobj.dataframe = df
+        
+        warnings.simplefilter("ignore")
+        obj.write(self.test_weather_file_path[:-4] + ".BIN",overwrite=True)
         
 if __name__ == "__main__":
     o = unittest.main(Test_Alter())

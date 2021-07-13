@@ -32,6 +32,7 @@ from copy import deepcopy
 from mews.epw import epw
 from mews.errors import EPWMissingDataFromFile, EPWFileReadFailure, EPWRepeatDateError
 from mews.weather.doe2weather import DOE2Weather
+import warnings
 
 class Alter(object):
     """
@@ -39,7 +40,7 @@ class Alter(object):
     """
     
     def __init__(self,weather_file_path,replace_year=None,check_types=True,
-                 isdoe2=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
+                 isdoe2=False,use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
                  doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
         
         """
@@ -68,6 +69,8 @@ class Alter(object):
         ONLY NEEDED IF DOE2
         isdoe2 : optional: bool : read in a DOE2 weather file instead of an EPW and then
             wrangle that data into an EP format for the self.epwobj database
+        use_exe : optional : bool : determine whether to use BIN2TXT and TXT2BIN
+            executables (True) or native Python to read BIN files.
         doe2_bin2txt_path : optional : string : a valid path to an executable
             that converts a DOE2 *.BIN weather file to an ASCII text file. 
             The executable is assumed to be named BIN2TXT.EXE and comes with
@@ -103,12 +106,12 @@ class Alter(object):
         self.df2bin = obj.df2bin
         self.bin2df = obj.bin2df
         
-        self.read(weather_file_path,replace_year,check_types,True,isdoe2,
+        self.read(weather_file_path,replace_year,check_types,True,isdoe2,use_exe,
                   doe2_bin2txt_path,doe2_start_datetime,doe2_tz,
                   doe2_hour_in_file,doe2_dst)
         
         
-    def _leap_year_replacements(self,df,year):
+    def _leap_year_replacements(self,df,year,isdoe2):
             Feb28 = df[(df["Day"] == 28) & (df["Month"] == 2) & (df["Year"]==year)]
             Mar1 = df[(df["Month"] == 3) & (df["Day"] == 1) & (df["Year"]==year)]
             Feb29 = df[(df["Month"] == 2) & (df["Day"] == 29) & (df["Year"]==year)]
@@ -141,7 +144,13 @@ class Alter(object):
                 df_new = df.drop(Feb29.index)
             else:
                 df_new = df
-                
+            
+            if isdoe2:
+                # keep custom attributes like "headers" that were added elsewhere
+                df_new.headers = df.headers
+            
+            
+              
             return df_new
 
                 
@@ -280,7 +289,9 @@ class Alter(object):
                 if isinstance(shape_func,np.ndarray):
                     num = len(shape_func)
                     if num != duration:
-                        raise ValueError("If the shape_func is provided as a list, it must have length of the 'duration' input")
+                        raise ValueError("If the shape_func is provided as a "
+                                         +"list, it must have length of the"
+                                         +" 'duration' input")
                 else:
                     correct_type_found = False
                     
@@ -302,7 +313,8 @@ class Alter(object):
             raise EPWRepeatDateError("The date: {0} has a repeat entry!".format(
                 str(datetime(year,month,day,hour))))
         elif len(bind_list) == 0:
-            raise Exception("A query for begin dates of an alteration has returned a zero length answer!")
+            raise Exception("The requested alteration dates are outside the"+
+                            " range of weather data in the current data!")
         else:
             bind = bind_list[0]
         
@@ -332,19 +344,34 @@ class Alter(object):
         self.alterations[alteration_name] = addseg
         
     def read(self,weather_file_path,replace_year=None,check_types=True,
-             clear_alterations=False,isdoe2=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
+             clear_alterations=False,isdoe2=False,use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
              doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
         
         """
         read a new Energy Plus Weather (epw) file (or doe2 *.bin) while optionally 
         keeping previously added alterations in obj.alterations
         
-        obj.read(weather_file_path,replace_year,check_types)
+        obj.read(weather_file_path,replace_year=None,check_types=True,
+             clear_alterations=False,isdoe2=False,
+             use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
+             doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None)
+        
+        The input has three valid modes:
+            Energy Plus: only input weather_file_path and optionally:
+                replace_year, check_types, and clear_alterations
+            DOE2 native python: All Energy Plus AND: isdoe2=True:
+                use_exe=False (default) all other inputs are optional:
+            DOE2 using exe: All inputs (even optional ones) are REQUIRED
+                except doe2_bin2txt_path, replace_year, check_types, and
+                clear_alterations remain optional.
+                
+        Once you have used one mode, there is no crossing over to another mode
         
         Warning: This function resets the entire object and is equivalent 
                  to creating a new object except that the previously entered 
                  alterations are left intact. This allows for these altertions
-                 to be applied in proportionately the same positions
+                 to be applied in proportionately the same positions for a new
+                 weather history.
                 
         If replace_year causes new coincidence with leap years, then an 
         extra day is added (Feb 28th if repeated). If a replace_year moves
@@ -372,6 +399,8 @@ class Alter(object):
             of weather to recieve the same alterations a previous set recieved
         isdoe2 : optional: bool : read in a DOE2 weather file instead of an EPW and then
             wrangle that data into an EP format for the self.epwobj database
+        use_exe : optional : bool : True = Use BIN2TXT.EXE to read DOE-2 BIN file
+            False = Use Python to read DOE-2 BIN (PREFERRED).
         doe2_bin2txt_path : optional : string : a valid path to an executable
             that converts a DOE2 *.BIN weather file to an ASCII text file. 
             The executable is assumed to be named BIN2TXT.EXE and comes with
@@ -379,9 +408,12 @@ class Alter(object):
             agreement with James Hirsch and Associates (www.doe2.com). A folder
             in mews "third_party_software" can be used to put the *.EXE
         doe2_start_datetime : optional : datetime : Input the start time for
-            the weather file. required if isdoe2=True. 
+            the weather file. if not entered, then the value in the BIN file
+            is used. 
         doe2_hour_in_file : optional : must be 8760 or 8784 for leap years.
-            required if isdoe2=True
+            required if isdoe2=True. This allows a non-leap year to be forced
+            into a leap year for consistency. Feb28th is just repeated for such
+            cases.
         doe2_timezone : optional : required if isdoe2=True: str : name of time
             zone applicable to the doe2 file
         doe2_dst : optional : required if isdoe2=True: list/tuple with 2 entries
@@ -401,11 +433,12 @@ class Alter(object):
             if doe2_bin2txt_path == r"../third_party_software/BIN2TXT.EXE":
                 doe2_bin2txt_path = os.path.join(os.path.dirname(__file__),doe2_bin2txt_path)
             
+            
             self._doe2_check_types(check_types,weather_file_path,doe2_start_datetime, doe2_hour_in_file,
-                        doe2_bin2txt_path,doe2_tz,doe2_dst)
+                        doe2_bin2txt_path,doe2_tz,doe2_dst,use_exe)
             
             df = self.bin2df(weather_file_path,doe2_start_datetime, doe2_hour_in_file,
-                        doe2_bin2txt_path,doe2_tz,doe2_dst)
+                        doe2_bin2txt_path,doe2_tz,doe2_dst,use_exe)
             
             # add Year column which is expected by the routine
             df["Year"] = int(replace_year)
@@ -447,7 +480,7 @@ class Alter(object):
             
             if len(new_year_ind) == 0:
                 df["Year"] = replace_year
-                df = self._leap_year_replacements(df, replace_year)
+                df = self._leap_year_replacements(df, replace_year, isdoe2)
             else:
                 # ADD A START POINT FOR THE REPLACE YEAR IF THE FILE DOES NOT BEGIN WITH 
                 # JAN 1ST
@@ -463,8 +496,8 @@ class Alter(object):
                 # This has to be done separately or the new_year_ind will be 
                 # knocked out of place.
                 for idx, ind in enumerate(new_year_ind):
-                    df = self._leap_year_replacements(df, replace_year + idx)
-            
+                    df = self._leap_year_replacements(df, replace_year + idx, isdoe2)
+        
         epwobj.dataframe = df
         epwobj.original_dataframe = deepcopy(df)
 
@@ -504,7 +537,7 @@ class Alter(object):
 
     def _doe2_check_types(self,check_types,weather_file_path,doe2_start_datetime, 
                           doe2_hour_in_file,doe2_bin2txt_path,
-                          doe2_tz,doe2_dst):
+                          doe2_tz,doe2_dst,use_exe):
         
         if check_types:
             self._check_string_path(weather_file_path)
@@ -516,23 +549,25 @@ class Alter(object):
             else:
                 raise TypeError("The input 'weather_file_path' must be a string!")
             
-            if not isinstance(doe2_start_datetime,datetime):
-                raise TypeError("The input 'doe2_start_datetime' must be a datetime object!")
             
-            if doe2_hour_in_file != 8760 and doe2_hour_in_file != 8784:
-                raise ValueError("The input 'doe2_hour_in_file' must be an "+
-                                 "integer of value 8760 for normal years or"+
-                                 " 8784 for leap years")
+            if use_exe:
+                if not isinstance(doe2_start_datetime,datetime):
+                    raise TypeError("The input 'doe2_start_datetime' must be a datetime object!")
                 
-            if not isinstance(doe2_tz,str):
-                raise TypeError("The input 'doe2_tz' must be a string!")
-                
-            if not isinstance(doe2_dst,(list,tuple)):
-                raise TypeError("The input 'doe2_dst' must be a list or tuple of 2-elements")
-            if len(doe2_dst) != 2:
-                raise ValueError("The input 'doe2_dst' must have 2-elements")
-            if not isinstance(doe2_dst[0],datetime) or not isinstance(doe2_dst[1],datetime):
-                raise TypeError("The input 'doe2_dst' must have 2-elements that are datetime objects!")
+                if doe2_hour_in_file != 8760 and doe2_hour_in_file != 8784:
+                    raise ValueError("The input 'doe2_hour_in_file' must be an "+
+                                     "integer of value 8760 for normal years or"+
+                                     " 8784 for leap years")
+                    
+                if not isinstance(doe2_tz,str):
+                    raise TypeError("The input 'doe2_tz' must be a string!")
+                    
+                if not isinstance(doe2_dst,(list,tuple)):
+                    raise TypeError("The input 'doe2_dst' must be a list or tuple of 2-elements")
+                if len(doe2_dst) != 2:
+                    raise ValueError("The input 'doe2_dst' must have 2-elements")
+                if not isinstance(doe2_dst[0],datetime) or not isinstance(doe2_dst[1],datetime):
+                    raise TypeError("The input 'doe2_dst' must have 2-elements that are datetime objects!")
             
             
     def remove_alteration(self,alteration_name):
@@ -624,7 +659,7 @@ class Alter(object):
                                          +" exist")
     
     def write(self,out_file_name=None,overwrite=False,create_dir=False,
-              txt2bin_exepath=r"../third_party_software/TXT2BIN.EXE"):
+              use_exe=False,txt2bin_exepath=r"../third_party_software/TXT2BIN.EXE"):
         """
         write an Energy Plus Weather file with alterations
 
@@ -675,7 +710,7 @@ class Alter(object):
             start_datetime = self.epwobj.dataframe["Date"].iloc[0]
             hour_in_file = len(self.epwobj.dataframe)
             
-            self.df2bin(self.epwobj.dataframe, out_file_name, start_datetime, 
+            self.df2bin(self.epwobj.dataframe, out_file_name, use_exe, start_datetime, 
                    hour_in_file, txt2bin_exepath)
         else:
             self.epwobj.write(out_file_name)
