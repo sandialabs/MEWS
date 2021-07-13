@@ -8,9 +8,7 @@ jobs:
       - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
-        uses: actions/checkout@master
-        with:
-          ref: ${{ github.ref }}
+        uses: actions/checkout@v2
       - name: Install Python3
         uses: actions/setup-python@v1
         with:
