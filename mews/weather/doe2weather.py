@@ -518,21 +518,7 @@ class DOE2Weather(object):
         warnings.simplefilter("ignore",category=UserWarning)
 
         if use_exe:
-        # np.dtype([('location_IWDID','a20'),
-        #                                     ('year_IWYR', 'i4'),
-        #                                     ('latitude_WLAT','f4'),
-        #                                     ('longitude_WLONG','f4'),
-        #                                     ('timezone_IWTZN','i4'),
-        #                                     ('record_length_LRECX','i4'),
-        #                                     ('number_days_NUMDAY','i4'),
-        #                                     ('clearness_number_CLN_IM1','f4'),
-        #                                     ('ground_temperature_GT_IM1','f4'),
-        #                                     ('solar_flag_IWSOL','i4')])
-        # TEXT FORMATTING DEPENDENT CODE BASED ON BIN2TXT.EXE
-            try:
-                clearness_number = [float(x) for x in b_lines[1].split(" ") if len(x)!=0]
-            except:
-                import pdb; pdb.set_trace()
+            clearness_number = [float(x) for x in b_lines[1].split(" ") if len(x)!=0]
             ground_temps = [float(x) for x in b_lines[2].split(" ") if len(x)!=0]
             headers = []
             month = 0
