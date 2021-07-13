@@ -48,7 +48,7 @@ Third-Party Libraries
 MEWS includes the source code from the following:
 
 
-1. EPW - Energy Plus Weather 
+1 ) EPW - Energy Plus Weather 
 ============================
 
 EPW is not the EPW downloaded from pypi.org, it must be downloaded
@@ -79,7 +79,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-2. DOE2 BIN2TXT.F and TXT2BIN.F Translations:
+2 ) DOE2 BIN2TXT.F and TXT2BIN.F Translations:
 =============================================
 
 METHODS   mews.weather.DOE2Weather.read_doe2_bin and  
