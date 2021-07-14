@@ -22,7 +22,7 @@ must be replicated in any derivative works that use the source code.
 """
 
 from mews.weather import Alter
-from mews.cython import markov_chain
+from mews.cython.markov import markov_chain
 from mews.stats.markov import MarkovPy
 from mews.errors.exceptions import ExtremesIntegrationError
 from numpy.random  import default_rng, seed
