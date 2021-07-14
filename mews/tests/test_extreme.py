@@ -240,31 +240,10 @@ class Test_Extreme(unittest.TestCase):
         col = ['DRY BULB TEMP (DEG F)','Dry Bulb Temperature']
         fname = [[os.path.join(self.test_weather_path,"NM_Albuquerque_Intl_ArptTMY3.bin")],[self.test_weather_file_path]]
         
-        # test to see if DOE-2 utilities are available.
-        if os.path.exists(r"../third_party_software/BIN2TXT.EXE") and os.path.exists(r"../third_party_software/TXT2BIN.EXE"):
-            testDoe2 = True
-        else:
-            testDoe2 = False
-            warnings.warn("The DOE-2 features of MEWS cannot be tested"
-                          +" because the 'third_part_software' folder does not"
-                          +" contain 'BIN2TXT.EXE' and 'TXT2BIN.EXE.' These must"
-                          +" be obtained from James Hirsch and Associates "
-                          +" who can be contacted through www.doe2.com"
-                          +". The utilities are free but require a separate"
-                          +" license agreement.")
-            
+
         
         for ido,wfiles,column in zip(isdoe2,fname,col):
-            
-            mu_integral = 0.5 # three day average heat wave with 2C average 
-                                     # higher temperature C*hr/hr
-            sig_integral = 0.5  #
-            
-            mu_min = 1
-            mu_max = 1.2
-            sig_min = 1
-            sig_max = 1
-            
+                        
             p_ee = 1e-2 
             
             # this matrices rows must add to one
@@ -274,8 +253,6 @@ class Test_Extreme(unittest.TestCase):
  
             max_avg_delta = 1.0
             min_avg_delta = -1.0
-            min_delta = -1.0
-            max_delta = 2.0
             
             num_real = 2 # 2 different realizations of the random history 
                           # (i.e. 2 years into the future)
@@ -284,13 +261,12 @@ class Test_Extreme(unittest.TestCase):
             year = 2021
             
             if ido:
-                if testDoe2:
-                    doe_in = {'doe2_hour_in_file':8760,
+                doe_in = {'doe2_hour_in_file':8760,
                               'doe2_start_datetime':datetime(year,1,1,1,0,0,0),
                               'doe2_dst':[datetime(year,3,14,2,0,0,0), datetime(year,11,7,2,0,0,0)],
-                              'doe2_tz':"America/Denver"}
-                else:
-                    continue
+                              'doe2_tz':"America/Denver",
+                              'use_exe':False}
+
             else:
                 doe_in = None
                 
@@ -319,8 +295,7 @@ class Test_Extreme(unittest.TestCase):
             fig,axl = plt.subplots(7,1,sharex=True,sharey=True,figsize=(10,10))
             
             for realization_number,ax in enumerate(axl):
-                if realization_number == len(axl):
-                    legend_labels = ("extreme","normal")
+
                 Graphics.plot_realization(res,column,realization_number,ax=ax,legend_labels=("extreme","normal"))
                 ax.set_ylabel('R{0:d}'.format(realization_number))
             

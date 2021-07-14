@@ -31,6 +31,7 @@ from mews.weather.doe2weather import DataFormats
 from matplotlib import pyplot as plt
 from matplotlib import rc
 from datetime import datetime
+
 import warnings
 
 class Test_Alter(unittest.TestCase):
@@ -156,12 +157,15 @@ class Test_Alter(unittest.TestCase):
         DSTs = [[datetime(years[0],3, 8,2,0,0,0), datetime(years[0],11,1,2,0,0,0)],
                 [datetime(years[1],3,12,2,0,0,0), datetime(years[1],11,5,2,0,0,0)]]
         
+        exe_path = os.path.join(os.path.dirname(__file__),"../third_party_software")
+        exe_exist = os.path.exists(os.path.join(exe_path,"BIN2TXT.EXE")) and os.path.exists(os.path.join(exe_path,"TXT2BIN.EXE"))
+        
         # run four tests with leap year and without etc...
         for use_exe in use_exe_list:
             for year,DST in zip(years,DSTs): 
                 if use_exe:
                     # test to see if DOE-2 utilities are available.
-                    if os.path.exists(r"../third_party_software/BIN2TXT.EXE") and os.path.exists(r"../third_party_software/TXT2BIN.EXE"):
+                    if exe_exist:
                         testDoe2 = True
                     else:
                         testDoe2 = False
