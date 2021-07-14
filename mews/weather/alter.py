@@ -541,7 +541,7 @@ class Alter(object):
         
         if check_types:
             self._check_string_path(weather_file_path)
-            self._check_string_path(doe2_bin2txt_path)
+            
             if isinstance(weather_file_path,str):
                 if not os.path.exists(weather_file_path):
                     raise FileNotFoundError("The path "+weather_file_path+ 
@@ -551,6 +551,7 @@ class Alter(object):
             
             
             if use_exe:
+                self._check_string_path(doe2_bin2txt_path)
                 if not isinstance(doe2_start_datetime,datetime):
                     raise TypeError("The input 'doe2_start_datetime' must be a datetime object!")
                 
