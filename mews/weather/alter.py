@@ -706,8 +706,8 @@ class Alter(object):
         if self.isdoe2:
             if txt2bin_exepath==r"../third_party_software/TXT2BIN.EXE":
                 txt2bin_exepath = os.path.join(os.path.dirname(__file__),txt2bin_exepath)
-            
-            self._check_string_path(txt2bin_exepath)
+            if use_exe:
+                self._check_string_path(txt2bin_exepath)
             start_datetime = self.epwobj.dataframe["Date"].iloc[0]
             hour_in_file = len(self.epwobj.dataframe)
             
