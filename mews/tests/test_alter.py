@@ -149,8 +149,8 @@ class Test_Alter(unittest.TestCase):
         # into their respective positions
         
         # original testing using use_exe = True which is no longer the default
-        
         use_exe_list = [False,True]
+        
         binfilename = os.path.join(self.test_weather_path,"NM_Albuquerque_Intl_ArptTMY3.bin")
         years = [2020,2017]
         
