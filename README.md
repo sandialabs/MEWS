@@ -1,6 +1,6 @@
 ![MEWS](documentation/figures/logo.png)
 
-![workflow](https://github.com/github/docs/actions/workflows/pytest.yml/badge.svg)
+![workflow](https://github.com/sandialabs/mews/actions/workflows/pytest.yml/badge.svg)
 
 The Multi-scenario Extreme Weather Simulator (MEWS) is a Python package designed to add
 extreme weather events to existing weather data or projections. MEWS does not simulate
