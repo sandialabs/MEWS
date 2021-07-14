@@ -42,11 +42,10 @@ Organization
 ------------
 
 Directories
-  * ci - UNDER CONSTRUCTION - eventually testing via travis-ci
   * mews - Python package
   * documentation - UNDER CONSTRUCTION - eventually documentation on ReadTheDocs
   * examples - two scripts showing how to use the 'Extremes' class to create
-               heat waves 
+               heat waves via Energy Plus and DOE2
 
 
 Contact
