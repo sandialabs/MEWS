@@ -28,12 +28,12 @@ ext_modules = []
 
 if use_cython:
     ext_modules += [
-        Extension("mews.cython.markov", ["mews/cython/markov.pyx"]),
+        Extension("mews.cython.markov", ["mews/cython/markov.pyx"],include_dirs=[np.get_include()]),
     ]
     cmdclass.update({'build_ext': build_ext})
 else:
     ext_modules += [
-        Extension("mews.cython.markov", ["mews/cython/markov.pyx"]),
+        Extension("mews.cython.markov", ["mews/cython/markov.pyx"],include_dirs=[np.get_include()]),
     ]
 
 # use README file as the long description
