@@ -96,10 +96,9 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
         climate_temp_func = lambda years: 0.03 * (years-2020) + 0.1
 
-        with warnings.catch_warnings():
-            warnings.simplefilter('error')
-            obj = ExtremeTemperatureWaves(station, weather_files, use_local=True, run_parallel=False)
-            obj.create_scenario("test", 2020, 4, climate_temp_func)
+
+        obj = ExtremeTemperatureWaves(station, weather_files, use_local=True, run_parallel=False)
+        obj.create_scenario("test", 2020, 4, climate_temp_func)
 
                         
     def test_ipcc_increases_in_temperature_and_frequency(self):
