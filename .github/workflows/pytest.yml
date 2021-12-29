@@ -21,6 +21,8 @@ jobs:
            pip install -r requirements.txt
            python setup.py install
       - name: run tests with pytest
+        run: |
+           ls /opt/hostedtoolcache/Python/3.8.12/x64/lib/python3.8/site-packages/mews-0.0.1-py3.8-linux-x86_64.egg/mews/events
         run: pytest
       - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
       - name: List files in the repository
