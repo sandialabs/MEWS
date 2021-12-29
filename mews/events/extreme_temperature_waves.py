@@ -21,7 +21,6 @@ import requests as rqs
 import shutil
 import urllib
 from urllib.parse import urlparse
-import pdb
 
 from datetime import datetime, timedelta
 from contextlib import closing
@@ -789,7 +788,7 @@ class ExtremeTemperatureWaves(Extremes):
             if results.pvalues[0] > 0.05:
                 self._plot_linear_fit(log_prob_duration,num_hour_passed,results.params,results.pvalues,
                                 "Month=" + str(month)+" Markov probability")
-                print(results.summary())
+                warnings.warn(results.summary())
                 raise ValueError("The weather data has produced a low p-value fit"+
                                  " for Markov process fits! More data is needed "+
                                  "to produce a statistically significant result!")
@@ -1148,7 +1147,6 @@ class DeltaTransition_IPCC_FigureSPM6():
         # equation 30 optimal scaling of D_HW_Pm
         S_D_m = np.log(Phwsm)/np.log(P_prime_hwsm)
         if S_D_m + epsilon < 1.0:
-            import pdb; pdb.set_trace()
             raise ValueError("The scaling factor on heat wave sustainment"+
                              " must be greater than 1.0")
         
