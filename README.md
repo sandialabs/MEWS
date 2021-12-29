@@ -47,6 +47,11 @@ Directories
   * examples - two scripts showing how to use the 'Extremes' class to create
                heat waves via Energy Plus and DOE2
 
+Installation
+------------
+MEWS requires Cython which needs a C comnpiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
+that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them.
+
 
 Contact
 --------
