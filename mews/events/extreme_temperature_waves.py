@@ -987,6 +987,7 @@ class DeltaTransition_IPCC_FigureSPM6():
     def __init__(self,hot_param,cold_param,climate_temp_func,year):
                 
         # bring in the ipcc data and process it.
+        print(__file__)
         ipcc_data =  pd.read_csv(os.path.join(os.path.dirname(__file__),"data","IPCC_FigureSPM_6.csv"))
         
         # neglect leap years
