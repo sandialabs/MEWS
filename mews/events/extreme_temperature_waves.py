@@ -13,18 +13,15 @@ from scipy.special import erf
 
 import io
 from calendar import monthrange
-import requests as rqs
 import pandas as pd
 import numpy as np
 import os
-import requests as rqs
 import shutil
 import urllib
 from urllib.parse import urlparse
 
 from datetime import datetime, timedelta
 from contextlib import closing
-from scipy import stats
 import statsmodels.api as sm
 from warnings import warn
 
