@@ -69,15 +69,16 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                       +" and the ./mews/tests folder has residual "
                                       +"*.bin, *.epw, *.EXE, or *.DAT files"
                                       +" that need to be removed!")
-        for file_name in os.listdir(os.path.join(".","mews_results")):
-            if (".epw" in file_name):
-                try:
-                    os.remove(os.path.join("mews_results",file_name))
-                except:
-                    warnings.warn("The testing could not clean up files"
-                                      +" and the tests folders have residual "
-                                      +"*.epw files in ./mews/tests/mews_results"
-                                      +" that need to be removed!")
+        if os.path.exists(os.path.join(".","mews_results")):
+            for file_name in os.listdir(os.path.join(".","mews_results")):
+                if (".epw" in file_name):
+                    try:
+                        os.remove(os.path.join("mews_results",file_name))
+                    except:
+                        warnings.warn("The testing could not clean up files"
+                                          +" and the tests folders have residual "
+                                          +"*.epw files in ./mews/tests/mews_results"
+                                          +" that need to be removed!")
         try:
             os.removedirs("mews_results")
         except:
