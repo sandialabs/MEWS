@@ -65,14 +65,13 @@ class Test_Extreme(unittest.TestCase):
                                                   "USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw")
         cls.tran_mat = np.array([[0.1,0.2,0.3,0.4],[0.4,0.3,0.2,0.1],
                                  [0.2,0.3,0.4,0.1],[0.3,0.4,0.2,0.1]])
-        plt.close('all')
-        font = {'size':16}
-        rc('font', **font)   
+        if cls.plot_results:
+            plt.close('all')
+            font = {'size':16}
+            rc('font', **font)   
     
     @classmethod
     def tearDownClass(cls):
-        if cls.from_main_dir:
-            os.chdir(os.path.join("..",".."))
         for file_name in os.listdir():
             if ("NM_Albuquerque_Intl_ArptTMY3" in file_name or
                 "USA_NM_Santa.Fe.County.Muni.AP.723656" in file_name or
@@ -86,6 +85,8 @@ class Test_Extreme(unittest.TestCase):
                                       +" and the tests folders have residual "
                                       +"*.bin, *.epw, *.EXE, or *.DAT files"
                                       +" that need to be removed!")
+        if cls.from_main_dir:
+            os.chdir(os.path.join("..",".."))
 
             
     def test_MarkovChain(self):
@@ -292,25 +293,24 @@ class Test_Extreme(unittest.TestCase):
     
             res = obj.results
             
-            fig,axl = plt.subplots(7,1,sharex=True,sharey=True,figsize=(10,10))
-            
-            for realization_number,ax in enumerate(axl):
+            if self.plot_results:
+                fig,axl = plt.subplots(7,1,sharex=True,sharey=True,figsize=(10,10))
+                
+                for realization_number,ax in enumerate(axl):
+    
+                    Graphics.plot_realization(res,column,realization_number,ax=ax,legend_labels=("extreme","normal"))
+                    ax.set_ylabel('R{0:d}'.format(realization_number))
+                
+                if column == "Dry Bulb Temperature":
+                    figtxt1 = "Dry Bulb Temperature (${^\\circ}C$)"
+                else:
+                    figtxt1 = column
+                
+                fig.text(0.01, 0.5, figtxt1, va='center', rotation='vertical')
+                
+                plt.legend(bbox_to_anchor=(1.1,-0.8),ncol=5)
+                plt.tight_layout()
 
-                Graphics.plot_realization(res,column,realization_number,ax=ax,legend_labels=("extreme","normal"))
-                ax.set_ylabel('R{0:d}'.format(realization_number))
-            
-            if column == "Dry Bulb Temperature":
-                figtxt1 = "Dry Bulb Temperature (${^\\circ}C$)"
-            else:
-                figtxt1 = column
-            
-            fig.text(0.01, 0.5, figtxt1, va='center', rotation='vertical')
-            
-            plt.legend(bbox_to_anchor=(1.1,-0.8),ncol=5)
-            plt.tight_layout()
-            
-            if not self.plot_results:
-                plt.close('all')
         
     
     

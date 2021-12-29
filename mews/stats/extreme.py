@@ -26,7 +26,7 @@ from mews.cython.markov import markov_chain
 from mews.stats.markov import MarkovPy
 from mews.errors.exceptions import ExtremesIntegrationError
 from numpy.random  import default_rng, seed
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 import pandas as pd
 import numpy as np
 import os
@@ -57,13 +57,16 @@ class DiscreteMarkov():
         ----------
         rng : numpy.random.default_rng() :
             Random number generator
+            
         transition_matrix : np.ndarray of np.float
             Square matrix that is a right stochastic matrix (i.e. the rows 
             sum to 1)
+            
         state_names : list of strings, optional
             list of names that must be of the same dimension as the dimension
             as the transition_matrix
             The default is None and a list of ["0","1",...] is assigned 
+            
         use_cython : bool, optional
             Use cython to calculate markov chain histories (~20x faster). 
             The default is True.
@@ -98,7 +101,7 @@ class DiscreteMarkov():
         self.use_cython = True
         self.tol = 1e-10
         
-    def history(self,num_step,state0,min_steps=24,skip_steps=0):
+    def history(self,num_step,state0,min_steps=24,skip_steps=0,count_in_min_steps_intervals=True):
         """
         obj.history(num_step,state0, min_steps, skip_steps)
         
@@ -118,7 +121,12 @@ class DiscreteMarkov():
             state0 (this is used for weather files that may begin in the middle
                     of the day to avoid applying heat waves out of sync with
                     day-night cycles)
-
+        count_in_min_steps_intervals : bool : optional : Default = True
+            True = apply markov transition matrix as a discrete process that 
+                   is randomly tested every min_steps interval (i.e. min_steps = 24
+                   means the markov chain state is only tested 1 in 24 steps)
+            False = apply markov transition matrix every step but only transition
+                   at every min_steps step.
         Raises
         ------
         ValueError
@@ -147,8 +155,10 @@ class DiscreteMarkov():
             if state0 > len(self._names):
                 raise ValueError("The transition_matrix is {0:d}x{1:d} ".format(nxn,nxn)
                                  +"but a state = {2:d} was entered")
-          
-        num_real_step = np.int(np.floor((num_step - skip_steps)/min_steps))
+        if count_in_min_steps_intervals: 
+            num_real_step = np.int(np.floor((num_step - skip_steps)/min_steps))
+        else:
+            num_real_step = num_step
         
         if num_real_step < 0:
             raise ValueError("The number of skip_steps must not be greater than the num_steps!")
@@ -156,8 +166,11 @@ class DiscreteMarkov():
             raise ValueError("There are no real steps. The weather history"
                              +" provided is too short to sample in min_steps"
                              +"={0:d} size steps!".format(min_steps))
+        if count_in_min_steps_intervals:
+            remain_steps = num_step - num_real_step * min_steps - skip_steps
+        else:
+            remain_steps = 0
             
-        remain_steps = num_step - num_real_step * min_steps - skip_steps
         prob = self.rng.random(num_real_step)
         
         cdf = self._cdf
@@ -166,13 +179,29 @@ class DiscreteMarkov():
             state = markov_chain(cdf,prob,state0)
         else:
             state = MarkovPy.markov_chain_py(cdf,prob,state0)
-
-        # translate state into an array of min_step length segments
-        state_extended = np.repeat(state,min_steps)
-        ending_state = np.repeat(np.array([state_extended[-1]]),remain_steps)
-        begin_state = np.repeat(np.array([state0]),skip_steps)
         
-        final_state = np.concatenate((begin_state,state_extended,ending_state))
+        if count_in_min_steps_intervals:
+            # translate state into an array of min_step length segments
+            state_extended = np.repeat(state,min_steps)
+            ending_state = np.repeat(np.array([state_extended[-1]]),remain_steps)
+            begin_state = np.repeat(np.array([state0]),skip_steps)
+            
+            final_state = np.concatenate((begin_state,state_extended,ending_state))
+        else:
+            # TODO - this is slow!
+            # move state changes to min_step intervals
+            # for each day, assign the state that has the majority of hours in
+            # the day.
+            
+
+            big_step = np.int(np.floor(num_step/min_steps))
+
+            for idx in range(big_step):
+                day = state[min_steps * idx:min_steps*(idx+1)]
+                state_count = np.array([(day == state_val).sum() for name,state_val in self._names.items()])
+                state[min_steps * idx:min_steps*(idx+1)] = state_count.argmax()
+
+            final_state = state
         
         return final_state
             
@@ -277,11 +306,18 @@ class Extremes():
                  results_folder="",
                  results_append_to_name="",
                  run_parallel=True,
-                 frac_long_wave=0.8,
                  min_steps=24,
                  test_shape_func=False,
                  doe2_input=None,
-                 random_seed=None):
+                 random_seed=None,
+                 max_E_dist=None,
+                 del_max_E_dist=None,
+                 min_E_dist=None,
+                 del_min_E_dist=None,
+                 frac_long_wave=0.8,
+                 current_year=None,
+                 climate_temp_func=None,
+                 averaging_steps=1):
         
         """
         
@@ -302,10 +338,18 @@ class Extremes():
                  results_folder="",
                  results_append_to_name="",
                  run_parallel=True,
-                 frac_long_wave=0.8,
                  min_steps=24,
                  test_shape_func=False,
-                 doe2_input=None)
+                 doe2_input=None,
+                 random_seed=None,
+                 max_E_dist=None,
+                 del_max_E_dist=None,
+                 min_E_dist=None,
+                 del_min_E_dist=None,
+                 frac_long_wave=0.8,
+                 current_year=None,
+                 climate_temp_func=None,
+                 averaging_steps=1)
         
         Parameters
         ----------
@@ -314,17 +358,28 @@ class Extremes():
             Year to begin a new history that will replace other years in 
             weather files
         
-        max_avg_dist : function
-            high extreme (for temperature extreme heat) statistical
-            distribution function that returns random numbers that indicate
-            how much energy/hr is associated with an extreme event
+        max_avg_dist : function or dict
+            if function:
+                high extreme (for temperature extreme heat) statistical
+                distribution function that returns random numbers that indicate
+                how much energy/hr is associated with an extreme event
+            if dict:
+                a dictionary of functions where each 
             
-        max_avg_delta : float
-            gradient of change for the average value of 
-            max_avg_dist per year. Change is included step-wise on a yearly
-            basis
+        max_avg_delta : float or dict
+            if float:
+                gradient of change for the average value of 
+                max_avg_dist per year. Change is included step-wise on a yearly
+                basis
+            if dict:
+                contains elements 'func' and 'param' where 'param' is a dictionary
+                of deltas on each parameter input to the function in 'func'
+                set of all monthly parameters needed by the max_avg_dist 
+                function. The number of parameters is distribution dependent
             
-        min_avg_dist : function
+        min_avg_dist : function or dict
+            if function:
+                A CDF that recieves one input
             low extreme (for temperature extreme cold) statistical distribution
             function that returns random numbers that indicate how much 
             reduction in energy/hr is associated with an extreme event
@@ -382,11 +437,6 @@ class Extremes():
             flag to either run parallel (True) or run on a single processor (False)
             set to False if parallel run engine fails.
             
-        frac_long_wave : float : optional : Default = 0.8
-            Amount of variable added that is attributed to a sinusoidal function 
-            accross the entire duration of the extreme event. The remainder is 
-            applied to a constant increase for the entire extreme event.
-            
         min_steps : int > 0 : optional : Default=24
             Minimum number of time steps for an extreme event 
             
@@ -410,19 +460,63 @@ class Extremes():
                      'doe2_dst'= Start and end of daylight savings time for the 
                                  doe2_start_datetime year,
                       'txt2bin_exepath' : OPTIONAL - path to txt2bin.exe DOE2 utility}
-
+        
+        random_seed : int : optional : Default = None
+            Use this to fix an analysis so that pseudo-random numbers are sampled
+            as the same sequence so that results can be replicated.
+            
+         max_E_dist : dict : optional : Default = None
+             A distribution that defines random sampling for energy of an 
+             extreme wave. If this is None, then the old way of using
+             Extreme applies if it is a dictionary, then it must be a CDF function
+             that allows random numbers to be used and has parameters as independent
+             inputs so that they can be shifted via the del_max_E_dist input
+             
+        del_max_E_dist : dict : optional : Default = None
+            For every parameter in max_E_dist, a del_param is needed that shows
+            how the max_E_dist is stretched/shifted with changes in climate.
+            
+        frac_long_wave : float <= 1 > 0 : old input style feature. The amount
+            of energy that goes into a sinusoidal peak 
+            
+        current_year : int : optional : new input style feature. Used to 
+           add a global warming offset to the entire dataset.
+        
+        TODO finish documentation
+         ,
+         min_E_dist=None - optional, cold snap analog to max_E_dist
+         del_min_E_dist - optional, cold snap analog to del_max_E_dist
+         climate_temp_func
+         averaging_steps (see alter object)
+        
         Returns
         -------
         
         None - look for results in obj.results - files are output as specified
                in the inputs.
         """
+        # perform some input checking
+        new_input_format = self._monthly_input_checking([max_avg_dist, 
+                                      max_avg_delta, 
+                                      min_avg_dist, 
+                                      min_avg_delta, 
+                                      transition_matrix, 
+                                      transition_matrix_delta, 
+                                      max_E_dist, 
+                                      del_max_E_dist, 
+                                      min_E_dist, 
+                                      del_min_E_dist])
+        
+
+
+        
+        # set the random seed - only for non-parallel application!
         if not random_seed is None:
             self.rng = default_rng(seed=random_seed)
         else:
             self.rng = default_rng()
         
-        
+        # turn off parallel for the DOE2 case or setup parallel processing otherwise.
         if run_parallel and doe2_input is None:
             
             try:
@@ -434,13 +528,13 @@ class Extremes():
                             +"of asynchronous processes reverting to"
                             +" non-parallel run!",UserWarning)
                 run_parallel = False
-        else:
+        elif run_parallel and not doe2_input is None:
             run_parallel = False
             warnings.warn("The program does not handle DOE2 files with"+
                               " multiple processors run_parallel set to 'False'",
                               UserWarning)
         
-        
+        # Constants that should not be changed.
         state_int = [1,2] # no changes to non-selected intervals
         state_name = [name for name in self.states.keys()]
         num_wfile = len(weather_files)
@@ -450,16 +544,28 @@ class Extremes():
         for id0 in range(num_realizations):
             for idx in range(num_repeat):
                 for idy,wfile in enumerate(weather_files):
-                    year = start_year + idx * num_wfile + idy
+                     
+                    if new_input_format:
+                        year = current_year
+                        
+                    else:
+                        year = start_year + idx * num_wfile + idy
+                        
                     key_name = (wfile, id0, year)
                     if run_parallel:
+                        if random_seed is None:
+                            rng = default_rng()
+                        else: 
+                            rng = default_rng(seed=(random_seed + int(1010 * self.rng.random(1))))
                         args = (start_year,idx,num_wfile,idy,wfile,column,
                                 tzname,transition_matrix,transition_matrix_delta,
                                 state_name,use_cython,state_int, 
                                 min_avg_dist, min_avg_delta, 
                                 max_avg_dist, max_avg_delta, results_folder, 
                                 results_append_to_name, id0, write_results,year,
-                                frac_long_wave,min_steps,test_shape_func,doe2_input)
+                                frac_long_wave,min_steps,test_shape_func,doe2_input,
+                                max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
+                                new_input_format,climate_temp_func,averaging_steps,rng)
                         results[key_name] = pool.apply_async(self._process_wfile,
                                                          args=args)
                     else:
@@ -470,7 +576,9 @@ class Extremes():
                                 min_avg_dist, min_avg_delta, 
                                 max_avg_dist, max_avg_delta, results_folder, 
                                 results_append_to_name, id0, write_results, year,
-                                frac_long_wave,min_steps,test_shape_func,doe2_input)
+                                frac_long_wave,min_steps,test_shape_func,doe2_input,
+                                max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
+                                new_input_format,climate_temp_func,averaging_steps,self.rng)
         
         if run_parallel:
             results_get = {}
@@ -487,6 +595,32 @@ class Extremes():
         else:
             self.results = results
     
+    def _monthly_input_checking(self,dict_list):
+        incorrect_type = 0
+        dict_found = False
+        for dict_e in dict_list:
+            if not isinstance(dict_e,dict) and not dict_e is None:
+                incorrect_type += 1
+            else:
+                if not dict_e is None:
+                    dict_found=True
+                    if 'func' in dict_e.keys():
+                        dict_e2 = dict_e['param']
+                    else:
+                        dict_e2 = dict_e
+                    
+                    if list(dict_e2.keys()) != [1,2,3,4,5,6,7,8,9,10,11,12]:
+                        raise ValueError("All dictionary inputs must have an entry for every month!")
+        
+        
+        if incorrect_type > 0 and incorrect_type != 6:
+            raise TypeError("You must either define all inputs as dictionaires"
+                            +" with 12 months as the key {1:,2:, etc..} or as"
+                            +" functions and floats per the documentation")
+        
+        return dict_found
+            
+    
     # this function was created to make parallelization possible.
     def _process_wfile(self,start_year,idx,num_wfile,idy,wfile,column,tzname,
                        transition_matrix,transition_matrix_delta,state_name,
@@ -494,7 +628,9 @@ class Extremes():
                        min_avg_delta,max_avg_dist,max_avg_delta,
                        results_folder, results_append_to_name,id0, 
                        write_results, year, frac_long_wave,min_steps,
-                       test_shape_func,doe2_in):
+                       test_shape_func,doe2_in, max_E_dist,del_max_E_dist,
+                       min_E_dist,del_min_E_dist, new_input_format,
+                       climate_temp_func,averaging_steps,rng):
         
         if doe2_in is None:
             objA = Alter(wfile, year)
@@ -504,43 +640,117 @@ class Extremes():
         org_series = objA.epwobj.dataframe[column]
         org_dates = objA.reindex_2_datetime(tzname).index
         num_step = len(objA.epwobj.dataframe.index)
-        
-        objDM = DiscreteMarkov(self.rng,transition_matrix 
+
+        if new_input_format:
+            state0 = "normal"
+            states_arr = None
+            for month, trans_matrix in transition_matrix.items():
+                month_num_steps = (org_dates.month == month).sum()
+                
+                modified_trans_matrix = trans_matrix + transition_matrix_delta[month]
+                
+                objDM = DiscreteMarkov(rng, modified_trans_matrix, 
+                                       state_name, use_cython)
+                
+                if states_arr is None:
+                    states_arr = objDM.history(month_num_steps, state0,count_in_min_steps_intervals=False)
+                else:
+                    states_arr = np.concatenate((states_arr, objDM.history(
+                                    month_num_steps, 
+                                    state0,
+                                    count_in_min_steps_intervals=False)))
+                
+                state0 = state_name[states_arr[-1]]
+            
+            #import matplotlib.pyplot as plt
+            #plt.plot(states_arr)
+        else:
+            objDM = DiscreteMarkov(rng,transition_matrix 
                                + transition_matrix_delta 
                                * (year - start_year),
                                state_name,use_cython)
-        # generate a history
-        states_arr = objDM.history(num_step,"normal",min_steps=min_steps)
+        # distinguish the shape function type
+        if new_input_format:
+            shape_function_type = "heat_wave_shape_func"
+        else:
+            shape_function_type = "double_shape_func"
+        
+            # generate a history
+            states_arr = objDM.history(num_step,"normal",min_steps=min_steps)
         # separate history into extreme states.
         state_intervals = self._find_extreme_intervals(states_arr, state_int)
         for state, s_ind in zip(state_intervals,state_int):
-            if s_ind == 1:
-                avg_dist = min_avg_dist
-                avg_delta = (year - start_year) * min_avg_delta
+
+            if s_ind==1:
+                # shift cold snaps to start at noon whereas heat waves 
+                # start at mid-night
+                shifted_state = []
+                for tup in state:
+                    tup_try = (int(tup[0] + min_steps/2), int(tup[1] + min_steps/2))
+                    if tup_try[0] >= len(states_arr) or tup_try[1] > len(states_arr): # go back
+                        tup_try = (int(tup[0]-min_steps/2),int(tup[1]-min_steps/2))
+                    shifted_state.append(tup_try)
+                state = shifted_state
+
+
+                if new_input_format:
+                    avg_dist = min_E_dist 
+                    peak_dist = min_avg_dist  # minimum temperature
+                    peak_delta = min_avg_delta
+                    avg_delta = del_min_E_dist
+                else:
+                    avg_dist = min_avg_dist
+                    peak_dist = None
+                    peak_delta = None
+                    avg_delta = (year - start_year) * min_avg_delta
             else:
-                avg_dist = max_avg_dist
-                avg_delta = (year - start_year) * max_avg_delta
+                wave_shift = 0.0
+                if new_input_format:
+                    avg_dist = max_E_dist
+                    peak_dist = max_avg_dist
+                    peak_delta = max_avg_delta
+                    avg_delta = del_max_E_dist
+                else:    
+                    avg_dist = max_avg_dist
+                    peak_dist = None
+                    peak_delta = None
+                    avg_delta = (year - start_year) * max_avg_delta
+                    
                 
             for tup in state:
                 new_vals = self._add_extreme(org_series.iloc[tup[0]:tup[1]+1], 
                                   avg_dist, avg_delta,
                                   frac_long_wave=frac_long_wave,
                                   min_steps=min_steps,
-                                  test_shape_func=test_shape_func)
+                                  shape_func_type=shape_function_type,
+                                  test_shape_func=test_shape_func,
+                                  peak_dist=peak_dist,
+                                  peak_delta=peak_delta,
+                                  org_dates=org_dates[tup[0]:tup[1]+1],
+                                  rng=rng)
+
                 new_date_start = org_dates[new_vals.index[0]]
                 duration = len(new_vals)
+                
                 if s_ind == 1:
-                    peak_delta = new_vals.min()
+                    peak_delta_val = new_vals.min()
                 else:
-                    peak_delta = new_vals.max()
+                    peak_delta_val = new_vals.max()
                     
                 objA.add_alteration(year, 
                                     new_date_start.day, 
                                     new_date_start.month, 
                                     new_date_start.hour, 
-                                    duration, peak_delta,
+                                    duration, peak_delta_val,
                                     shape_func=new_vals.values,
-                                    column=column)
+                                    column=column,
+                                    averaging_steps=averaging_steps)
+        if not climate_temp_func is None:
+            year_no = year - start_year
+            year_time = year_no + (np.arange(num_step)+1)/num_step
+            objA.add_alteration(year,1,1,1,num_step,1.0,climate_temp_func(year_time),
+                                alteration_name="global temperature trend")
+                
                 
         if write_results:
             # TODO, this writing needs to be standardized accross all
@@ -613,12 +823,32 @@ class Extremes():
 
     @staticmethod
     def double_shape_func(t,A,B,D,min_s):
-        return A * np.sin(t * np.pi/D) + B * (1.0-np.cos(t * np.pi / (0.5*min_s)))          
+        return A * np.sin(t * np.pi/D) + B * (1.0-np.cos(t * np.pi / (0.5*min_s)))
+
+    @staticmethod
+    def heat_wave_shape_func(t,A,B,D,D_odd,min_s):
+        
+        return np.where(t>D_odd,
+                 B*(1-np.cos(2*np.pi*t/min_s)),
+                 A*np.sin(np.pi * t / D_odd) + B * (1-np.cos(2*np.pi * t/min_s)))
+    @staticmethod
+    def total_energy_integral(A,B,D,D_odd,min_s,is_hw):
+        if is_hw:
+            A = np.abs(A)
+            B = np.abs(B)
+        else:
+            A = -np.abs(A)
+            B = -np.abs(B)
+        return 2 * A * D_odd/np.pi + B * D - B * min_s / (
+            2 * np.pi) * np.sin(2 * np.pi * D / min_s)
+        
     
     def _add_extreme(self,org_vals,integral_dist,integral_delta,frac_long_wave,min_steps,
-                     test_shape_func=False):
+                     shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None,
+                     org_dates=None,rng=None):
         """
-        obj._add_extreme(org_vals,integral_dist,integral_delta,frac_long_wave=1.0,min_steps=12)
+        obj._add_extreme(org_vals,integral_dist,integral_delta,frac_long_wave=1.0,min_steps,
+                         shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None)
 
         Parameters
         ----------
@@ -644,10 +874,27 @@ class Extremes():
             min_steps=24, then a heat wave can only begin and end at the 
             beginning of a new day)
             
+        shape_func_type : str : optional - default = None
+            The name of the function that is to be used. If a new shape
+            is desired, then a new function has to be hard coded into extremes
+            TODO - generalize this to any shape function input.
+            
+            
         test_shape_func : Bool, optional - for testing purposes
             Boolean indicating whether computationally expensive testing is 
             done to assure the shape function used integrates to the original
             heat_added. Default value is False - True is needed for unittesting
+
+        peak_dist : function : optional - only for new input structure
+            random number generating function for the peak temperature per duration
+            
+        peak_delta : dict : optional - only for new input structure
+            delta on each parameter of peak_dist due to climate change.
+            
+        org_dates : pd.Series : optional - only for new input structure
+            allows calculation of which months the heat wave start date began in.
+            
+        rng : random number generator. If None, then use self.rng
 
         Returns
         -------
@@ -656,36 +903,189 @@ class Extremes():
             extreme event
         """        
         duration = len(org_vals)
-        # heat added per hour duration of the heat wave
-        heat_added = (integral_dist(None)+integral_delta) * duration
+        
+        if rng is None:
+            rng = self.rng
+            
         
         # these are determined by taking the integral of "double_shape_func" from
         # 0 to D and equating it to heat_added times frac_long_wave for the sine term
-        # and to (1-frac_long_wave) for the 1-cos term.        
-        term1 = np.pi / (0.5 * min_steps)
-        Acoef = frac_long_wave * heat_added * np.pi / (2.0 * duration)
-        Bcoef = term1*(1.0 - frac_long_wave) * heat_added / (
-            duration*term1-np.sin(term1*duration))
-        
-        # for unit testing, assure the shape function used integrates 
-        # correctly
-        if test_shape_func:
-            acceptable_error_percent = 0.1
-            # 100 steps per day.
-            xval = np.array(np.arange(0,duration,duration/(24*100)))
-            h_test = Extremes.double_shape_func(xval,Acoef,Bcoef,duration,min_steps)
-            h_test_heat = np.trapz(h_test,xval)
-            if 100 * (h_test_heat - heat_added)/heat_added > acceptable_error_percent:
-                raise ExtremesIntegrationError("The heat wave increased "
-                                           +"temperature did not integrate to"
-                                           +" the heat_added. This should"
-                                           +" never happen. There is a bug.")
+        # and to (1-frac_long_wave) for the 1-cos term. 
+        if shape_func_type is None or shape_func_type == "double_shape_func":
+            # this is the old method code - eventually we want to depricate this
+            # but it is retained so that MEWS can replicate earlier study results.
+            
+            # heat added per hour duration of the heat wave
+            heat_added = (integral_dist(None)+integral_delta) * duration
+            term1 = np.pi / (0.5 * min_steps)
+            Acoef = frac_long_wave * heat_added * np.pi / (2.0 * duration)
+            Bcoef = term1*(1.0 - frac_long_wave) * heat_added / (
+                duration*term1-np.sin(term1*duration))
+            
+            # for unit testing, assure the shape function used integrates 
+            # correctly
+            if test_shape_func:
+                acceptable_error_percent = 0.1
+                # 100 steps per day.
+                xval = np.array(np.arange(0,duration,duration/(24*100)))
+
+                h_test = Extremes.double_shape_func(xval,Acoef,Bcoef,duration,min_steps)
+                h_test_heat = np.trapz(h_test,xval)
                 
-        h_t = Extremes.double_shape_func(np.array(range(duration)),Acoef,Bcoef,duration,min_steps)
-        # renormalize to make hourly approximation exactly fit heat_added
-        h_t = heat_added * h_t / h_t.sum()
+                if 100 * (h_test_heat - heat_added)/heat_added > acceptable_error_percent:
+                    raise ExtremesIntegrationError("The heat wave increased "
+                                               +"temperature did not integrate to"
+                                               +" the heat_added. This should"
+                                               +" never happen. There is a bug.")
+            
+            h_t = Extremes.double_shape_func(np.array(range(duration)),Acoef,Bcoef,duration,min_steps)
+            # renormalize to make hourly approximation exactly fit heat_added
+            h_t = heat_added * h_t / h_t.sum()
+            
+            new_vals = pd.Series(h_t,index=org_vals.index,name=org_vals.name,dtype=org_vals.dtype)
+            
+        elif shape_func_type == "heat_wave_shape_func":
+            # THIS IS HIGHLY REPETITIVE - perhaps some code refactoring would be appropriate
+            # the month of the start date determines the sampling parameters
+
+            # statistics come from the month with he majority of hours in.
+            s_month = org_dates.month.unique()[np.array([(org_dates.month == 
+                        month).sum() for month in org_dates.month.unique()]
+                                                        ).argmax()]
+
+            param = integral_dist['param'][s_month]
+            
+            # trunc_norm_dist(rnd,mu,sig,a,b,minval,maxval)
+            mu_E = param['energy_normal_param']['mu']
+            sig_E = param['energy_normal_param']['sig']
+            maxval_E = param['max energy per duration']
+            minval_E = param['min energy per duration']
+            norm_energy = param['normalizing energy']
+            norm_duration = param['normalizing duration']
+            alpha_E = param['energy linear slope']
+            mu_T = param['extreme_temp_normal_param']['mu']
+            sig_T = param['extreme_temp_normal_param']['sig']
+            maxval_T = param['max extreme temp per duration']
+            minval_T = param['min extreme temp per duration']
+            norm_temperature = param['normalizing extreme temp']
+            alpha_T = param['normalized extreme temp duration fit slope']
+            beta_T = param['normalized extreme temp duration fit intercept']
+            Sm1_E = 0.0
+            Sm1_T = 0.0
+            S_E = 0.0
+            S_T = 0.0
+            
+            # introduce a delta if it exists.
+            if not integral_delta is None:
+                param_delta = integral_delta[s_month]
+                mu_E += param_delta['del_mu']
+                sig_E += param_delta['del_sig']
+                Sm1_E += param_delta['del_a']
+                S_E += param_delta['del_b']
+            if not peak_delta is None:
+                peak_param_delta = peak_delta[s_month]
+                mu_T += peak_param_delta['del_mu']
+                sig_T += peak_param_delta['del_sig']
+                Sm1_T += peak_param_delta['del_a']
+                S_T += peak_param_delta['del_b']                
+                
+                
+            # integral_dist - includes the inverse transform back to 
+            # energy per duration from the -1..1 space (-1..1 gets shifted so it
+            # is not strictly -1..1)
+            iter0 = 0
+            max_iter = 20
+            found_physical_solution = False
+            
+            #TODO - you need more work on the relationship between peak 
+            #       temperature and total energy
+            
+            E_per_duration = integral_dist['func'](rng.random(1)[0],
+                                                   mu_E,
+                                                   sig_E,
+                                                   -1+Sm1_E,
+                                                   1+S_E,
+                                                   minval_E,
+                                                   maxval_E)
+            T_per_duration = integral_dist['func'](rng.random(1)[0],
+                                                   mu_T,
+                                                   sig_T,
+                                                   -1+Sm1_T,
+                                                   1+S_T,
+                                                   minval_T,
+                                                   maxval_T)
+            
+            heat_added = E_per_duration * norm_energy * alpha_E * (duration/norm_duration)
+            Tmax = T_per_duration * norm_temperature * (alpha_T * (duration/norm_duration) + beta_T)
+            D = duration
+            
+            # calculate D_odd
+            Dint = np.floor(duration/min_steps)
+            if np.mod(Dint,2)==0 and Dint != 0:
+                D_odd = Dint - 1
+            elif Dint != 0:
+                D_odd = Dint
+            else:
+                Dint = 1
+            D_odd = D_odd * min_steps
+            
+            # determine E and Tmax coefficients
+            Acoef = (Tmax - np.pi/(2*D_odd) * heat_added)/(2 - np.pi * D / (2 * D_odd)
+                                                  + (min_steps/(2*D_odd)) * 
+                                                  np.sin(2*np.pi * D/min_steps))
+            Bcoef = (Tmax - Acoef)/2
+            
+            if test_shape_func:
+                
+                acceptable_error_percent = 0.1
+                # 100 steps per day.
+                xval = np.array(np.arange(0,duration,duration/(24*100)))
+    
+                h_test = Extremes.heat_wave_shape_func(xval,Acoef,Bcoef,D,D_odd,min_steps)
+                h_test_heat = np.trapz(h_test,xval)
+                
+                if 100 * (h_test_heat - heat_added)/heat_added > acceptable_error_percent:
+                    raise ExtremesIntegrationError("The heat wave increased "
+                                               +"temperature did not integrate to"
+                                               +" the heat_added. This should"
+                                               +" never happen. There is a bug.")
+            
+            # adjust to meet Tmax but not E if the solution is non-physical.
+            dual_solution = False
+            if heat_added >= 0 and Acoef > Tmax:
+                Acoef = Tmax
+                Bcoef = 0.0
+            elif heat_added >= 0 and Acoef < 0.0:
+                Bcoef = Tmax / 2
+                Acoef = 0.0
+            elif heat_added <= 0 and Acoef < Tmax:
+                Acoef = Tmax
+                Bcoef = 0.0
+            elif heat_added <=0 and Acoef > 0:
+                Acoef = 0.0
+                Bcoef = Tmax / 2
+            else:
+                dual_solution = True
+                Bcoef = (Tmax - Acoef)/2
+            
+            if iter0 >= max_iter:
+                raise ValueError("The E and Tmax sampling could not find a physically real solution!")
+                
+            # for unit testing, assure the shape function used integrates 
+            # correctly
+     
+            h_t = Extremes.heat_wave_shape_func(np.array(range(duration)),Acoef,Bcoef,D,D_odd,min_steps)
+            
+            # renormalize to make hourly approximation exactly fit heat_added
+            if dual_solution:
+                h_t = heat_added * h_t / h_t.sum()
+            
+            new_vals = pd.Series(h_t,index=org_vals.index,name=org_vals.name,dtype=org_vals.dtype) 
+        else:
+            raise ValueError("MEWS currently only can have 'double_shape_func' or 'heat_wave_shape_func'" +
+                             " as values for the shape_func_type input")
         
-        new_vals = pd.Series(h_t,index=org_vals.index,name=org_vals.name,dtype=org_vals.dtype)
+
         
         return new_vals
         

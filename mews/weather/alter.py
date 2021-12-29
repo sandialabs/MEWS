@@ -33,6 +33,7 @@ from mews.epw import epw
 from mews.errors import EPWMissingDataFromFile, EPWFileReadFailure, EPWRepeatDateError
 from mews.weather.doe2weather import DOE2Weather
 import warnings
+from copy import deepcopy
 
 class Alter(object):
     """
@@ -228,7 +229,8 @@ class Alter(object):
                       peak_delta,
                       shape_func=lambda x: np.sin(x*np.pi),
                       column='Dry Bulb Temperature',
-                      alteration_name=None):
+                      alteration_name=None,
+                      averaging_steps=1):
         """
         add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column):
             
@@ -258,6 +260,11 @@ class Alter(object):
                     number of alterations + 1.
                     If any other type, it must not be a repeat of previously
                     added alterations.
+            averaging_steps : int : optional Default = 1
+                 The number of steps to average the weather signal over when
+                 adding the heat wave. For example, if heat wave statistics
+                 come from daily data, then additions need to be made w/r to
+                 the daily average and this should be 24
                 
         Outputs
         -------
@@ -265,6 +272,7 @@ class Alter(object):
             
         """
         df = self.epwobj.dataframe
+             
         
         # special handling
         if alteration_name is None:
@@ -340,7 +348,37 @@ class Alter(object):
             normalized_func_values = peak_delta * np.abs(func_values) / extremum
         
         addseg = pd.DataFrame(normalized_func_values,index=range(bind,eind),columns=[column])
-        df.loc[bind:eind-1,column] = df.loc[bind:eind-1,column] + addseg.loc[bind:eind-1,column]
+        if averaging_steps > 1:
+            #TODO - this needs to be moved elsewhere. You have a lot of work
+            # to do to add daily average based heat waves correctly.
+            df_avg = df.loc[:,column].rolling(window=averaging_steps).mean()
+            # assure first steps have numeric values
+            df_avg.iloc[:averaging_steps] = df.loc[:,column].iloc[:averaging_steps]
+            
+            df_diff = df.loc[bind:eind-1,column] - df_avg.loc[bind:eind-1]
+            if addseg.sum().values[0] < 0:
+                # cold snap
+                scale = ((addseg.min() - df_diff.min())/addseg.min()).values[0]
+
+            else:
+                # heat wave
+                
+                if addseg.max()[0] <= 0:
+                    scale = 0.0
+                else:
+                    scale = ((addseg.max() - df_diff.max())/addseg.max()).values[0]
+            if scale > 0:
+                addsegmod = addseg * scale
+            else:
+                addsegmod = addseg * 0.0
+            
+           
+                
+        else:
+            addsegmod = addseg
+        
+        #df_org = deepcopy(df.loc[bind:eind-1,column])
+        df.loc[bind:eind-1,column] = df.loc[bind:eind-1,column] + addsegmod.loc[bind:eind-1,column]
         self.alterations[alteration_name] = addseg
         
     def read(self,weather_file_path,replace_year=None,check_types=True,

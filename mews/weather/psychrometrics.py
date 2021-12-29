@@ -5,6 +5,8 @@ Created on Thu Oct 14 12:15:33 2021
 @author: dlvilla
 """
 
+import numpy as np
+
 def relative_humidity(dew_point_F, dry_bulb_F):
     def claussius_clapeyron(Temp_C):
         kelvin_offset = 273.15

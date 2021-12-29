@@ -557,7 +557,13 @@ class Test_Alter(unittest.TestCase):
             month += 1
         
         obj.isdoe2 = True  # switching this 
-        df.headers = headers
+        
+        # Do not allow warning output. I want to add an attribute to the
+        # pandas dataframe. I know...I should create my own class to do this
+        # correctly. For now, I am just going to do it this way though.
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            df.headers = headers
 
         obj.epwobj.dataframe = df
         
