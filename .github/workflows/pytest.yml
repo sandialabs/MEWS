@@ -20,6 +20,8 @@ jobs:
            pwd
            pip install -r requirements.txt
            python setup.py install
+      - env:
+           DB_URL: ${{ github.workspace }}/mews/events/data/
       - name: run tests with pytest
         run: pytest
       - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
