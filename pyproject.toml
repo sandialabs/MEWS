@@ -11,6 +11,7 @@ requires = [
 "pyparsing>=2.2.1",
 "six>=1.16.0",
 "pytz>=2017.3",
+"requests>=2.25.1",
 "pytest>=6.2.4",
 "cython>=0.29.24",
 "setuptools>=42",
