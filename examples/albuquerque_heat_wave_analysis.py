@@ -26,6 +26,8 @@ from datetime import datetime
 import warnings
 from copy import deepcopy
 import pickle as pkl
+import getopt
+import sys
 
 
 class Input():
@@ -39,7 +41,7 @@ class Input():
     post_process_path = os.path.join(ep_path,"PostProcess",'ReadVarsESO.exe')
     # much faster to run parallel but sometimes there are platform or changes
     # that cause this to fail.
-    run_parallel = True
+    run_parallel = False
     
     
     # DO NOT CHANGE THIS!
@@ -49,11 +51,11 @@ class Input():
     station = os.path.join("example_data","USW00023050.csv")
     weather_file_name = "USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw" 
     weather_files = [os.path.join("example_data",weather_file_name)]
-    random_seed = 54564863
+    #random_seed = 54564863
     # recommend keeping num_year = 1 and adding to start year if greater resolution is desired.
     num_year = 1
-    start_years = [2020,2025,2030,2035,2045,2050,2055,2060,2065,2070,2075,2080]
-    scenarios = ['SSP5-8.5','SSP3-7.0','SSP2-4.5','SSP1-2.6','SSP1-1.9']
+    #start_years = [2020,2025,2030,2035,2045,2050,2055,2060,2065,2070,2075,2080]
+    #scenarios = ['SSP5-8.5','SSP3-7.0','SSP2-4.5','SSP1-2.6','SSP1-1.9']
     num_realizations = 100
     
     # Energy Plus
@@ -68,7 +70,10 @@ class Input():
     zn = ['CLASSROOM_BOT']
     vn = ['Temperature']
     
-    
+    def __init__(self,start_years,scenarios,random_seed):
+        self.start_years = start_years
+        self.scenarios = scenarios
+        self.random_seed = random_seed
     
 
 
@@ -279,7 +284,11 @@ def run_and_post_process_ep(tup):
     return [run_succeeded, results]
 
 class EnergyPlusWrapper(Input):
-    def __init__(self):
+    def __init__(self,Inp):
+        
+        self.scenarios = Inp.scenarios
+        self.start_years = Inp.start_years
+        self.wfile_names = Inp.wfile_names
         
         # unpack to local script context
         main_path = self.main_path
@@ -302,7 +311,7 @@ class EnergyPlusWrapper(Input):
         zone_names = '|'.join(zn)
         variable_names = '|'.join(vn)
         
-        list_EPWs_HW = os.listdir("mews_results")
+        list_EPWs_HW = self.wfile_names
         list_IDFs = path_idf_files
         
         list_IDFs = sorted(list_IDFs)
@@ -313,8 +322,6 @@ class EnergyPlusWrapper(Input):
         if not os.path.exists(os.path.join(main_path,name_main_folder)):
             os.makedirs(os.path.join(main_path,name_main_folder))
         
-        if not os.path.exists(os.path.join(main_path,name_main_folder,'plots')):
-            os.makedirs(os.path.join(main_path,name_main_folder,'plots'))
         
         # Create all the nested folders for all the considered combinations of IDFs and EPWs
         results = {}
@@ -361,32 +368,31 @@ class EnergyPlusWrapper(Input):
 
         
 class MEWSWrapper(Input):
-    def __init__(self):
+    def __init__(self,Inp):
+        self.start_years = Inp.start_years
+        self.scenarios = Inp.scenarios
+        self.random_seed = Inp.random_seed
+        
+        
         # run MEWS only if it has not been run before and the needed files 
         # do not exist
         if not os.path.exists("mews_results"):
             os.makedirs("mews_results")
         
-        if (len(os.listdir("mews_results")) != (self.num_realizations * 
-           len(self.start_years) * len(self.scenarios) * 
-           self.num_year)):
-            for file in os.listdir("mews_results"):
-                os.remove(os.path.join("mews_results",file))
+        clim_scen = ClimateScenario()
+        obj = ExtremeTemperatureWaves(self.station, 
+                                      self.weather_files,
+                                         use_local=True,random_seed=self.random_seed,
+                                         include_plots=False,run_parallel=False)
+        
+        for start_year in self.start_years:
+            for scenario in self.scenarios:
             
-            
-            clim_scen = ClimateScenario()
-            obj = ExtremeTemperatureWaves(self.station, 
-                                          self.weather_files,
-                                             use_local=True,random_seed=self.random_seed,
-                                             include_plots=False,run_parallel=True)
-            
-            for start_year in self.start_years:
-                for scenario in self.scenarios:
-                
-                    clim_scen.calculate_coef(scenario)
-                    climate_temp_func = clim_scen.climate_temp_func
-                    # no need to process results, they are being written
-                    obj.create_scenario(scenario, start_year, self.num_year, climate_temp_func, num_realization=self.num_realizations)
+                clim_scen.calculate_coef(scenario)
+                climate_temp_func = clim_scen.climate_temp_func
+                # no need to process results, they are being written
+                obj.create_scenario(scenario, start_year, self.num_year, climate_temp_func, num_realization=self.num_realizations)
+        self.wfile_names = obj.wfile_names
         
 class FinalPostProcess(Input):
     def __init__(self,objEP,objMEWS):
@@ -489,17 +495,40 @@ class FinalPostProcess(Input):
 
 
 if __name__ == "__main__":
-    # run MEWS
-    objMEWS = MEWSWrapper()
 
-    # this assumes no changes to the study!
-    if os.path.exists('study_results.pkl'):
-        [objEP,objMEWS] = pkl.load(open('junk.pkl','rb'))
-    else:
-        objEP = EnergyPlusWrapper()
-        pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))
+     try:
+        opts, args = getopt.getopt(sys.argv[1:],"s:y:r",["scenario=","start_year=","random_seed="])
+     except getopt.GetoptError:
+        print("")
+        print('Input invalid')
+        print("")
+        sys.exit(2)
+        
+     if not opts:
+        print("")
+        print('No command line options given, you must have "--scenario=<IPCC scenario name>" and "--start_year=<year>"')
+        print("")
+        sys.exit(2)
+       
+     for opt, arg in opts:
+        if opt in ("-s","--scenario"):
+             scenarios = [str(arg)]
+        elif opt in ("-y","--start_year"):
+             start_years = [int(arg)]
+        elif opt in ("-r","--random_seed"):
+            random_seed = int(arg)
+  
+      # run MEWS
+     Inp = Input(start_years,scenarios,random_seed) 
+     
+     objMEWS = MEWSWrapper(Inp)
+ 
+     Inp.wfile_names = objMEWS.wfile_names
+
+     objEP = EnergyPlusWrapper(Inp)
+    #pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))
     
-    FinalPostProcess(objEP,objMEWS)
+    #FinalPostProcess(objEP,objMEWS)
     
 
     

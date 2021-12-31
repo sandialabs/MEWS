@@ -495,6 +495,7 @@ class Extremes():
         None - look for results in obj.results - files are output as specified
                in the inputs.
         """
+        self.wfile_names = []
         # perform some input checking
         new_input_format = self._monthly_input_checking([max_avg_dist, 
                                       max_avg_delta, 
@@ -761,22 +762,22 @@ class Extremes():
                 simple_call = True
             else:
                 simple_call = False 
-                
+            
+            
+            new_wfile_name = (os.path.basename(wfile)[:-4] 
+                         + results_append_to_name 
+                         + "_{0:d}".format(year) 
+                         + "_r{0:d}".format(id0)
+                         + wfile[-4:])
+            
             if simple_call:
-                objA.write(os.path.join(results_folder,os.path.basename(wfile)[:-4] 
-                             + results_append_to_name 
-                             + "_{0:d}".format(year) 
-                             + "_r{0:d}".format(id0)
-                             + wfile[-4:]), 
+                objA.write(os.path.join(results_folder,new_wfile_name), 
                               overwrite=True, create_dir=True)
             else:
-                objA.write(os.path.join(results_folder,os.path.basename(wfile)[:-4] 
-                             + results_append_to_name 
-                             + "_{0:d}".format(year) 
-                             + "_r{0:d}".format(id0)
-                             + wfile[-4:]), 
+                objA.write(os.path.join(results_folder,new_wfile_name), 
                               overwrite=True, create_dir=True,
                               txt2bin_exepath=doe2_in['txt2bin_exepath'])
+            self.wfile_names.append(new_wfile_name)
         return objA
 
     def _DOE2Alter(self,wfile,year,doe2_in):
