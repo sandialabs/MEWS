@@ -28,6 +28,7 @@ from copy import deepcopy
 import pickle as pkl
 import getopt
 import sys
+from matplotlib import rc
 
 
 class Input():
@@ -36,6 +37,10 @@ class Input():
     study can be adapted by only making changes here.
     
     """
+    # plot options
+    font = {'size':18,'family':'Times New Roman'}
+    rc('font', **font)
+    
     # provide a path to energy plus' latest executable.
     ep_path = r"C:\Users\dlvilla\Documents\BuildingEnergyModeling\EnergyPlusV9-6-0"
     post_process_path = os.path.join(ep_path,"PostProcess",'ReadVarsESO.exe')
@@ -43,9 +48,14 @@ class Input():
     # that cause this to fail.
     run_parallel = False
     
-    
+    only_post_process = True
+    print_progress = True
     # DO NOT CHANGE THIS!
     main_path = os.path.dirname(os.path.realpath("__file__"))
+    
+    building_area = 4982.19 #m2
+    
+    plot_locations = r"C:\Users\dlvilla\Documents\BuildingEnergyModeling\MEWS\mews_temp\SimbuildPaper\from_python\plots"
     
     #mews
     station = os.path.join("example_data","USW00023050.csv")
@@ -54,8 +64,8 @@ class Input():
     #random_seed = 54564863
     # recommend keeping num_year = 1 and adding to start year if greater resolution is desired.
     num_year = 1
-    #start_years = [2020,2025,2030,2035,2045,2050,2055,2060,2065,2070,2075,2080]
-    #scenarios = ['SSP5-8.5','SSP3-7.0','SSP2-4.5','SSP1-2.6','SSP1-1.9']
+    #start_years_local = [2020,2025,2030,2035,2045,2050,2055,2060]
+    #scenarios_local = ['SSP5-8.5','SSP3-7.0','SSP2-4.5','SSP1-2.6','SSP1-1.9']
     num_realizations = 100
     
     # Energy Plus
@@ -79,7 +89,7 @@ class Input():
 
 """
 
-THE FOLLOWING IS CODE BY CARLO BIANCO FROM NREL. It has not been approved
+PARTS OF THE FOLLOWING IS CODE BY CARLO BIANCO FROM NREL. It has not been approved
 for release onto GitHUB by NREL so you need to get his consent to post it.
 """
 def execute_command(input):
@@ -192,7 +202,6 @@ def post_process_single_run(epw,idf):
                                         rows_wanted = ["Electricity:Facility",
                                                        "Cooling:Electricity",
                                                        "Heating:Electricity"])
-    
     gas_table = read_eplus_subtable(df_raw,"Energy Meters",
                                             "Annual and Peak Values - Natural Gas",
                                             scenario,
@@ -254,7 +263,10 @@ def run_and_post_process_ep(tup):
     variable_names,
     list_EPWs_HW,
     zn,
-    vn) = tup
+    vn,
+    idx,
+    only_post_process,
+    print_progress) = tup
     
     idf_name = os.path.basename(idf)
     list_df_single_model = []
@@ -269,17 +281,25 @@ def run_and_post_process_ep(tup):
     # Here, let's start copying the files in the folder. 
     #This part can be commented out to speed up the process.
     # COPY IDF
-    shutil.copyfile(idf, 'in.idf')
-    # COPY EPW
-    shutil.copyfile(os.path.join(path_mews_files_HW,epw), 'in.epw')
     
-    # Now let's run EP and ReadVarsESO to generate the CSV results  
-    run_succeeded = execute_command([os.path.join(ep_path,'energyplus'), "-w", 'in.epw', 'in.idf'])
+    if not only_post_process:
+        shutil.copyfile(idf, 'in.idf')
+        # COPY EPW
+        shutil.copyfile(os.path.join(path_mews_files_HW,epw), 'in.epw')
+        
+        # Now let's run EP and ReadVarsESO to generate the CSV results  
+        run_succeeded = execute_command([os.path.join(ep_path,'energyplus'), "-w", 'in.epw', 'in.idf'])
+    else:
+        run_succeeded = os.path.exists("eplustbl.csv")
     
     if run_succeeded:
         results = post_process_single_run(epw, idf)
     else:
         results = None
+        
+    if print_progress:
+        print("Run {0:d} is complete".format(idx))
+        print("")
     
     return [run_succeeded, results]
 
@@ -311,11 +331,17 @@ class EnergyPlusWrapper(Input):
         zone_names = '|'.join(zn)
         variable_names = '|'.join(vn)
         
-        list_EPWs_HW = self.wfile_names
+        if not self.only_post_process:
+            list_EPWs_HW = self.wfile_names
+        else:
+            # this presuposes that the entire study has been run
+            list_EPWs_HW = os.listdir("mews_results")
         list_IDFs = path_idf_files
         
         list_IDFs = sorted(list_IDFs)
+
         list_EPWs_HW = sorted(list_EPWs_HW)
+        
         
         
         name_main_folder = 'ep_results'
@@ -325,10 +351,11 @@ class EnergyPlusWrapper(Input):
         
         # Create all the nested folders for all the considered combinations of IDFs and EPWs
         results = {}
+        idx = 0
         for idf in list_IDFs:
             #Now let's run each IDF with different weather scenarios
             for epw in list_EPWs_HW:
-                
+                idx += 1
                 key_name = (idf,epw)
                 
                 tup = (idf, 
@@ -342,7 +369,10 @@ class EnergyPlusWrapper(Input):
                         variable_names,
                         list_EPWs_HW,
                         zn,
-                        vn)
+                        vn,
+                        idx,
+                        self.only_post_process,
+                        self.print_progress)
                  
                 if run_parallel:
                     results[key_name] = pool.apply_async(run_and_post_process_ep,
@@ -399,12 +429,31 @@ class FinalPostProcess(Input):
         # show error bared plots of various variables with scenario in the 
         # legend, year as the x axis and variable as the y axis where perhaps 
         # several variables can be added to a 2-yaxis type plot.
-        df_list = self._stack_tables(objEP)
+        if not os.path.exists("study_results_step2.pkl"):
+            df_list = self._stack_tables(objEP)
+            
+            df_stats_list = self._table_realization_stats(df_list)
+            pkl.dump([df_stats_list],open("study_results_step2.pkl",'wb'))
+        else:
+            df_stats_list = pkl.load(open("study_results_step2.pkl",'rb'))[0]
+        #1000 goes from GJ to kWh
+        GJ_to_kWh = 277.778
+        W_to_kW = 0.001
         
-        df_stats_list = self._table_realization_stats(df_list)
+        normf = [[self.building_area/GJ_to_kWh,self.building_area,self.building_area],
+                 [self.building_area/GJ_to_kWh,self.building_area,self.building_area],
+                 [1]]
+        numsig = [3,3,1]
+        sig_names_for_plot = [["Electricity (kWh/yr/m$^2$)","Minimum Electricity (W/m$2$)","Peak Electricity (W/m$2$)"],
+                     ["Natural Gas (kWh/yr/m$^2$)","Minimum Natural Gas (W/m$2$)","Peak Natural Gas (W/m$2$)"],
+                     ["Hours Criterion Not Met (hr/yr)"]]
+        var_title = {"Cooling:Electricity":"HVAC Electricity","Electricity:Facility":"Total Electricity","Heating:Electricity":"Electric Heating",
+                     'Time Setpoint Not Met During Occupied Cooling':'Cooling Setpoint Not Met',
+                     'Time Not Comfortable Based on Simple ASHRAE 55-2004':'Discomfort Simple ASHRAE 55-2004'}
         
-        self._plot_stats_df_list(df_stats_list[0])
-        pass
+        for df_li, norf,nsig,signame in zip(df_stats_list[:3],normf,numsig,sig_names_for_plot):
+            self._plot_stats_df_list(df_li,norf,nsig,signame,var_title)
+        
     
     def _table_realization_stats(self,df_list):
         
@@ -465,37 +514,71 @@ class FinalPostProcess(Input):
                         
         return df_list
     
-    def _plot_stats_df_list(self, df, ax=None):
-        
-        if ax is None:
-            fig, ax = plt.subplots(1,1)
+    def _plot_stats_df_list(self, df,normf,num_sig,signame,vtitle):
 
-        # plot by variable 
+        num_var = 0
         for var_name, var_df in df.groupby(level=0):
-            for scenario, scen_df in var_df.groupby(level=1):
-                num_sig = int(scen_df.shape[1]/6) # THIS IS DEPENDENT on the number of statistics computed!
+            num_var+=1        
+
+        
+        
+
+        
+        not_legend_plotted = True
+        only_plot_next = False
+        # plot by variable 
+        var = -1
+        for var_name, var_df in df.groupby(level=0):
+            var+=1   
                 
-                years = np.array([tup[2] for tup in scen_df.index])
-                
-                for idx in range(num_sig):
+            for idx in range(num_sig):
+                line_width = 34
+                fig, ax = plt.subplots(1,1) # this must be = num_sig
+                for scenario, scen_df in var_df.groupby(level=1):
+                    #num_sig = int(scen_df.shape[1]/6) # THIS IS DEPENDENT on the number of statistics computed!
+                    
+                    years = np.array([tup[2] for tup in scen_df.index])
                     stat = []
                     for idy in range(6):
                         stat.append(scen_df.iloc[:,idx + idy*num_sig])
                         stat[-1].index = years
+                        
+                    
                     mean = stat[0].values
                     p025 = stat[-2].values
                     p975 = stat[-1].values
-                    ax.errorbar(stat[0].index, mean, yerr=[mean-p025,p975-mean],label=var_name + " " + scenario)
-                    ax.scatter(stat[0].index, stat[2].values, marker="x")
-                    ax.scatter(stat[0].index, stat[3].values, marker="x")
+                    color = next(ax._get_lines.prop_cycler)['color']
+                    ax.errorbar(stat[0].index, mean/normf[idx], yerr=[(mean-p025)/normf[idx],(p975-mean)/normf[idx]],
+                                       label=scenario,elinewidth=line_width,
+                                       color=color,linewidth=3)
+                    ax.scatter(stat[0].index, stat[2].values/normf[idx], marker="x",color=color)
+                    ax.scatter(stat[0].index, stat[3].values/normf[idx], marker="x",color=color)
+                    ax.set_ylabel(signame[idx])
 
-
-        
-        
-
+                    ax.grid("on")
+                    line_width -= 8
+                    if var_name in vtitle:
+                        vname = vtitle[var_name]
+                    else:
+                        vname = var_name
+                #ax.set_title(vname)
+                if not_legend_plotted:
+                    ax.legend(fontsize=12)
+                    if only_plot_next:
+                        not_legend_plotted = False
+                fname = "AlbuquerqueStudy_" + vname + "_" + signame[idx] + ".png"
+                for char in r"$\/^()[] :":
+                    fname = fname.replace(char,"_")
+                plt.tight_layout()
+                plt.savefig(os.path.join(self.plot_locations,fname),dpi=1000)
+            if not_legend_plotted:
+                only_plot_next = True
+                
+                
 
 if __name__ == "__main__":
-
+     
+    
      try:
         opts, args = getopt.getopt(sys.argv[1:],"s:y:r",["scenario=","start_year=","random_seed="])
      except getopt.GetoptError:
@@ -521,14 +604,28 @@ if __name__ == "__main__":
       # run MEWS
      Inp = Input(start_years,scenarios,random_seed) 
      
-     objMEWS = MEWSWrapper(Inp)
+     if not Inp.only_post_process:
+         objMEWS = MEWSWrapper(Inp)
  
-     Inp.wfile_names = objMEWS.wfile_names
-
-     objEP = EnergyPlusWrapper(Inp)
-    #pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))
+         Inp.wfile_names = objMEWS.wfile_names
+     else:
+         objMEWS = None
+         Inp.wfile_names = None
+     
+     if True: #not os.path.exists("study_results.pkl"):
+         
+         objEP = EnergyPlusWrapper(Inp)
     
-    #FinalPostProcess(objEP,objMEWS)
+         pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))
+     else:
+         pass
+         if not "objEP" in vars():
+             [objEP, objMEWS] = pkl.load(open('study_results.pkl','rb'))
+     
+
+     if Inp.only_post_process:
+         plt.close('all')
+         FinalPostProcess(objEP,objMEWS)
     
 
     

@@ -131,7 +131,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
         obj = ExtremeTemperatureWaves(station, weather_files,
                                          use_local=True,random_seed=random_seed,
-                                         include_plots=False,run_parallel=True)
+                                         include_plots=self.plot_results,run_parallel=True)
         results_dict = {}
         
 

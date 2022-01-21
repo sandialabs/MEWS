@@ -716,7 +716,7 @@ class ExtremeTemperatureWaves(Extremes):
                 self._plot_fit(month_duration_norm,extreme_temp_norm,
                                 T_func, 
                                 results_shape_coef[1].pvalues, str(month),ax2[row,col])
-            
+
             # Calculate the linear growth of energy with duration based on the mean
             wave_energy_per_duration = wave_energy_C_hr / (norm_energy * E_func(month_duration_norm))   # deg C * hr / hr
             extreme_temp_per_duration = extreme_temp / (norm_extreme_temp * T_func(month_duration_norm))
@@ -881,14 +881,19 @@ class ExtremeTemperatureWaves(Extremes):
         
         mu = []
         sig = []
+        muT = []
+        sigT = []
         p_hw = []
         ps_hw = []
         months = []
         
         for month,modat in stats.items():
             logdat = modat['energy_normal_param']
+            logdelT = modat['extreme_temp_normal_param']
             mu.append(logdat['mu'])
             sig.append(logdat['sig'])
+            muT.append(logdelT['mu'])
+            sigT.append(logdelT['sig'])
             months.append(month)
             
             p_hw.append(modat['hourly prob of heat wave'])
@@ -898,10 +903,10 @@ class ExtremeTemperatureWaves(Extremes):
         
         plt.rcParams.update(fontsize)    
            
-        fig,axl = plt.subplots(4,1,figsize=(5,6))
+        fig,axl = plt.subplots(6,1,figsize=(5,8))
         
-        dat = [mu,sig,p_hw,ps_hw]
-        name = ["$\mu$","$\sigma$","$P_{w}$","$P_{sw}$"]
+        dat = [mu,sig,muT,sigT,p_hw,ps_hw]
+        name = ["$\mu_{\Delta E}$","$\sigma_{\Delta E}$","$\mu_{\Delta T}$","$\sigma_{\Delta T}$","$P_{w}$","$P_{sw}$"]
         
         idx = 0
         for ax,da,na in zip(axl,dat,name):
@@ -917,7 +922,7 @@ class ExtremeTemperatureWaves(Extremes):
         axl[-1].set_xlabel("Month")
         
         plt.tight_layout()
-        plt.savefig(title_string+"_monthly_MEWS_parameter_results.png",dpi=400)
+        plt.savefig(title_string+"_monthly_MEWS_parameter_results.png",dpi=1000)
         
         
     

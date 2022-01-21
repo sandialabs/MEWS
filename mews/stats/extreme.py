@@ -317,7 +317,8 @@ class Extremes():
                  frac_long_wave=0.8,
                  current_year=None,
                  climate_temp_func=None,
-                 averaging_steps=1):
+                 averaging_steps=1,
+                 no_climate_trend=False):
         
         """
         
@@ -349,7 +350,8 @@ class Extremes():
                  frac_long_wave=0.8,
                  current_year=None,
                  climate_temp_func=None,
-                 averaging_steps=1)
+                 averaging_steps=1,
+                 no_climate_trend=False)
         
         Parameters
         ----------
@@ -488,6 +490,10 @@ class Extremes():
          del_min_E_dist - optional, cold snap analog to del_max_E_dist
          climate_temp_func
          averaging_steps (see alter object)
+         
+         no_climate_trend : Bool : Optional : Default = False
+              Exclude the climate trend gradual increase in temperature
+              while including the heat wave effects.
         
         Returns
         -------
@@ -566,7 +572,7 @@ class Extremes():
                                 results_append_to_name, id0, write_results,year,
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
-                                new_input_format,climate_temp_func,averaging_steps,rng)
+                                new_input_format,climate_temp_func,averaging_steps,rng,no_climate_trend)
                         results[key_name] = pool.apply_async(self._process_wfile,
                                                          args=args)
                     else:
@@ -579,7 +585,7 @@ class Extremes():
                                 results_append_to_name, id0, write_results, year,
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
-                                new_input_format,climate_temp_func,averaging_steps,self.rng)
+                                new_input_format,climate_temp_func,averaging_steps,self.rng,no_climate_trend)
         
         if run_parallel:
             results_get = {}
@@ -631,7 +637,7 @@ class Extremes():
                        write_results, year, frac_long_wave,min_steps,
                        test_shape_func,doe2_in, max_E_dist,del_max_E_dist,
                        min_E_dist,del_min_E_dist, new_input_format,
-                       climate_temp_func,averaging_steps,rng):
+                       climate_temp_func,averaging_steps,rng, no_climate_trend):
         
         if doe2_in is None:
             objA = Alter(wfile, year)
@@ -746,10 +752,10 @@ class Extremes():
                                     shape_func=new_vals.values,
                                     column=column,
                                     averaging_steps=averaging_steps)
-        if not climate_temp_func is None:
-            year_no = year - start_year
-            year_time = year_no + (np.arange(num_step)+1)/num_step
-            objA.add_alteration(year,1,1,1,num_step,1.0,climate_temp_func(year_time),
+        if not climate_temp_func is None and not no_climate_trend:
+            # TODO - add the ability to continuously change the trend or to
+            #        just make it constant like it is now.
+            objA.add_alteration(year,1,1,1,num_step,climate_temp_func(year),np.ones(num_step),
                                 alteration_name="global temperature trend")
                 
                 
@@ -779,7 +785,7 @@ class Extremes():
                               txt2bin_exepath=doe2_in['txt2bin_exepath'])
             self.wfile_names.append(new_wfile_name)
         return objA
-
+    
     def _DOE2Alter(self,wfile,year,doe2_in):
         if not isinstance(doe2_in,dict):
             raise TypeError("The doe2 input must be a dictionary!")
