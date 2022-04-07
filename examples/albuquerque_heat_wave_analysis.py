@@ -9,6 +9,38 @@ in peak load and total energy use for energy plus commercial office proto-type
 due to increasing frequency and severity of heat waves between 2020 and 2050
 for a range of IPCC scenarios in a probabilistic context.
 
+The study is for Albuquerque. This routine is called from run_albuquerque_study.bat
+An equivalent batch file will have to be generated for unix and/or mac/os cases 
+as well.
+
+The script is run via three input arguments
+
+--start_year=2025         A valid year sometime in the future. This will determine
+                          how much heat waves are shifted.
+--scenario=SSP5-8.5       Must be a valid IPCC scenario name
+--random_seed=519419765   Just to be sure that results are replicable
+
+The class "Input" contains several options to alter the behavior of the script
+that will need adjustment 
+
+    ep_path : str : must provide a valid path to an EnergyPlus executable. If you do
+               not have this, then it can be downloaded at energyplus.net
+    post_process_path : str : a relative path from ep_path that indicates
+                              where energyplus results files will reside. 
+    run_parallel : bool : Indicate whether the run will be made in parallel 
+                          using multiprocessing.Pool or single runs. Keep True
+                          unless multiprocessing is failing or you are debugging
+                          this speeds up things by at least an order of magnitude
+    only_post_process : bool : Set to true if the study has already run but
+                               you are just working on refining graphical output
+    plot_locations : str : path to a file where output from the run will be
+                           placed.
+    num_realizations : int : the number of separate runs for each IPCC scenario
+                           and start year that is input. The original study 
+                           used 100.
+                           
+It is not advised that other inputs be changed.
+
 """
 from mews.events import ExtremeTemperatureWaves, ClimateScenario
 from mews.graphics import Graphics
@@ -46,9 +78,9 @@ class Input():
     post_process_path = os.path.join(ep_path,"PostProcess",'ReadVarsESO.exe')
     # much faster to run parallel but sometimes there are platform or changes
     # that cause this to fail.
-    run_parallel = False
+    run_parallel = True
     
-    only_post_process = True
+    only_post_process = False
     print_progress = True
     # DO NOT CHANGE THIS!
     main_path = os.path.dirname(os.path.realpath("__file__"))
@@ -335,7 +367,11 @@ class EnergyPlusWrapper(Input):
             list_EPWs_HW = self.wfile_names
         else:
             # this presuposes that the entire study has been run
+            if not os.path.exists("mews_results"):
+                os.mkdir("mews_results")
+                
             list_EPWs_HW = os.listdir("mews_results")
+                               
         list_IDFs = path_idf_files
         
         list_IDFs = sorted(list_IDFs)
@@ -577,29 +613,33 @@ class FinalPostProcess(Input):
                 
 
 if __name__ == "__main__":
-     
-    
-     try:
-        opts, args = getopt.getopt(sys.argv[1:],"s:y:r",["scenario=","start_year=","random_seed="])
-     except getopt.GetoptError:
-        print("")
-        print('Input invalid')
-        print("")
-        sys.exit(2)
-        
-     if not opts:
-        print("")
-        print('No command line options given, you must have "--scenario=<IPCC scenario name>" and "--start_year=<year>"')
-        print("")
-        sys.exit(2)
-       
-     for opt, arg in opts:
-        if opt in ("-s","--scenario"):
-             scenarios = [str(arg)]
-        elif opt in ("-y","--start_year"):
-             start_years = [int(arg)]
-        elif opt in ("-r","--random_seed"):
-            random_seed = int(arg)
+     run_local = True
+     if run_local:
+         scenarios = ["SSP5-8.5"]
+         start_years = [2025]
+         random_seed = 519419765
+     else:
+         try:
+            opts, args = getopt.getopt(sys.argv[1:],"s:y:r",["scenario=","start_year=","random_seed="])
+         except getopt.GetoptError:
+            print("")
+            print('Input invalid')
+            print("")
+            sys.exit(2)
+            
+         if not opts:
+            print("")
+            print('No command line options given, you must have "--scenario=<IPCC scenario name>" and "--start_year=<year>"')
+            print("")
+            sys.exit(2)
+            
+         for opt, arg in opts:
+            if opt in ("-s","--scenario"):
+                 scenarios = [str(arg)]
+            elif opt in ("-y","--start_year"):
+                 start_years = [int(arg)]
+            elif opt in ("-r","--random_seed"):
+                random_seed = int(arg)
   
       # run MEWS
      Inp = Input(start_years,scenarios,random_seed) 
