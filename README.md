@@ -53,7 +53,7 @@ MEWS requires Cython which needs a C comnpiler in place. For windows, this can b
 that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them.
 
 
-Contact
+Contact 
 --------
 
    * Daniel Villa, Sandia National Laboratories (SNL) dlvilla@sandia.gov
