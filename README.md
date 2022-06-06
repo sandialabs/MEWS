@@ -50,7 +50,10 @@ Directories
 Installation
 ------------
 MEWS requires Cython which needs a C comnpiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
-that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them.
+that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them. It is necessary
+to assure the correct version of the build tools is installed. The stack exchange thread below shows how to verify the correct version is installed.
+
+https://stackoverflow.com/questions/66838238/cython-setup-py-cant-find-installed-visual-c-build-tools
 
 
 Contact 
