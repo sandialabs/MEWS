@@ -2,6 +2,7 @@ from mews import weather
 from mews import stats
 from mews import cython
 from mews import epw
+#from mews import requests
 
 
 __version__ = '0.0.1'
