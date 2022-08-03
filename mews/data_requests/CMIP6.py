@@ -45,13 +45,12 @@ import time
 import xarray as xr
 import numpy as np
 import math
-import cartopy.crs as ccrs
-import cartopy.feature as cf
 import matplotlib.pyplot as plt
 import scipy.stats as st
 from scipy.optimize import curve_fit
 import multiprocessing as mp
 import threading as thr
+import logging
 
 ########## Setting Proxies ##############
 # Needed if downloading files 
@@ -82,8 +81,9 @@ class CMIP_Data():
                  file_path,
                  data_folder=None,
                  scenario_list=["historical","SSP119","SSP126","SSP245","SSP370","SSP585"],
-                 world_map=True,
-                 calculate_error=True):
+                 world_map=False,
+                 calculate_error=True,
+                 display_logging=False):
         
         """
         obj = CMIP_Data(lat_desired,
@@ -126,13 +126,17 @@ class CMIP_Data():
             the script is called from. If None, the code will search for the 
             model_guide and download all files to the cwd.
             
-        World_map : bool : optional : Default = True
+        world_map : bool : optional : Default = True
             Displays the latitude-longitude location desired on a world map.
             Can be useful in double checking the location is selected correctly.
             
         calculate_error : bool : optional : Default = True
             If true, will calculate normalization and distance error for all
-            models. Sighlty faster to run if set to False
+            models. Sighlty faster to run if set to False.
+            
+        display_logging : bool : optional : Default = False
+            If set to True, the logging statements will be printed to the console
+            as well as saved to a file in the current directory.
             
         
         Returns
@@ -147,6 +151,7 @@ class CMIP_Data():
             self.dirname = os.path.join(os.path.abspath(os.getcwd()),data_folder)
         else:
             self.dirname = os.path.abspath(os.getcwd())
+            
         self.world_map = world_map
         self.lat_desired = lat_desired
         self.lon_desired = lon_desired
@@ -154,9 +159,38 @@ class CMIP_Data():
         self.year_desired = year_desired
         self.calculate_error = calculate_error
         self.model_guide = model_guide
-        
         self.data_folder = data_folder
         self.scenario_list = scenario_list
+
+        #Initializing logging
+        global logger
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+        logger.handlers = []
+
+        file_handler = logging.FileHandler("CMIP6_Data_Log.log")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.propagate = False
+        if display_logging:
+            stream_handler = logging.StreamHandler()
+            stream_handler.setFormatter(formatter)
+            logger.addHandler(stream_handler)
+            logger.propagate = False
+        logger.info("Script Initiation")
+        
+        #Testing Cartopy module import
+        try:
+            global ccrs
+            global cf
+            import cartopy.crs as ccrs
+            import cartopy.feature as cf
+            self.use_cartopy = True
+            urllib.request.urlretrieve("https://testingcaseinwhichthisfails")
+        except:
+            logger.warning("Unable to import cartopy")
+            self.use_cartopy = False
         
         #Checking latitude and longitude inputs
         if self.lon_desired < 0: #If negative lon is inputted
@@ -175,12 +209,10 @@ class CMIP_Data():
         Downloads all necessary CMIP6 files, performs location and temperature
         computation, collects temperature change values.
         """
-        
         if self.world_map:
             self._World_map_plotting()
         
         #Downloads necessary files for each scenario
-         
         for scenario in self.scenario_list:
             folder_path = "CMIP6_Data_Files" 
             model_guide_wb = openpyxl.load_workbook(os.path.join(self.dirname,self.model_guide))
@@ -205,8 +237,7 @@ class CMIP_Data():
                 threads.append(t)
             for thread in threads:
                 thread.join()
-            print(f"All {scenario} files downloaded")
-                    
+            logger.info(f"All {scenario} files downloaded")
                     
         #Runs bulk of calculations with multiprocessing
         pool = mp.Pool(mp.cpu_count()-1)
@@ -222,7 +253,7 @@ class CMIP_Data():
             self.total_model_data[total_model_list[index].get().scenario] = total_model_list[index].get()
           
         model_guide_wb.close()
-        print("Temperature Computation Complete")
+        logger.info("Temperature computation complete")
         
         #calculates all result statistics used for delT and results1()
         self._calculate_stats()
@@ -237,17 +268,20 @@ class CMIP_Data():
         
         Plots selected latitude-longitude point on a world map.
         """
-        ##### Potting Location for Reference ####         
-        plt.figure(1, figsize=[30,13])
-        ax = plt.axes(projection=ccrs.PlateCarree())
-        ax.stock_img()
-        plt.plot([self.lon_desired,self.lon_desired],
-                 [self.lat_desired,self.lat_desired-0.5],
-                 color='red', linestyle='-',linewidth=10, 
-                 transform=ccrs.PlateCarree())
-        ax.add_feature(cf.BORDERS)
-        ax.coastlines()
-        plt.show()
+        if self.use_cartopy:
+            ##### Potting Location for Reference #####
+            plt.figure(1, figsize=[30,13])
+            ax = plt.axes(projection=ccrs.PlateCarree())
+            ax.stock_img()
+            plt.plot([self.lon_desired,self.lon_desired],
+                     [self.lat_desired,self.lat_desired-0.5],
+                     color='red', linestyle='-',linewidth=10, 
+                     transform=ccrs.PlateCarree())
+            ax.add_feature(cf.BORDERS)
+            ax.coastlines()
+            plt.show()
+        else:
+            logger.warning("Cannot display world map because cartopy is not properly installed")
         
         
     def _Download_File(self,path,link):
@@ -258,11 +292,11 @@ class CMIP_Data():
         nodes will be checked for a duplicate file.
         """
         if os.path.exists(path) == False:
-            print("Downloading file:",path)
+            logger.info("Downloading file:",path)
             try: 
                 urllib.request.urlretrieve(link, path)
             except:
-                print("Download failed. Data node is down. Trying again with other nodes")
+                logger.warning("Download failed. Data node is down. Trying again with other nodes")
                 all_data_nodes = ["aims3.llnl.gov",
                                   "cmip.bcc.cma.cn",
                                   "crd-esgf-drc.ec.gc.ca",
@@ -339,7 +373,7 @@ class CMIP_Data():
 
     class Model_object:
         """
-        Model_object class used for storing information from each model in objects
+        Model_object class used for storing information from each model in objects.
         """
         def __init__(self,model,path):
             self.name = model
@@ -360,7 +394,7 @@ class CMIP_Data():
                     
     class Total_data:
         """
-        Total_data class used for storing resulting data from all models
+        Total_data class used for storing resulting data from all models.
         """
         def __init__(self,scenario):
             if scenario != "historical":
@@ -389,7 +423,7 @@ class CMIP_Data():
         
         Calculates average yearly temperature value for the specific location
         input using 2-point interpolation and error calcualtions. Stores output
-        data in the total scenario object
+        data in the total scenario object.
         """
         data_tas = model_object.data
         start_year = model_object.start_year
@@ -509,7 +543,7 @@ class CMIP_Data():
         Calculates ensemble means and 95% confidence interval bounds for the 
         total temperature data of each scenario, then performs a fixed point
         regression on all data to produce useable results. The regressed data
-        is later outputted as results
+        is later outputted as results.
         """
         historical_years = [year for year in range(1850,2015,1)]
         future_years = [year for year in range(2015,2101,1)]
@@ -571,15 +605,15 @@ class CMIP_Data():
         
         scatter_display : bool : list : optional : Default = [False,False,False,False,False,False]
             A list of 6 boolean values used for selecting which scatter data to plot.
-            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585
+            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585.
             
         regression_display : bool : list : optional : Default = [True,True,True,True,True,True]
             A list of 6 boolean values used for selecting which regressions to plot.
-            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585
+            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585.
             
         CI_display : bool : list : optional : Default = [True,False,True,False,True,False]
             A list of 6 boolean values used for selecting which Confidence intervals to plot.
-            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585            
+            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585.            
         
         Returns
         -------
@@ -644,7 +678,7 @@ class CMIP_Data():
             setting is low so the simulation can be run quicker. Higher qualities can
             take much longer to calculate and display. All possible resolutions are:
             "low","medium","high","extreme". "test" is very inaccurate, only used for
-            unittesting
+            unittesting.
             
         Returns
         -------
@@ -688,31 +722,44 @@ class CMIP_Data():
                     array  += temp_array_list[index]
                 array = array/len(model_list)
             result_arrays.append(array)
-  
         
         baseline = xr.DataArray(data=result_arrays[0],dims=["lat", "lon"],coords=[lat_array,lon_array])
         projection = xr.DataArray(data=result_arrays[1],dims=["lat", "lon"],coords=[lat_array,lon_array])
         delta_temp = projection - baseline
 
-        extent = [-125, -66, 24, 46]
-        plt.figure(figsize=(16, 6))
-        plt.rcParams.update({'font.size': 12})
-        ax = plt.subplot(1, 1, 1, projection=ccrs.PlateCarree())
-
         value_high = np.max(delta_temp)
         value_low = abs(np.min(delta_temp))
         limit = np.max([math.ceil(value_high),math.ceil(value_low)])
-        delta_temp.plot.pcolormesh(ax=ax,cmap='coolwarm',vmin=-limit,vmax=limit)
 
-        ax.gridlines(draw_labels=True)
-        ax.set_extent(extent)
-        ax.coastlines()
-        ax.add_feature(cf.BORDERS)
-        ax.add_feature(cf.STATES)
-        plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}",x=0.55,fontdict={'fontsize': 16})
+        extent = [-125, -66, 24, 46]
+        plt.rcParams.update({'font.size': 12})
+        
+        if self.use_cartopy:
+            plt.figure(figsize=(16, 6))
+            ax = plt.subplot(1, 1, 1, projection=ccrs.PlateCarree())
+            delta_temp.plot.pcolormesh(ax=ax,cmap='coolwarm',vmin=-limit,vmax=limit)
+            ax.gridlines(draw_labels=True)
+            ax.set_extent(extent)
+            ax.coastlines()
+            ax.add_feature(cf.BORDERS)
+            ax.add_feature(cf.STATES)
+            plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}",x=0.55,fontdict={'fontsize': 16})
+        else:
+            logger.warning("Cannot display US borders because cartopy is not properly installed")
+            fig = plt.figure()
+            ax = plt.axes([0,0,2,1])
+            c = ax.pcolormesh(lon_array, lat_array, delta_temp, cmap='coolwarm', vmin=-limit, vmax=limit)
+            ax.set_title('pcolormesh')
+            fig.colorbar(c, ax=ax)
+            plt.ylabel("Latitude [Degrees North]")
+            plt.xlabel("Longitude [Degrees East]")
+            plt.xlim(235,294)
+            plt.ylim(24,50)
+            plt.grid()
+            plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}")
+            
         plt.show()
-        
-        
+
             
     def _results2_calc(self,model_guide_ws,folder_path,scenario,model,lat_array,lon_array,year):
         """
@@ -802,19 +849,21 @@ class CMIP_Data():
         
 
 if __name__ == '__main__':
-    "Test Code: example ran in examples/CMIP_data"
+    #Test Code: example ran in examples/CMIP_data
     start_time = time.time()
     obj = CMIP_Data(lat_desired = 35.0433,
                     lon_desired = -106.6129,
                     year_baseline = 2014,
                     year_desired = 2050,
                     file_path = os.path.abspath(os.getcwd()),
-                    model_guide = "Models_Used_alpha.xlsx",
-                    calculate_error=True)
+                    model_guide = "Models_Used_Simplified.xlsx",
+                    calculate_error=True,
+                    world_map=True,
+                    display_logging=False)
     obj.results1(scatter_display=[True,True,True,True,True,True])
-    obj.results2(desired_scenario = "SSP119",resolution = "low")
+    #obj.results2(desired_scenario = "SSP119",resolution = "high")
 
-    print("Program run time: {0:.3f} seconds".format(time.time() - start_time))
+    #print("Program run time: {0:.3f} seconds".format(time.time() - start_time))
 
 
 """
