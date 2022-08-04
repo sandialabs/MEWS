@@ -72,6 +72,70 @@ class CMIP_Data():
     for 5 SSP scenarios for a specific latitude-longitude input. Can also be 
     used to generate global warming plots. Used for CMIP6 data collection when
     accounting for global warming in MEWS.
+  
+    >>> obj = CMIP_Data(lat_desired,
+                        lon_desired,
+                        year_baseline,
+                        year_desired,
+                        model_guide,
+                        world_map,
+                        calculate_error=True)
+    
+    Parameters
+    ----------
+    
+    lat_desired : float
+        Latitude value used for temperature change calculations. Must be
+        between -90 and 90 [degrees].
+    
+    lon_desired : float
+        Longitude value used for temperature change calculations. Must be 
+        between -360 (when using degrees W) and 360 (when using degrees E).
+        
+    year_baseline : int
+        Year input for the baseline temperature change. All delta_T's will 
+        be calculated from this year. 1850 <= year <= 2014.
+        
+    year_desired : int
+        Future year input for which all temperature change values will be 
+        calculated to. 2015 <= year <= 2100.
+        
+    model_guide : str
+        Filename for excel spreadsheet which contains the names and links 
+        to all models used in the calculations.
+        
+    file_path : str
+        Defines where the file is being called from.
+        
+    data_folder : str : optional : Default = None
+        The name of the folder where the model_guide can be found and where
+        all of the CMIP data files will downloaded to relative to the file
+        the script is called from. If None, the code will search for the 
+        model_guide and download all files to the cwd.
+        
+    world_map : bool : optional : Default = True
+        Displays the latitude-longitude location desired on a world map.
+        Can be useful in double checking the location is selected correctly.
+        
+    calculate_error : bool : optional : Default = True
+        If true, will calculate normalization and distance error for all
+        models. Sighlty faster to run if set to False.
+        
+    display_logging : bool : optional : Default = False
+        If set to True, the logging statements will be printed to the console
+        as well as saved to a file in the current directory.
+        
+    display_plots : bool : optional : Default = True
+        If set to False, the computation for the plotting will be done, but
+        no plots will be shown. Used in unittesting.
+    
+    Returns
+    -------
+    
+    None - Results found in obj.del_T which returns a dictionary of the 
+        temperature change values for each scenario based on year_desired.
+    
+        Plots can be generated through obj.results1 and obj.results2
     """
     def __init__(self, lat_desired, 
                  lon_desired,
@@ -83,70 +147,10 @@ class CMIP_Data():
                  scenario_list=["historical","SSP119","SSP126","SSP245","SSP370","SSP585"],
                  world_map=False,
                  calculate_error=True,
-                 display_logging=False):
+                 display_logging=False,
+                 display_plots=True):
         
-        """
-        obj = CMIP_Data(lat_desired,
-                 lon_desired,
-                 year_baseline,
-                 year_desired,
-                 model_guide,
-                 world_map,
-                 calculate_error=True)
-        
-        Parameters
-        ----------
-        
-        lat_desired : float
-            Latitude value used for temperature change calculations. Must be
-            between -90 and 90 [degrees].
-        
-        lon_desired : float
-            Longitude value used for temperature change calculations. Must be 
-            between -360 (when using degrees W) and 360 (when using degrees E).
-            
-        year_baseline : int
-            Year input for the baseline temperature change. All delta_T's will 
-            be calculated from this year. 1850 <= year <= 2014.
-            
-        year_desired : int
-            Future year input for which all temperature change values will be 
-            calculated to. 2015 <= year <= 2100.
-            
-        model_guide : str
-            Filename for excel spreadsheet which contains the names and links 
-            to all models used in the calculations.
-            
-        file_path : str
-            Defines where the file is being called from.
-            
-        data_folder : str : optional : Default = None
-            The name of the folder where the model_guide can be found and where
-            all of the CMIP data files will downloaded to relative to the file
-            the script is called from. If None, the code will search for the 
-            model_guide and download all files to the cwd.
-            
-        world_map : bool : optional : Default = True
-            Displays the latitude-longitude location desired on a world map.
-            Can be useful in double checking the location is selected correctly.
-            
-        calculate_error : bool : optional : Default = True
-            If true, will calculate normalization and distance error for all
-            models. Sighlty faster to run if set to False.
-            
-        display_logging : bool : optional : Default = False
-            If set to True, the logging statements will be printed to the console
-            as well as saved to a file in the current directory.
-            
-        
-        Returns
-        -------
-        
-        None - Results found in obj.del_T which returns a dictionary of the 
-        temperature change values for each scenario based on year_desired.
-        
-        Plots can be generated through obj.results1 and obj.results2
-        """
+
         if data_folder != None: 
             self.dirname = os.path.join(os.path.abspath(os.getcwd()),data_folder)
         else:
@@ -161,6 +165,7 @@ class CMIP_Data():
         self.model_guide = model_guide
         self.data_folder = data_folder
         self.scenario_list = scenario_list
+        self.display_plots = display_plots
 
         #Initializing logging
         global logger
@@ -187,7 +192,7 @@ class CMIP_Data():
             import cartopy.crs as ccrs
             import cartopy.feature as cf
             self.use_cartopy = True
-            urllib.request.urlretrieve("https://testingcaseinwhichthisfails")
+            #urllib.request.urlretrieve("https://testingcaseinwhichthisfails")
         except:
             logger.warning("Unable to import cartopy")
             self.use_cartopy = False
@@ -268,7 +273,7 @@ class CMIP_Data():
         
         Plots selected latitude-longitude point on a world map.
         """
-        if self.use_cartopy:
+        if self.use_cartopy and self.display_plots:
             ##### Potting Location for Reference #####
             plt.figure(1, figsize=[30,13])
             ax = plt.axes(projection=ccrs.PlateCarree())
@@ -279,7 +284,6 @@ class CMIP_Data():
                      transform=ccrs.PlateCarree())
             ax.add_feature(cf.BORDERS)
             ax.coastlines()
-            plt.show()
         else:
             logger.warning("Cannot display world map because cartopy is not properly installed")
         
@@ -621,43 +625,43 @@ class CMIP_Data():
         None - plots the temperature change values for the scenarios for the years
         1950-2100.
         """
-        
-        historical_years = [year for year in range(1850,2015,1)]
-        future_years = [year for year in range(2015,2101,1)]
-        
-        plt.rcParams.update({'font.size': 22})
-        fig,ax = plt.subplots()
-        
-        #years, colors, and labels organized into dictionaries for succinctness
-        year_dict = {"historical":historical_years,"SSP119":future_years,"SSP126":future_years,"SSP245":future_years,"SSP370":future_years,"SSP585":future_years}
-        color_dict = {"historical":"k","SSP119":"dodgerblue","SSP126":"navy","SSP245":"gold","SSP370":"red","SSP585":"maroon"}
-        scatter_label_dict = {"historical":"Averaged Historical Data","SSP119":"Averaged SSP1-1.9 Data","SSP126":"Averaged SSP1-2.6 Data",
-                              "SSP245":"Averaged SSP2-4.5 Data","SSP370":"Averaged SSP3.70 Data","SSP585":"Averaged SSP5-8.5 Data"}
-        regression_label_dict = {"historical":"Historical Regression","SSP119":"SSP1-1.9 Regression","SSP126":"SSP1-2.6 Regression",
-                                 "SSP245":"SSP2-4.5 Regression","SSP370":"SSP3.70 Regression","SSP585":"SSP5-8.5 Regression"}
-        CI_label_dict = {"historical":"Historical Data 95% CI","SSP119":"SSP1-1.9 Data 95% CI","SSP126":"SSP1-2.6 Data 95% CI",
-                         "SSP245":"SSP2-4.5 Data 95% CI","SSP370":"SSP3.70 Data 95% CI","SSP585":"SSP5-8.5 Data 95% CI"}
-
-        for scenario in self.scenario_list:
-            index = self.scenario_list.index(scenario)
-            if scatter_display[index]:
-                ax.scatter(year_dict[scenario],self.total_model_data[scenario].delT_list,c=color_dict[scenario],label=scatter_label_dict[scenario])
-            if regression_display[index]:
-                ax.plot(year_dict[scenario],self.total_model_data[scenario].delT_list_reg,color_dict[scenario],linewidth=3,label=regression_label_dict[scenario])
-            if CI_display[index]:
-                ax.fill_between(year_dict[scenario],(self.total_model_data[scenario].delT_list-self.total_model_data[scenario].CI_list),
-                                (self.total_model_data[scenario].delT_list+self.total_model_data[scenario].CI_list),color=color_dict[scenario],alpha=.2,label=CI_label_dict[scenario])
+        if self.display_plots: 
+            historical_years = [year for year in range(1850,2015,1)]
+            future_years = [year for year in range(2015,2101,1)]
             
-        plot_box = ax.get_position()
-        ax.set_position([plot_box.x0, plot_box.y0,plot_box.width*0.8,plot_box.height])
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.xlabel("Year",fontdict={'fontsize': 26})
-        plt.ylabel("°C Change",fontdict={'fontsize': 26})
-        plt.title("Surface Temperature Change at ({0:.5f}, {1:.5f}) Relative to {2:.0f}".format(self.lat_desired,self.lon_desired,self.year_baseline),y=1.02,x=0.7,fontdict={'fontsize': 30})
-        plt.xlim(1950,2100)
-        plt.grid()
-        fig.set_size_inches(18.5, 10.5)
-        plt.show()
+            plt.rcParams.update({'font.size': 22})
+            fig,ax = plt.subplots()
+            
+            #years, colors, and labels organized into dictionaries for succinctness
+            year_dict = {"historical":historical_years,"SSP119":future_years,"SSP126":future_years,"SSP245":future_years,"SSP370":future_years,"SSP585":future_years}
+            color_dict = {"historical":"k","SSP119":"dodgerblue","SSP126":"navy","SSP245":"gold","SSP370":"red","SSP585":"maroon"}
+            scatter_label_dict = {"historical":"Averaged Historical Data","SSP119":"Averaged SSP1-1.9 Data","SSP126":"Averaged SSP1-2.6 Data",
+                                  "SSP245":"Averaged SSP2-4.5 Data","SSP370":"Averaged SSP3.70 Data","SSP585":"Averaged SSP5-8.5 Data"}
+            regression_label_dict = {"historical":"Historical Regression","SSP119":"SSP1-1.9 Regression","SSP126":"SSP1-2.6 Regression",
+                                     "SSP245":"SSP2-4.5 Regression","SSP370":"SSP3.70 Regression","SSP585":"SSP5-8.5 Regression"}
+            CI_label_dict = {"historical":"Historical Data 95% CI","SSP119":"SSP1-1.9 Data 95% CI","SSP126":"SSP1-2.6 Data 95% CI",
+                             "SSP245":"SSP2-4.5 Data 95% CI","SSP370":"SSP3.70 Data 95% CI","SSP585":"SSP5-8.5 Data 95% CI"}
+    
+            for scenario in self.scenario_list:
+                index = self.scenario_list.index(scenario)
+                if scatter_display[index]:
+                    ax.scatter(year_dict[scenario],self.total_model_data[scenario].delT_list,c=color_dict[scenario],label=scatter_label_dict[scenario])
+                if regression_display[index]:
+                    ax.plot(year_dict[scenario],self.total_model_data[scenario].delT_list_reg,color_dict[scenario],linewidth=3,label=regression_label_dict[scenario])
+                if CI_display[index]:
+                    ax.fill_between(year_dict[scenario],(self.total_model_data[scenario].delT_list-self.total_model_data[scenario].CI_list),
+                                    (self.total_model_data[scenario].delT_list+self.total_model_data[scenario].CI_list),color=color_dict[scenario],alpha=.2,label=CI_label_dict[scenario])
+                
+            plot_box = ax.get_position()
+            ax.set_position([plot_box.x0, plot_box.y0,plot_box.width*0.8,plot_box.height])
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            plt.xlabel("Year",fontdict={'fontsize': 26})
+            plt.ylabel("°C Change",fontdict={'fontsize': 26})
+            plt.title("Surface Temperature Change at ({0:.5f}, {1:.5f}) Relative to {2:.0f}".format(self.lat_desired,self.lon_desired,self.year_baseline),y=1.02,x=0.7,fontdict={'fontsize': 30})
+            plt.xlim(1950,2100)
+            plt.grid()
+            fig.set_size_inches(18.5, 10.5)
+            plt.show()
         
     
     def results2(self,desired_scenario,resolution='low'):
@@ -733,32 +737,32 @@ class CMIP_Data():
 
         extent = [-125, -66, 24, 46]
         plt.rcParams.update({'font.size': 12})
-        
-        if self.use_cartopy:
-            plt.figure(figsize=(16, 6))
-            ax = plt.subplot(1, 1, 1, projection=ccrs.PlateCarree())
-            delta_temp.plot.pcolormesh(ax=ax,cmap='coolwarm',vmin=-limit,vmax=limit)
-            ax.gridlines(draw_labels=True)
-            ax.set_extent(extent)
-            ax.coastlines()
-            ax.add_feature(cf.BORDERS)
-            ax.add_feature(cf.STATES)
-            plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}",x=0.55,fontdict={'fontsize': 16})
-        else:
-            logger.warning("Cannot display US borders because cartopy is not properly installed")
-            fig = plt.figure()
-            ax = plt.axes([0,0,2,1])
-            c = ax.pcolormesh(lon_array, lat_array, delta_temp, cmap='coolwarm', vmin=-limit, vmax=limit)
-            ax.set_title('pcolormesh')
-            fig.colorbar(c, ax=ax)
-            plt.ylabel("Latitude [Degrees North]")
-            plt.xlabel("Longitude [Degrees East]")
-            plt.xlim(235,294)
-            plt.ylim(24,50)
-            plt.grid()
-            plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}")
-            
-        plt.show()
+        if self.display_plots:
+            if self.use_cartopy:
+                plt.figure(figsize=(16, 6))
+                ax = plt.subplot(1, 1, 1, projection=ccrs.PlateCarree())
+                delta_temp.plot.pcolormesh(ax=ax,cmap='coolwarm',vmin=-limit,vmax=limit)
+                ax.gridlines(draw_labels=True)
+                ax.set_extent(extent)
+                ax.coastlines()
+                ax.add_feature(cf.BORDERS)
+                ax.add_feature(cf.STATES)
+                plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}",x=0.55,fontdict={'fontsize': 16})
+            else:
+                logger.warning("Cannot display US borders because cartopy is not properly installed")
+                fig = plt.figure()
+                ax = plt.axes([0,0,2,1])
+                c = ax.pcolormesh(lon_array, lat_array, delta_temp, cmap='coolwarm', vmin=-limit, vmax=limit)
+                ax.set_title('pcolormesh')
+                fig.colorbar(c, ax=ax)
+                plt.ylabel("Latitude [Degrees North]")
+                plt.xlabel("Longitude [Degrees East]")
+                plt.xlim(235,294)
+                plt.ylim(24,50)
+                plt.grid()
+                plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}")
+                
+            plt.show()
 
             
     def _results2_calc(self,model_guide_ws,folder_path,scenario,model,lat_array,lon_array,year):
@@ -859,9 +863,10 @@ if __name__ == '__main__':
                     model_guide = "Models_Used_Simplified.xlsx",
                     calculate_error=True,
                     world_map=True,
-                    display_logging=False)
+                    display_logging=False,
+                    display_plots=False)
     obj.results1(scatter_display=[True,True,True,True,True,True])
-    #obj.results2(desired_scenario = "SSP119",resolution = "high")
+    obj.results2(desired_scenario = "SSP119",resolution = "test")
 
     #print("Program run time: {0:.3f} seconds".format(time.time() - start_time))
 

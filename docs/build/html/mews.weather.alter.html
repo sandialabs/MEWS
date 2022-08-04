@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mews.weather.alter module &mdash; MEWS 0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mews.weather.climate module" href="mews.weather.climate.html" />
+    <link rel="prev" title="mews.weather package" href="mews.weather.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> MEWS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">API Documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html#module-mews">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="mews.cython.html">mews.cython package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.data_requests.html">mews.data_requests package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.epw.html">mews.epw package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.errors.html">mews.errors package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.events.html">mews.events package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.graphics.html">mews.graphics package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.stats.html">mews.stats package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="mews.weather.html">mews.weather package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="mews.weather.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MEWS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="modules.html">API Documentation</a> &raquo;</li>
+          <li><a href="mews.weather.html">mews.weather package</a> &raquo;</li>
+      <li>mews.weather.alter module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/mews.weather.alter.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-mews.weather.alter">
+<span id="mews-weather-alter-module"></span><h1>mews.weather.alter module<a class="headerlink" href="#module-mews.weather.alter" title="Permalink to this heading"></a></h1>
+<p>Created on Tue Apr 20 14:50:39 2021</p>
+<div class="section" id="copyright-notice">
+<h2>Copyright Notice<a class="headerlink" href="#copyright-notice" title="Permalink to this heading"></a></h2>
+<p>Copyright 2021 National Technology and Engineering Solutions of Sandia, LLC.
+Under the terms of Contract DE-NA0003525, there is a non-exclusive license
+for use of this work by or on behalf of the U.S. Government.
+Export of this program may require a license from the
+United States Government.</p>
+<p>Please refer to the LICENSE.md file for a full description of the license
+terms for MEWS.</p>
+<p>The license for MEWS is the Modified BSD License and copyright information
+must be replicated in any derivative works that use the source code.</p>
+<p>&#64;author: dlvilla</p>
+<p>MEWS = Multi-senario Extreme Weather Simulator</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="mews.weather.alter.Alter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mews.weather.alter.</span></span><span class="sig-name descname"><span class="pre">Alter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weather_file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replace_year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isdoe2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_bin2txt_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../third_party_software/BIN2TXT.EXE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_start_datetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_tz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_hour_in_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8760</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Alter energy plus or doe2 weather files - shorter or longer than a year permitted</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.alter.Alter.add_alteration">
+<span class="sig-name descname"><span class="pre">add_alteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">day</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_func=&lt;function</span> <span class="pre">Alter.&lt;lambda&gt;&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column='Dry</span> <span class="pre">Bulb</span> <span class="pre">Temperature'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alteration_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">averaging_steps=1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.add_alteration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.add_alteration" title="Permalink to this definition"></a></dt>
+<dd><p>add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column):</p>
+<blockquote>
+<div><p>year  : int : year of start date
+day   : int : day of month on which the heat wave starts
+month : int : month of year on which the heat wave starts
+hour  : int : hour of day on which the heat wave starts (1-24)
+duration : int : number of hours that the heat wave lasts. if = -1</p>
+<blockquote>
+<div><p>then the change is applied to the end of the weather file</p>
+</div></blockquote>
+<dl class="simple">
+<dt>peak_delta<span class="classifier">float</span><span class="classifier">peak value change from original weather</span></dt><dd><p>at “shape_func” maximum</p>
+</dd>
+<dt>shape_func<span class="classifier">function|list|tuple|np.array</span><span class="classifier">a function or array</span></dt><dd><p>whose range interval [0,1] will be mapped to [0,duration] in hours.
+The function will be normalized to have a peak of 1 for its
+peak value over [0,1]. For example, a sine function could be
+lambda x: sin(pi*x). This shape is applied in adding the heat wave.
+from the start time to duration_hours later. If the input is an
+array, it must have ‘duration’ number of entries.</p>
+</dd>
+<dt>column<span class="classifier">str</span><span class="classifier">optional</span><span class="classifier">default = ‘Dry Bulb Temperature’</span></dt><dd><p>must be an entry in the column names of the energy plus weather
+file.</p>
+</dd>
+<dt>alteration_name<span class="classifier">any type that can be a key for dict</span><span class="classifier">optional :</span></dt><dd><dl class="simple">
+<dt>Default = None:</dt><dd><p>If none then name is “Alteration X” where X is the current
+number of alterations + 1.
+If any other type, it must not be a repeat of previously
+added alterations.</p>
+</dd>
+</dl>
+</dd>
+<dt>averaging_steps<span class="classifier">int</span><span class="classifier">optional Default = 1</span></dt><dd><p>The number of steps to average the weather signal over when
+adding the heat wave. For example, if heat wave statistics
+come from daily data, then additions need to be made w/r to
+the daily average and this should be 24</p>
+</dd>
+</dl>
+</div></blockquote>
+<blockquote>
+<div><p>None - internal epwobj is altered use “write” to write the result.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.alter.Alter.read">
+<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weather_file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replace_year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clear_alterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isdoe2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_bin2txt_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../third_party_software/BIN2TXT.EXE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_start_datetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_tz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_hour_in_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8760</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.read" title="Permalink to this definition"></a></dt>
+<dd><p>read a new Energy Plus Weather (epw) file (or doe2 <a href="#id1"><span class="problematic" id="id2">*</span></a>.bin) while optionally
+keeping previously added alterations in obj.alterations</p>
+<dl class="simple">
+<dt>obj.read(weather_file_path,replace_year=None,check_types=True,</dt><dd><p>clear_alterations=False,isdoe2=False,
+use_exe=False,doe2_bin2txt_path=r”../third_party_software/BIN2TXT.EXE”,
+doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None)</p>
+</dd>
+<dt>The input has three valid modes:</dt><dd><dl class="simple">
+<dt>Energy Plus: only input weather_file_path and optionally:</dt><dd><p>replace_year, check_types, and clear_alterations</p>
+</dd>
+<dt>DOE2 native python: All Energy Plus AND: isdoe2=True:</dt><dd><p>use_exe=False (default) all other inputs are optional:</p>
+</dd>
+<dt>DOE2 using exe: All inputs (even optional ones) are REQUIRED</dt><dd><p>except doe2_bin2txt_path, replace_year, check_types, and
+clear_alterations remain optional.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Once you have used one mode, there is no crossing over to another mode</p>
+<dl class="simple">
+<dt>Warning: This function resets the entire object and is equivalent</dt><dd><p>to creating a new object except that the previously entered
+alterations are left intact. This allows for these altertions
+to be applied in proportionately the same positions for a new
+weather history.</p>
+</dd>
+</dl>
+<p>If replace_year causes new coincidence with leap years, then an
+extra day is added (Feb 28th if repeated). If a replace_year moves
+from a leap year to a non-leap year, then Feb 29th is deleted if it
+is present.</p>
+<dl class="simple">
+<dt>weather_file_path<span class="classifier">str</span><span class="classifier">a valid path to an energy plus weather file</span></dt><dd><p>or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl
+inputs are needed for the doe2 option.</p>
+</dd>
+<dt>replace_year<span class="classifier">optional</span><span class="classifier">int</span><span class="classifier">optional - required if isdoe2=True</span><span class="classifier">default = None</span></dt><dd><p>If None, then leave the year in the energy plus file unaltered
+If an int, then change the year to the value for all rows
+If a tup, then first entry is the begin year and second is the hour
+at which to change to the next year.
+This is useful to give TMY or other multi-year compilations a single
+year within a scenario history.</p>
+</dd>
+<dt>check_types<span class="classifier">optional: bool</span><span class="classifier">optional</span><span class="classifier">default = True</span></dt><dd><p>True - check types in all functions (slower but safer)
+False - do not check types (likely to get less understandable errors
+if something goes wrong)</p>
+</dd>
+<dt>clear_alterations<span class="classifier">optional: bool</span><span class="classifier">remove previous alterations from the current</span></dt><dd><p>object. Reissuing a read command to an Alter object allows a new set
+of weather to recieve the same alterations a previous set recieved</p>
+</dd>
+<dt>isdoe2<span class="classifier">optional: bool</span><span class="classifier">read in a DOE2 weather file instead of an EPW and then</span></dt><dd><p>wrangle that data into an EP format for the self.epwobj database</p>
+</dd>
+<dt>use_exe<span class="classifier">optional</span><span class="classifier">bool</span><span class="classifier">True = Use BIN2TXT.EXE to read DOE-2 BIN file</span></dt><dd><p>False = Use Python to read DOE-2 BIN (PREFERRED).</p>
+</dd>
+<dt>doe2_bin2txt_path<span class="classifier">optional</span><span class="classifier">string</span><span class="classifier">a valid path to an executable</span></dt><dd><p>that converts a DOE2 <a href="#id3"><span class="problematic" id="id4">*</span></a>.BIN weather file to an ASCII text file.
+The executable is assumed to be named BIN2TXT.EXE and comes with
+any distribution of DOE2 which can be obtained by forming a license
+agreement with James Hirsch and Associates (www.doe2.com). A folder
+in mews “third_party_software” can be used to put the <a href="#id5"><span class="problematic" id="id6">*</span></a>.EXE</p>
+</dd>
+<dt>doe2_start_datetime<span class="classifier">optional</span><span class="classifier">datetime</span><span class="classifier">Input the start time for</span></dt><dd><p>the weather file. if not entered, then the value in the BIN file
+is used.</p>
+</dd>
+<dt>doe2_hour_in_file<span class="classifier">optional</span><span class="classifier">must be 8760 or 8784 for leap years.</span></dt><dd><p>required if isdoe2=True. This allows a non-leap year to be forced
+into a leap year for consistency. Feb28th is just repeated for such
+cases.</p>
+</dd>
+<dt>doe2_timezone<span class="classifier">optional</span><span class="classifier">required if isdoe2=True: str</span><span class="classifier">name of time</span></dt><dd><p>zone applicable to the doe2 file</p>
+</dd>
+<dt>doe2_dst<span class="classifier">optional</span><span class="classifier">required if isdoe2=True: list/tuple with 2 entries</span></dt><dd><p>that are datetimes with begin and end times for day light savings
+time.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None - obj.epwobj has a new dataset afterwards.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.alter.Alter.reindex_2_datetime">
+<span class="sig-name descname"><span class="pre">reindex_2_datetime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tzname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.reindex_2_datetime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.reindex_2_datetime" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tzname</strong> (<em>str : optional : a valid time zone name</em>) – Default - None - keep data time zone naive</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>df_out - Dataframe with a DatetimeIndex index and weather data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.alter.Alter.remove_alteration">
+<span class="sig-name descname"><span class="pre">remove_alteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alteration_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.remove_alteration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.remove_alteration" title="Permalink to this definition"></a></dt>
+<dd><p>Remove an alteration that has already been added</p>
+<p>obj.remove_alteration(alteration_name)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>alteration_name</strong> (<em>str</em>) – a name that must exist in the obj.alterations already added</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.alter.Alter.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">out_file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txt2bin_exepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../third_party_software/TXT2BIN.EXE'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.write"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.write" title="Permalink to this definition"></a></dt>
+<dd><p>write an Energy Plus Weather file with alterations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>out_file_name</strong> (<em>str</em><em>, </em><em>optional</em>) – File name and path to output altered epw weather to.
+The default is None. If None, then use the original file name with
+“_Altered” appended to it</p></li>
+<li><p><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, overwrite an existing file otherwise throw an error if the
+file exists. The default is False.</p></li>
+<li><p><strong>create_dir</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True create a new directory, otherwise throw an error if the
+folder does not exsit. The default is False.</p></li>
+<li><p><strong>txt2bin_exepath</strong> (<em>str : optional</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mews.weather.html" class="btn btn-neutral float-left" title="mews.weather package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mews.weather.climate.html" class="btn btn-neutral float-right" title="mews.weather.climate module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
