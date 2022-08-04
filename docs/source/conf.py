@@ -1,4 +1,4 @@
-autodoc_mock_imports = ['mews.cython.markov']
+autodoc_mock_imports = ['mews.cython.markov','openpyxl','xarray']
 
 # Configuration file for the Sphinx documentation builder.
 #
