@@ -73,11 +73,11 @@ class Alter(object):
         use_exe : optional : bool : determine whether to use BIN2TXT and TXT2BIN
             executables (True) or native Python to read BIN files.
         doe2_bin2txt_path : optional : string : a valid path to an executable
-            that converts a DOE2 *.BIN weather file to an ASCII text file. 
+            that converts a DOE2 filename.BIN weather file to an ASCII text file. 
             The executable is assumed to be named BIN2TXT.EXE and comes with
             any distribution of DOE2 which can be obtained by forming a license
             agreement with James Hirsch and Associates (www.doe2.com). A folder
-            in mews "third_party_software" can be used to put the *.EXE
+            in mews "third_party_software" can be used to put the filename.EXE
         doe2_start_datetime : optional : datetime : Input the start time for
             the weather file. required if isdoe2=True. 
         doe2_hour_in_file : optional : must be 8760 or 8784 for leap years.
@@ -234,16 +234,20 @@ class Alter(object):
         """
         add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column):
             
-        Inputs
-        ------
+        Parameters
+        ----------
+        
             year  : int : year of start date
             day   : int : day of month on which the heat wave starts        
             month : int : month of year on which the heat wave starts
             hour  : int : hour of day on which the heat wave starts (1-24)
+            
             duration : int : number of hours that the heat wave lasts. if = -1
                 then the change is applied to the end of the weather file
+            
             peak_delta   : float : peak value change from original weather 
                 at "shape_func" maximum
+            
             shape_func     : function|list|tuple|np.array : a function or array 
                 whose range interval [0,1] will be mapped to [0,duration] in hours. 
                 The function will be normalized to have a peak of 1 for its 
@@ -266,7 +270,7 @@ class Alter(object):
                  come from daily data, then additions need to be made w/r to
                  the daily average and this should be 24
                 
-        Outputs
+        Returns
         -------
             None - internal epwobj is altered use "write" to write the result.
             
@@ -386,7 +390,7 @@ class Alter(object):
              doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
         
         """
-        read a new Energy Plus Weather (epw) file (or doe2 *.bin) while optionally 
+        read a new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally 
         keeping previously added alterations in obj.alterations
         
         obj.read(weather_file_path,replace_year=None,check_types=True,
@@ -416,7 +420,7 @@ class Alter(object):
         from a leap year to a non-leap year, then Feb 29th is deleted if it 
         is present.
         
-        Inputs
+        Parameters
         ------
         weather_file_path : str : a valid path to an energy plus weather file
             or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl
@@ -440,11 +444,11 @@ class Alter(object):
         use_exe : optional : bool : True = Use BIN2TXT.EXE to read DOE-2 BIN file
             False = Use Python to read DOE-2 BIN (PREFERRED).
         doe2_bin2txt_path : optional : string : a valid path to an executable
-            that converts a DOE2 *.BIN weather file to an ASCII text file. 
+            that converts a DOE2 filename.BIN weather file to an ASCII text file. 
             The executable is assumed to be named BIN2TXT.EXE and comes with
             any distribution of DOE2 which can be obtained by forming a license
             agreement with James Hirsch and Associates (www.doe2.com). A folder
-            in mews "third_party_software" can be used to put the *.EXE
+            in mews "third_party_software" can be used to put the filename.EXE
         doe2_start_datetime : optional : datetime : Input the start time for
             the weather file. if not entered, then the value in the BIN file
             is used. 
@@ -458,7 +462,7 @@ class Alter(object):
             that are datetimes with begin and end times for day light savings
             time.
         
-        returns
+        Returns
         ------
         None - obj.epwobj has a new dataset afterwards.
         """

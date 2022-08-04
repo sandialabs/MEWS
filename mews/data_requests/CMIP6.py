@@ -78,12 +78,10 @@ class CMIP_Data():
                         year_baseline,
                         year_desired,
                         model_guide,
-                        world_map,
-                        calculate_error=True)
+                        file_path)
     
     Parameters
     ----------
-    
     lat_desired : float
         Latitude value used for temperature change calculations. Must be
         between -90 and 90 [degrees].
@@ -131,7 +129,6 @@ class CMIP_Data():
     
     Returns
     -------
-    
     None - Results found in obj.del_T which returns a dictionary of the 
         temperature change values for each scenario based on year_desired.
     

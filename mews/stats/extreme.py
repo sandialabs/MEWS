@@ -118,7 +118,7 @@ class DiscreteMarkov():
             minimum number of steps before a state can transition
         skip_steps : int :
             Number of steps at the beginning of the markov chain to assign to
-            state0 (this is used for weather files that may begin in the middle
+                    state0 (this is used for weather files that may begin in the middle
                     of the day to avoid applying heat waves out of sync with
                     day-night cycles)
         count_in_min_steps_intervals : bool : optional : Default = True

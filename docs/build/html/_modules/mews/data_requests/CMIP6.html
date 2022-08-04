@@ -145,12 +145,10 @@
 <span class="sd">                        year_baseline,</span>
 <span class="sd">                        year_desired,</span>
 <span class="sd">                        model_guide,</span>
-<span class="sd">                        world_map,</span>
-<span class="sd">                        calculate_error=True)</span>
+<span class="sd">                        file_path)</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    </span>
 <span class="sd">    lat_desired : float</span>
 <span class="sd">        Latitude value used for temperature change calculations. Must be</span>
 <span class="sd">        between -90 and 90 [degrees].</span>
@@ -198,7 +196,6 @@
 <span class="sd">    </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    </span>
 <span class="sd">    None - Results found in obj.del_T which returns a dictionary of the </span>
 <span class="sd">        temperature change values for each scenario based on year_desired.</span>
 <span class="sd">    </span>

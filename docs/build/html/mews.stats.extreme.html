@@ -131,12 +131,12 @@ and initial ‘state0’</p>
 <li><p><strong>num_step</strong> (<em>int</em><em> or </em><em>np.int</em>) – number of steps to simulate for the object’s defined transition_matrix</p></li>
 <li><p><strong>state0</strong> (<em>int</em><em> or </em><em>str</em>) – initial state of the history</p></li>
 <li><p><strong>min_steps</strong> (<em>int : optional</em>) – minimum number of steps before a state can transition</p></li>
-<li><p><strong>skip_steps</strong> (<em>int :</em>) – <p>Number of steps at the beginning of the markov chain to assign to
-state0 (this is used for weather files that may begin in the middle</p>
-<blockquote>
-<div><p>of the day to avoid applying heat waves out of sync with
+<li><p><strong>skip_steps</strong> (<em>int :</em>) – <dl class="simple">
+<dt>Number of steps at the beginning of the markov chain to assign to</dt><dd><p>state0 (this is used for weather files that may begin in the middle
+of the day to avoid applying heat waves out of sync with
 day-night cycles)</p>
-</div></blockquote>
+</dd>
+</dl>
 </p></li>
 <li><p><strong>count_in_min_steps_intervals</strong> (<em>bool : optional : Default = True</em>) – <dl class="simple">
 <dt>True = apply markov transition matrix as a discrete process that</dt><dd><p>is randomly tested every min_steps interval (i.e. min_steps = 24

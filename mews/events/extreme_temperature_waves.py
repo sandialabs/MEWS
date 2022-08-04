@@ -193,8 +193,8 @@ class ExtremeTemperatureWaves(Extremes):
         obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func)
         
         
-        Inputs:
-        -------
+        Parameters
+        ----------
         
         scenario_name : str : A string indicating the name of a scenario
         
@@ -215,8 +215,8 @@ class ExtremeTemperatureWaves(Extremes):
                 Number of times to repeat the entire analysis of each weather file 
                 so that stochastic analysis can be carried out.
         
-        Returns :
-            
+        Returns
+        -------    
             Places results into self.extreme_results and
                                 self.ext_obj
         

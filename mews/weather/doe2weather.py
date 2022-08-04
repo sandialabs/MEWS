@@ -352,32 +352,34 @@ class DOE2Weather(object):
 
 
     def bin2df(self,binfilename, start_datetime=None, hour_in_file=None, bin2txt_exepath=None, timezone=None, dst=None, use_exe=False):
-        """ This function was originally written in matlab and is the 
+        """ 
+        This function was originally written in matlab and is the 
         "ReadDOE2BINTXTFile.m" function except that it also includes conversion
         of the BIN file into a text file  
         
         DST is a list of the start of daylight savings and end so that
         adjustments can be made and the time stamps adjusted for daylight savings.
-    % the input *.txt "filename" must come from a DOE2 bin file that has been
-    %  converted to a text file. It has the following columns of information:
-    % Column Number   Variable      Description         Units
-    %C 1              IM2            MOMTH              (1-12)
-    %C 2             ID             DAY OF MONTH
-    %C 3             IH             HOUR OF DAY
-    %C 4             CALC(1)        WET BULB TEMP      (DEG F)
-    %C 5             CALC(2)        DRY BULB TEMP      (DEG F)
-    %C 6             CALC(3)        PRESSURE           (INCHES OF HG)
-    %C 7             CALC(4)        CLOUD AMOUNT       (0 - 10)
-    %C 8             ISNOW          SNOW FLAG          (1 = SNOWFALL)
-    %C 9             IRAIN          RAIN FLAG          (1 = RAINFALL)
-    %C 10            IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)
-    %C 11            CALC(8)        HUMIDITY RATIO     (LB H2O/LB AIR)
-    %C 12            CALC(9)        DENSITY OF AIR     (LB/CU FT)
-    %C 13            CALC(10)       SPECIFIC ENTHALPY  (BTU/LB)
-    %C 14            CALC(11)       TOTAL HOR. SOLAR   (BTU/HR-SQFT)
-    %C 15            CALC(12)       DIR. NORMAL SOLAR  (BTU/HR-SQFT)
-    %C 16            ICLDTY         CLOUD TYPE         (0 - 2)
-    %C 17            CALC(14)       WIND SPEED         KNOTS    
+        the input filename.txt must come from a DOE2 bin file that has been
+        converted to a text file. It has the following columns of information:
+            
+        %Column Number   Variable       Description        Units
+        %C 1             IM2            MONTH              (1-12)
+        %C 2             ID             DAY OF MONTH
+        %C 3             IH             HOUR OF DAY
+        %C 4             CALC(1)        WET BULB TEMP      (DEG F)
+        %C 5             CALC(2)        DRY BULB TEMP      (DEG F)
+        %C 6             CALC(3)        PRESSURE           (INCHES OF HG)
+        %C 7             CALC(4)        CLOUD AMOUNT       (0 - 10)
+        %C 8             ISNOW          SNOW FLAG          (1 = SNOWFALL)
+        %C 9             IRAIN          RAIN FLAG          (1 = RAINFALL)
+        %C 10            IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)
+        %C 11            CALC(8)        HUMIDITY RATIO     (LB H2O/LB AIR)
+        %C 12            CALC(9)        DENSITY OF AIR     (LB/CU FT)
+        %C 13            CALC(10)       SPECIFIC ENTHALPY  (BTU/LB)
+        %C 14            CALC(11)       TOTAL HOR. SOLAR   (BTU/HR-SQFT)
+        %C 15            CALC(12)       DIR. NORMAL SOLAR  (BTU/HR-SQFT)
+        %C 16            ICLDTY         CLOUD TYPE         (0 - 2)
+        %C 17            CALC(14)       WIND SPEED         KNOTS    
         
         
         """
@@ -799,8 +801,9 @@ class DOE2Weather(object):
             %C 17            CALC(14)       WIND SPEED         KNOTS    
             
         headers : list : list of np.array with specialized dtype to capture
-            the header for each month of data in the DOE-2 *.BIN file.
+            the header for each month of data in the DOE-2 filename.BIN file.
             The dtype spec is as follows:
+                
                 np.dtype([('location_IWDID','a20'),
                           ('year_IWYR', 'i4'),
                           ('latitude_WLAT','f4'),
@@ -811,6 +814,7 @@ class DOE2Weather(object):
                           ('clearness_number_CLN_IM1','f4'),
                           ('ground_temperature_GT_IM1','f4'),
                           ('solar_flag_IWSOL','i4')])
+
                 
         binfilename : str : valid path/filename for which a file will be 
             written.

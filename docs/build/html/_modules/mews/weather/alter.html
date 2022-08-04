@@ -140,11 +140,11 @@
 <span class="sd">        use_exe : optional : bool : determine whether to use BIN2TXT and TXT2BIN</span>
 <span class="sd">            executables (True) or native Python to read BIN files.</span>
 <span class="sd">        doe2_bin2txt_path : optional : string : a valid path to an executable</span>
-<span class="sd">            that converts a DOE2 *.BIN weather file to an ASCII text file. </span>
+<span class="sd">            that converts a DOE2 filename.BIN weather file to an ASCII text file. </span>
 <span class="sd">            The executable is assumed to be named BIN2TXT.EXE and comes with</span>
 <span class="sd">            any distribution of DOE2 which can be obtained by forming a license</span>
 <span class="sd">            agreement with James Hirsch and Associates (www.doe2.com). A folder</span>
-<span class="sd">            in mews &quot;third_party_software&quot; can be used to put the *.EXE</span>
+<span class="sd">            in mews &quot;third_party_software&quot; can be used to put the filename.EXE</span>
 <span class="sd">        doe2_start_datetime : optional : datetime : Input the start time for</span>
 <span class="sd">            the weather file. required if isdoe2=True. </span>
 <span class="sd">        doe2_hour_in_file : optional : must be 8760 or 8784 for leap years.</span>
@@ -301,16 +301,20 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column):</span>
 <span class="sd">            </span>
-<span class="sd">        Inputs</span>
-<span class="sd">        ------</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        </span>
 <span class="sd">            year  : int : year of start date</span>
 <span class="sd">            day   : int : day of month on which the heat wave starts        </span>
 <span class="sd">            month : int : month of year on which the heat wave starts</span>
 <span class="sd">            hour  : int : hour of day on which the heat wave starts (1-24)</span>
+<span class="sd">            </span>
 <span class="sd">            duration : int : number of hours that the heat wave lasts. if = -1</span>
 <span class="sd">                then the change is applied to the end of the weather file</span>
+<span class="sd">            </span>
 <span class="sd">            peak_delta   : float : peak value change from original weather </span>
 <span class="sd">                at &quot;shape_func&quot; maximum</span>
+<span class="sd">            </span>
 <span class="sd">            shape_func     : function|list|tuple|np.array : a function or array </span>
 <span class="sd">                whose range interval [0,1] will be mapped to [0,duration] in hours. </span>
 <span class="sd">                The function will be normalized to have a peak of 1 for its </span>
@@ -333,7 +337,7 @@
 <span class="sd">                 come from daily data, then additions need to be made w/r to</span>
 <span class="sd">                 the daily average and this should be 24</span>
 <span class="sd">                </span>
-<span class="sd">        Outputs</span>
+<span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">            None - internal epwobj is altered use &quot;write&quot; to write the result.</span>
 <span class="sd">            </span>
@@ -453,7 +457,7 @@
              <span class="n">doe2_start_datetime</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">doe2_tz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">doe2_hour_in_file</span><span class="o">=</span><span class="mi">8760</span><span class="p">,</span><span class="n">doe2_dst</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        read a new Energy Plus Weather (epw) file (or doe2 *.bin) while optionally </span>
+<span class="sd">        read a new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally </span>
 <span class="sd">        keeping previously added alterations in obj.alterations</span>
 <span class="sd">        </span>
 <span class="sd">        obj.read(weather_file_path,replace_year=None,check_types=True,</span>
@@ -483,7 +487,7 @@
 <span class="sd">        from a leap year to a non-leap year, then Feb 29th is deleted if it </span>
 <span class="sd">        is present.</span>
 <span class="sd">        </span>
-<span class="sd">        Inputs</span>
+<span class="sd">        Parameters</span>
 <span class="sd">        ------</span>
 <span class="sd">        weather_file_path : str : a valid path to an energy plus weather file</span>
 <span class="sd">            or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl</span>
@@ -507,11 +511,11 @@
 <span class="sd">        use_exe : optional : bool : True = Use BIN2TXT.EXE to read DOE-2 BIN file</span>
 <span class="sd">            False = Use Python to read DOE-2 BIN (PREFERRED).</span>
 <span class="sd">        doe2_bin2txt_path : optional : string : a valid path to an executable</span>
-<span class="sd">            that converts a DOE2 *.BIN weather file to an ASCII text file. </span>
+<span class="sd">            that converts a DOE2 filename.BIN weather file to an ASCII text file. </span>
 <span class="sd">            The executable is assumed to be named BIN2TXT.EXE and comes with</span>
 <span class="sd">            any distribution of DOE2 which can be obtained by forming a license</span>
 <span class="sd">            agreement with James Hirsch and Associates (www.doe2.com). A folder</span>
-<span class="sd">            in mews &quot;third_party_software&quot; can be used to put the *.EXE</span>
+<span class="sd">            in mews &quot;third_party_software&quot; can be used to put the filename.EXE</span>
 <span class="sd">        doe2_start_datetime : optional : datetime : Input the start time for</span>
 <span class="sd">            the weather file. if not entered, then the value in the BIN file</span>
 <span class="sd">            is used. </span>
@@ -525,7 +529,7 @@
 <span class="sd">            that are datetimes with begin and end times for day light savings</span>
 <span class="sd">            time.</span>
 <span class="sd">        </span>
-<span class="sd">        returns</span>
+<span class="sd">        Returns</span>
 <span class="sd">        ------</span>
 <span class="sd">        None - obj.epwobj has a new dataset afterwards.</span>
 <span class="sd">        &quot;&quot;&quot;</span>

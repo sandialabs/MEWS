@@ -119,17 +119,15 @@ besides MEWS</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.bin2df">
 <span class="sig-name descname"><span class="pre">bin2df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_datetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hour_in_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin2txt_exepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timezone</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.bin2df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.bin2df" title="Permalink to this definition"></a></dt>
-<dd><dl>
-<dt>This function was originally written in matlab and is the</dt><dd><p>“ReadDOE2BINTXTFile.m” function except that it also includes conversion
+<dd><p>This function was originally written in matlab and is the
+“ReadDOE2BINTXTFile.m” function except that it also includes conversion
 of the BIN file into a text file</p>
 <p>DST is a list of the start of daylight savings and end so that
-adjustments can be made and the time stamps adjusted for daylight savings.</p>
-</dd>
-</dl>
-<p>% the input <a href="#id1"><span class="problematic" id="id2">*</span></a>.txt “filename” must come from a DOE2 bin file that has been
-%  converted to a text file. It has the following columns of information:
-% Column Number   Variable      Description         Units
-%C 1              IM2            MOMTH              (1-12)
+adjustments can be made and the time stamps adjusted for daylight savings.
+the input filename.txt must come from a DOE2 bin file that has been
+converted to a text file. It has the following columns of information:</p>
+<p>%Column Number   Variable       Description        Units
+%C 1             IM2            MONTH              (1-12)
 %C 2             ID             DAY OF MONTH
 %C 3             IH             HOUR OF DAY
 %C 4             CALC(1)        WET BULB TEMP      (DEG F)
@@ -276,7 +274,7 @@ and associates.</p></li>
 %C 16            ICLDTY         CLOUD TYPE         (0 - 2)
 %C 17            CALC(14)       WIND SPEED         KNOTS</p>
 </p></li>
-<li><p><strong>headers</strong> (<em>list : list of np.array with specialized dtype to capture</em>) – <p>the header for each month of data in the DOE-2 <a href="#id3"><span class="problematic" id="id4">*</span></a>.BIN file.
+<li><p><strong>headers</strong> (<em>list : list of np.array with specialized dtype to capture</em>) – <p>the header for each month of data in the DOE-2 filename.BIN file.
 The dtype spec is as follows:</p>
 <blockquote>
 <div><dl class="simple">
@@ -293,11 +291,16 @@ The dtype spec is as follows:</p>
 </dl>
 </div></blockquote>
 </p></li>
-<li><p><strong>binfilename</strong> (<em>str : valid path/filename for which a file will be</em>) – written.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><ul class="simple">
+</dl>
+<dl class="simple">
+<dt>binfilename<span class="classifier">str</span><span class="classifier">valid path/filename for which a file will be</span></dt><dd><p>written.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><ul class="simple">
 <li><p><em>None</em></p></li>
 <li><p><em>License Note</em></p></li>
 <li><p><em>=============</em></p></li>

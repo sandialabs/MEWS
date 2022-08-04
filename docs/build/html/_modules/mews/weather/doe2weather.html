@@ -419,32 +419,34 @@
 
 
 <div class="viewcode-block" id="DOE2Weather.bin2df"><a class="viewcode-back" href="../../../mews.weather.doe2weather.html#mews.weather.doe2weather.DOE2Weather.bin2df">[docs]</a>    <span class="k">def</span> <span class="nf">bin2df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">binfilename</span><span class="p">,</span> <span class="n">start_datetime</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hour_in_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bin2txt_exepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dst</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_exe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; This function was originally written in matlab and is the </span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        This function was originally written in matlab and is the </span>
 <span class="sd">        &quot;ReadDOE2BINTXTFile.m&quot; function except that it also includes conversion</span>
 <span class="sd">        of the BIN file into a text file  </span>
 <span class="sd">        </span>
 <span class="sd">        DST is a list of the start of daylight savings and end so that</span>
 <span class="sd">        adjustments can be made and the time stamps adjusted for daylight savings.</span>
-<span class="sd">    % the input *.txt &quot;filename&quot; must come from a DOE2 bin file that has been</span>
-<span class="sd">    %  converted to a text file. It has the following columns of information:</span>
-<span class="sd">    % Column Number   Variable      Description         Units</span>
-<span class="sd">    %C 1              IM2            MOMTH              (1-12)</span>
-<span class="sd">    %C 2             ID             DAY OF MONTH</span>
-<span class="sd">    %C 3             IH             HOUR OF DAY</span>
-<span class="sd">    %C 4             CALC(1)        WET BULB TEMP      (DEG F)</span>
-<span class="sd">    %C 5             CALC(2)        DRY BULB TEMP      (DEG F)</span>
-<span class="sd">    %C 6             CALC(3)        PRESSURE           (INCHES OF HG)</span>
-<span class="sd">    %C 7             CALC(4)        CLOUD AMOUNT       (0 - 10)</span>
-<span class="sd">    %C 8             ISNOW          SNOW FLAG          (1 = SNOWFALL)</span>
-<span class="sd">    %C 9             IRAIN          RAIN FLAG          (1 = RAINFALL)</span>
-<span class="sd">    %C 10            IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)</span>
-<span class="sd">    %C 11            CALC(8)        HUMIDITY RATIO     (LB H2O/LB AIR)</span>
-<span class="sd">    %C 12            CALC(9)        DENSITY OF AIR     (LB/CU FT)</span>
-<span class="sd">    %C 13            CALC(10)       SPECIFIC ENTHALPY  (BTU/LB)</span>
-<span class="sd">    %C 14            CALC(11)       TOTAL HOR. SOLAR   (BTU/HR-SQFT)</span>
-<span class="sd">    %C 15            CALC(12)       DIR. NORMAL SOLAR  (BTU/HR-SQFT)</span>
-<span class="sd">    %C 16            ICLDTY         CLOUD TYPE         (0 - 2)</span>
-<span class="sd">    %C 17            CALC(14)       WIND SPEED         KNOTS    </span>
+<span class="sd">        the input filename.txt must come from a DOE2 bin file that has been</span>
+<span class="sd">        converted to a text file. It has the following columns of information:</span>
+<span class="sd">            </span>
+<span class="sd">        %Column Number   Variable       Description        Units</span>
+<span class="sd">        %C 1             IM2            MONTH              (1-12)</span>
+<span class="sd">        %C 2             ID             DAY OF MONTH</span>
+<span class="sd">        %C 3             IH             HOUR OF DAY</span>
+<span class="sd">        %C 4             CALC(1)        WET BULB TEMP      (DEG F)</span>
+<span class="sd">        %C 5             CALC(2)        DRY BULB TEMP      (DEG F)</span>
+<span class="sd">        %C 6             CALC(3)        PRESSURE           (INCHES OF HG)</span>
+<span class="sd">        %C 7             CALC(4)        CLOUD AMOUNT       (0 - 10)</span>
+<span class="sd">        %C 8             ISNOW          SNOW FLAG          (1 = SNOWFALL)</span>
+<span class="sd">        %C 9             IRAIN          RAIN FLAG          (1 = RAINFALL)</span>
+<span class="sd">        %C 10            IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)</span>
+<span class="sd">        %C 11            CALC(8)        HUMIDITY RATIO     (LB H2O/LB AIR)</span>
+<span class="sd">        %C 12            CALC(9)        DENSITY OF AIR     (LB/CU FT)</span>
+<span class="sd">        %C 13            CALC(10)       SPECIFIC ENTHALPY  (BTU/LB)</span>
+<span class="sd">        %C 14            CALC(11)       TOTAL HOR. SOLAR   (BTU/HR-SQFT)</span>
+<span class="sd">        %C 15            CALC(12)       DIR. NORMAL SOLAR  (BTU/HR-SQFT)</span>
+<span class="sd">        %C 16            ICLDTY         CLOUD TYPE         (0 - 2)</span>
+<span class="sd">        %C 17            CALC(14)       WIND SPEED         KNOTS    </span>
 <span class="sd">        </span>
 <span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -866,8 +868,9 @@
 <span class="sd">            %C 17            CALC(14)       WIND SPEED         KNOTS    </span>
 <span class="sd">            </span>
 <span class="sd">        headers : list : list of np.array with specialized dtype to capture</span>
-<span class="sd">            the header for each month of data in the DOE-2 *.BIN file.</span>
+<span class="sd">            the header for each month of data in the DOE-2 filename.BIN file.</span>
 <span class="sd">            The dtype spec is as follows:</span>
+<span class="sd">                </span>
 <span class="sd">                np.dtype([(&#39;location_IWDID&#39;,&#39;a20&#39;),</span>
 <span class="sd">                          (&#39;year_IWYR&#39;, &#39;i4&#39;),</span>
 <span class="sd">                          (&#39;latitude_WLAT&#39;,&#39;f4&#39;),</span>
@@ -878,6 +881,7 @@
 <span class="sd">                          (&#39;clearness_number_CLN_IM1&#39;,&#39;f4&#39;),</span>
 <span class="sd">                          (&#39;ground_temperature_GT_IM1&#39;,&#39;f4&#39;),</span>
 <span class="sd">                          (&#39;solar_flag_IWSOL&#39;,&#39;i4&#39;)])</span>
+
 <span class="sd">                </span>
 <span class="sd">        binfilename : str : valid path/filename for which a file will be </span>
 <span class="sd">            written.</span>

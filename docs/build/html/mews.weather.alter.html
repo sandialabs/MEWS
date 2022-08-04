@@ -109,52 +109,47 @@ must be replicated in any derivative works that use the source code.</p>
 <dt class="sig sig-object py" id="mews.weather.alter.Alter.add_alteration">
 <span class="sig-name descname"><span class="pre">add_alteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">day</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">month</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hour</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_func=&lt;function</span> <span class="pre">Alter.&lt;lambda&gt;&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column='Dry</span> <span class="pre">Bulb</span> <span class="pre">Temperature'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alteration_name=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">averaging_steps=1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.add_alteration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.add_alteration" title="Permalink to this definition"></a></dt>
 <dd><p>add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column):</p>
-<blockquote>
-<div><p>year  : int : year of start date
-day   : int : day of month on which the heat wave starts
-month : int : month of year on which the heat wave starts
-hour  : int : hour of day on which the heat wave starts (1-24)
-duration : int : number of hours that the heat wave lasts. if = -1</p>
-<blockquote>
-<div><p>then the change is applied to the end of the weather file</p>
-</div></blockquote>
-<dl class="simple">
-<dt>peak_delta<span class="classifier">float</span><span class="classifier">peak value change from original weather</span></dt><dd><p>at “shape_func” maximum</p>
-</dd>
-<dt>shape_func<span class="classifier">function|list|tuple|np.array</span><span class="classifier">a function or array</span></dt><dd><p>whose range interval [0,1] will be mapped to [0,duration] in hours.
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>year</strong> (<em>int : year of start date</em>) – </p></li>
+<li><p><strong>day</strong> (<em>int : day of month on which the heat wave starts</em>) – </p></li>
+<li><p><strong>month</strong> (<em>int : month of year on which the heat wave starts</em>) – </p></li>
+<li><p><strong>hour</strong> (<em>int : hour of day on which the heat wave starts</em><em> (</em><em>1-24</em><em>)</em>) – </p></li>
+<li><p><strong>duration</strong> (<em>int : number of hours that the heat wave lasts. if = -1</em>) – then the change is applied to the end of the weather file</p></li>
+<li><p><strong>peak_delta</strong> (<em>float : peak value change from original weather</em>) – at “shape_func” maximum</p></li>
+<li><p><strong>shape_func</strong> (<em>function</em><em>|</em><em>list</em><em>|</em><em>tuple</em><em>|</em><em>np.array : a function</em><em> or </em><em>array</em>) – whose range interval [0,1] will be mapped to [0,duration] in hours.
 The function will be normalized to have a peak of 1 for its
 peak value over [0,1]. For example, a sine function could be
 lambda x: sin(pi*x). This shape is applied in adding the heat wave.
 from the start time to duration_hours later. If the input is an
-array, it must have ‘duration’ number of entries.</p>
-</dd>
-<dt>column<span class="classifier">str</span><span class="classifier">optional</span><span class="classifier">default = ‘Dry Bulb Temperature’</span></dt><dd><p>must be an entry in the column names of the energy plus weather
-file.</p>
-</dd>
-<dt>alteration_name<span class="classifier">any type that can be a key for dict</span><span class="classifier">optional :</span></dt><dd><dl class="simple">
+array, it must have ‘duration’ number of entries.</p></li>
+<li><p><strong>column</strong> (<em>str : optional : default = 'Dry Bulb Temperature'</em>) – must be an entry in the column names of the energy plus weather
+file.</p></li>
+<li><p><strong>alteration_name</strong> (<em>any type that can be a key for dict : optional :</em>) – <dl class="simple">
 <dt>Default = None:</dt><dd><p>If none then name is “Alteration X” where X is the current
 number of alterations + 1.
 If any other type, it must not be a repeat of previously
 added alterations.</p>
 </dd>
 </dl>
-</dd>
-<dt>averaging_steps<span class="classifier">int</span><span class="classifier">optional Default = 1</span></dt><dd><p>The number of steps to average the weather signal over when
+</p></li>
+<li><p><strong>averaging_steps</strong> (<em>int : optional Default = 1</em>) – The number of steps to average the weather signal over when
 adding the heat wave. For example, if heat wave statistics
 come from daily data, then additions need to be made w/r to
-the daily average and this should be 24</p>
+the daily average and this should be 24</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None - internal epwobj is altered use “write” to write the result.</p>
 </dd>
 </dl>
-</div></blockquote>
-<blockquote>
-<div><p>None - internal epwobj is altered use “write” to write the result.</p>
-</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="mews.weather.alter.Alter.read">
 <span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weather_file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replace_year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_types</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clear_alterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isdoe2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_bin2txt_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../third_party_software/BIN2TXT.EXE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_start_datetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_tz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_hour_in_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8760</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doe2_dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/alter.html#Alter.read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.alter.Alter.read" title="Permalink to this definition"></a></dt>
-<dd><p>read a new Energy Plus Weather (epw) file (or doe2 <a href="#id1"><span class="problematic" id="id2">*</span></a>.bin) while optionally
+<dd><p>read a new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally
 keeping previously added alterations in obj.alterations</p>
 <dl class="simple">
 <dt>obj.read(weather_file_path,replace_year=None,check_types=True,</dt><dd><p>clear_alterations=False,isdoe2=False,
@@ -184,50 +179,41 @@ weather history.</p>
 extra day is added (Feb 28th if repeated). If a replace_year moves
 from a leap year to a non-leap year, then Feb 29th is deleted if it
 is present.</p>
-<dl class="simple">
-<dt>weather_file_path<span class="classifier">str</span><span class="classifier">a valid path to an energy plus weather file</span></dt><dd><p>or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl
-inputs are needed for the doe2 option.</p>
-</dd>
-<dt>replace_year<span class="classifier">optional</span><span class="classifier">int</span><span class="classifier">optional - required if isdoe2=True</span><span class="classifier">default = None</span></dt><dd><p>If None, then leave the year in the energy plus file unaltered
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weather_file_path</strong> (<em>str : a valid path to an energy plus weather file</em>) – or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl
+inputs are needed for the doe2 option.</p></li>
+<li><p><strong>replace_year</strong> (<em>optional : int : optional - required if isdoe2=True : default = None</em>) – If None, then leave the year in the energy plus file unaltered
 If an int, then change the year to the value for all rows
 If a tup, then first entry is the begin year and second is the hour
 at which to change to the next year.
 This is useful to give TMY or other multi-year compilations a single
-year within a scenario history.</p>
-</dd>
-<dt>check_types<span class="classifier">optional: bool</span><span class="classifier">optional</span><span class="classifier">default = True</span></dt><dd><p>True - check types in all functions (slower but safer)
+year within a scenario history.</p></li>
+<li><p><strong>check_types</strong> (<em>optional: bool : optional : default = True</em>) – True - check types in all functions (slower but safer)
 False - do not check types (likely to get less understandable errors
-if something goes wrong)</p>
-</dd>
-<dt>clear_alterations<span class="classifier">optional: bool</span><span class="classifier">remove previous alterations from the current</span></dt><dd><p>object. Reissuing a read command to an Alter object allows a new set
-of weather to recieve the same alterations a previous set recieved</p>
-</dd>
-<dt>isdoe2<span class="classifier">optional: bool</span><span class="classifier">read in a DOE2 weather file instead of an EPW and then</span></dt><dd><p>wrangle that data into an EP format for the self.epwobj database</p>
-</dd>
-<dt>use_exe<span class="classifier">optional</span><span class="classifier">bool</span><span class="classifier">True = Use BIN2TXT.EXE to read DOE-2 BIN file</span></dt><dd><p>False = Use Python to read DOE-2 BIN (PREFERRED).</p>
-</dd>
-<dt>doe2_bin2txt_path<span class="classifier">optional</span><span class="classifier">string</span><span class="classifier">a valid path to an executable</span></dt><dd><p>that converts a DOE2 <a href="#id3"><span class="problematic" id="id4">*</span></a>.BIN weather file to an ASCII text file.
+if something goes wrong)</p></li>
+<li><p><strong>clear_alterations</strong> (<em>optional: bool : remove previous alterations from the current</em>) – object. Reissuing a read command to an Alter object allows a new set
+of weather to recieve the same alterations a previous set recieved</p></li>
+<li><p><strong>isdoe2</strong> (<em>optional: bool : read in a DOE2 weather file instead of an EPW and then</em>) – wrangle that data into an EP format for the self.epwobj database</p></li>
+<li><p><strong>use_exe</strong> (<em>optional : bool : True = Use BIN2TXT.EXE to read DOE-2 BIN file</em>) – False = Use Python to read DOE-2 BIN (PREFERRED).</p></li>
+<li><p><strong>doe2_bin2txt_path</strong> (<em>optional : string : a valid path to an executable</em>) – that converts a DOE2 filename.BIN weather file to an ASCII text file.
 The executable is assumed to be named BIN2TXT.EXE and comes with
 any distribution of DOE2 which can be obtained by forming a license
 agreement with James Hirsch and Associates (www.doe2.com). A folder
-in mews “third_party_software” can be used to put the <a href="#id5"><span class="problematic" id="id6">*</span></a>.EXE</p>
-</dd>
-<dt>doe2_start_datetime<span class="classifier">optional</span><span class="classifier">datetime</span><span class="classifier">Input the start time for</span></dt><dd><p>the weather file. if not entered, then the value in the BIN file
-is used.</p>
-</dd>
-<dt>doe2_hour_in_file<span class="classifier">optional</span><span class="classifier">must be 8760 or 8784 for leap years.</span></dt><dd><p>required if isdoe2=True. This allows a non-leap year to be forced
+in mews “third_party_software” can be used to put the filename.EXE</p></li>
+<li><p><strong>doe2_start_datetime</strong> (<em>optional : datetime : Input the start time for</em>) – the weather file. if not entered, then the value in the BIN file
+is used.</p></li>
+<li><p><strong>doe2_hour_in_file</strong> (<em>optional : must be 8760</em><em> or </em><em>8784 for leap years.</em>) – required if isdoe2=True. This allows a non-leap year to be forced
 into a leap year for consistency. Feb28th is just repeated for such
-cases.</p>
+cases.</p></li>
+<li><p><strong>doe2_timezone</strong> (<em>optional : required if isdoe2=True: str : name of time</em>) – zone applicable to the doe2 file</p></li>
+<li><p><strong>doe2_dst</strong> (<em>optional : required if isdoe2=True: list/tuple with 2 entries</em>) – that are datetimes with begin and end times for day light savings
+time.</p></li>
+</ul>
 </dd>
-<dt>doe2_timezone<span class="classifier">optional</span><span class="classifier">required if isdoe2=True: str</span><span class="classifier">name of time</span></dt><dd><p>zone applicable to the doe2 file</p>
-</dd>
-<dt>doe2_dst<span class="classifier">optional</span><span class="classifier">required if isdoe2=True: list/tuple with 2 entries</span></dt><dd><p>that are datetimes with begin and end times for day light savings
-time.</p>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>None - obj.epwobj has a new dataset afterwards.</p>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None - obj.epwobj has a new dataset afterwards.</p>
 </dd>
 </dl>
 </dd></dl>

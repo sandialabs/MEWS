@@ -128,30 +128,29 @@ the sparse data available.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mews.events.extreme_temperature_waves.ExtremeTemperatureWaves.create_scenario">
 <span class="sig-name descname"><span class="pre">create_scenario</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scenario_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">climate_temp_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/events/extreme_temperature_waves.html#ExtremeTemperatureWaves.create_scenario"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.events.extreme_temperature_waves.ExtremeTemperatureWaves.create_scenario" title="Permalink to this definition"></a></dt>
-<dd><p>scenario_name : str : A string indicating the name of a scenario</p>
-<dl class="simple">
-<dt>start_year<span class="classifier">int</span><span class="classifier">A year (must be &gt;= 2020) that is the starting point of the</span></dt><dd><p>analysis</p>
-</dd>
-</dl>
-<p>num_year : int : number of subsequent years to include in the analysis</p>
-<dl>
-<dt>climate_temp_func<span class="classifier">func :</span></dt><dd><p>a function that provides a continuous change in temperature that
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scenario_name</strong> (<em>str : A string indicating the name of a scenario</em>) – </p></li>
+<li><p><strong>start_year</strong> (<em>int : A year</em><em> (</em><em>must be &gt;= 2020</em><em>) </em><em>that is the starting point of the</em>) – analysis</p></li>
+<li><p><strong>num_year</strong> (<em>int : number of subsequent years to include in the analysis</em>) – </p></li>
+<li><p><strong>climate_temp_func</strong> (<em>func :</em>) – <p>a function that provides a continuous change in temperature that
 is scaled to a yearly time scale. time = 2020 is the begin of the
 first year that is valid for the function.</p>
 <p>No valid return for values beyond 4 C due to lack of data from
 IPCC for higher values.</p>
+</p></li>
+<li><p><strong>num_realization</strong> (<em>int : Optional : Default = 1</em>) – Number of times to repeat the entire analysis of each weather file
+so that stochastic analysis can be carried out.</p></li>
+</ul>
 </dd>
-<dt>num_realization<span class="classifier">int</span><span class="classifier">Optional</span><span class="classifier">Default = 1</span></dt><dd><p>Number of times to repeat the entire analysis of each weather file
-so that stochastic analysis can be carried out.</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self.ext_obj</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Places results into self.extreme_results and</p>
 </dd>
 </dl>
-<p>Returns :</p>
-<blockquote>
-<div><dl class="simple">
-<dt>Places results into self.extreme_results and</dt><dd><p>self.ext_obj</p>
-</dd>
-</dl>
-</div></blockquote>
 </dd></dl>
 
 <dl class="py attribute">
