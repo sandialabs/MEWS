@@ -1,7 +1,7 @@
 autodoc_mock_imports = ['mews.cython.markov']
 
 latex_elements = { 
-    'maxlistdepth' : '6',
+    'maxlistdepth' : '7',
 }
 
 # Configuration file for the Sphinx documentation builder.
