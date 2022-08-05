@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'MEWS_autodoc_test'
-copyright = '2022, Tyler'
-author = 'Tyler'
+project = 'MEWS'
+copyright = '2022, Sandia National Labs'
+author = 'Tyler Schostek'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'
