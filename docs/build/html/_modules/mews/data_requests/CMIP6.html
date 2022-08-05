@@ -65,44 +65,21 @@
            <div itemprop="articleBody">
              
   <h1>Source code for mews.data_requests.CMIP6</h1><div class="highlight"><pre>
-<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">CMIP6 data collection and calculations. Used when accounting for global warming</span>
+<span class="sd">in MEWS.</span>
 
-<span class="sd">EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files</span>
-<span class="sd">EPW is not the EPW downloaded from pypi.org, it must be downloaded</span>
-<span class="sd">from https://github.com/building-energy/epw</span>
-
-<span class="sd">EPW License</span>
-<span class="sd">===========</span>
-
-<span class="sd">MIT License</span>
-
-<span class="sd">Copyright (c) 2019 Building Energy Research Group (BERG)</span>
-
-<span class="sd">Permission is hereby granted, free of charge, to any person obtaining a copy</span>
-<span class="sd">of this software and associated documentation files (the &quot;Software&quot;), to deal</span>
-<span class="sd">in the Software without restriction, including without limitation the rights</span>
-<span class="sd">to use, copy, modify, merge, publish, distribute, sublicense, and/or sell</span>
-<span class="sd">copies of the Software, and to permit persons to whom the Software is</span>
-<span class="sd">furnished to do so, subject to the following conditions:</span>
-
-<span class="sd">The above copyright notice and this permission notice shall be included in all</span>
-<span class="sd">copies or substantial portions of the Software.</span>
-
-<span class="sd">THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</span>
-<span class="sd">IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</span>
-<span class="sd">FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE</span>
-<span class="sd">AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER</span>
-<span class="sd">LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,</span>
-<span class="sd">OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE</span>
-<span class="sd">SOFTWARE.</span>
-
+<span class="sd">Calculates temperature change values from a baseline year to a future year</span>
+<span class="sd">for a specific latitude-longitude input. Compiles information from historical</span>
+<span class="sd">global climate models and 5 SSP scenario models.</span>
 
 <span class="sd">Created on Wed Jun 20 13:00:31 2022</span>
 
 <span class="sd">@author: tschoste</span>
+
+<span class="sd">----</span>
+
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="c1">###May need to be Changed ^^^^####</span>
 
 <span class="kn">import</span> <span class="nn">openpyxl</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -132,20 +109,61 @@
 <span class="c1">########## Initial Startup ##############</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span> <span class="c1">#Removes depreciation warnings</span>
 
-
-<div class="viewcode-block" id="CMIP_Data"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data">[docs]</a><span class="k">class</span> <span class="nc">CMIP_Data</span><span class="p">():</span>
+<div class="viewcode-block" id="CMIP_Data"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data">[docs]</a><span class="k">class</span> <span class="nc">CMIP_Data</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculates temperature change values from a baseline year to a future year</span>
-<span class="sd">    for 5 SSP scenarios for a specific latitude-longitude input. Can also be </span>
-<span class="sd">    used to generate global warming plots. Used for CMIP6 data collection when</span>
-<span class="sd">    accounting for global warming in MEWS.</span>
-<span class="sd">  </span>
+<span class="sd">    </span>
 <span class="sd">    &gt;&gt;&gt; obj = CMIP_Data(lat_desired,</span>
 <span class="sd">                        lon_desired,</span>
 <span class="sd">                        year_baseline,</span>
 <span class="sd">                        year_desired,</span>
 <span class="sd">                        model_guide,</span>
 <span class="sd">                        file_path)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    Results can be found in obj.delT which returns a dictionary of the </span>
+<span class="sd">    temperature change values for each scenario based on year_desired.</span>
+<span class="sd">    </span>
+<span class="sd">    More complete results can be found in obj.total_model_data. This is a </span>
+<span class="sd">    dictionary seperated based on scenario, that contains the following</span>
+<span class="sd">    information based on the latitude-longitude input.</span>
+<span class="sd">    </span>
+<span class="sd">    .. list-table::</span>
+<span class="sd">       :widths: 25 75</span>
+<span class="sd">       :header-rows: 1</span>
+
+<span class="sd">       * - Attribute</span>
+<span class="sd">         - Description</span>
+<span class="sd">       * - .start_year</span>
+<span class="sd">         - The first year of data available for the scenario</span>
+<span class="sd">       * - .end_year</span>
+<span class="sd">         - The last year of data available for the scenario</span>
+<span class="sd">       * - .year_temp_dict</span>
+<span class="sd">         - A dictionary of lists containing the temperature values for each model</span>
+<span class="sd">       * - .scenario</span>
+<span class="sd">         - The selected scenario</span>
+<span class="sd">       * - .avg_error_list</span>
+<span class="sd">         - A list of the normalized interpolation error values for each model</span>
+<span class="sd">       * - .delT_list</span>
+<span class="sd">         - A list of all averaged temperature change values with the first entry </span>
+<span class="sd">           corresponding to the start_year and the last entry corresponding to the </span>
+<span class="sd">           end_year</span>
+<span class="sd">       * - .CI_list</span>
+<span class="sd">         - A list of the 95% confidence interval bounds for delT_list</span>
+<span class="sd">       * - .delT_list_reg</span>
+<span class="sd">         - A list of all regressed temperature change values with the first entry</span>
+<span class="sd">           corresponding to the start_year and the last entry corresponding to the</span>
+<span class="sd">           end_year</span>
+<span class="sd">       * - .avg_error</span>
+<span class="sd">         - The averaged error value for every model used in the scenario</span>
+<span class="sd">         </span>
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; obj.total_model_data[&quot;SSP119&quot;].start_year</span>
+<span class="sd">    2015</span>
+<span class="sd">    </span>
+<span class="sd">    Plots can be generated through obj.results1 and obj.results2 (see below).</span>
+<span class="sd">    </span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -196,10 +214,8 @@
 <span class="sd">    </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    None - Results found in obj.del_T which returns a dictionary of the </span>
-<span class="sd">        temperature change values for each scenario based on year_desired.</span>
+<span class="sd">    None </span>
 <span class="sd">    </span>
-<span class="sd">        Plots can be generated through obj.results1 and obj.results2</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat_desired</span><span class="p">,</span> 
                  <span class="n">lon_desired</span><span class="p">,</span>
@@ -213,7 +229,6 @@
                  <span class="n">calculate_error</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">display_logging</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                  <span class="n">display_plots</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        
 
         <span class="k">if</span> <span class="n">data_folder</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span> 
             <span class="bp">self</span><span class="o">.</span><span class="n">dirname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()),</span><span class="n">data_folder</span><span class="p">)</span>
@@ -439,7 +454,7 @@
         <span class="k">return</span> <span class="n">Total_obj</span>
 
 
-<div class="viewcode-block" id="CMIP_Data.Model_object"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data.Model_object">[docs]</a>    <span class="k">class</span> <span class="nc">Model_object</span><span class="p">:</span>
+    <span class="k">class</span> <span class="nc">Model_object</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Model_object class used for storing information from each model in objects.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -450,17 +465,17 @@
             <span class="c1">#To be set later</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="mi">0</span>
-<div class="viewcode-block" id="CMIP_Data.Model_object.set_data"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data.Model_object.set_data">[docs]</a>        <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
             <span class="n">start_year</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             <span class="n">start_year_list</span> <span class="o">=</span> <span class="n">start_year</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">start_year</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">start_year_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
             <span class="n">end_year</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             <span class="n">end_year_list</span> <span class="o">=</span> <span class="n">end_year</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">end_year</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">end_year_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;tas&#39;</span><span class="p">]</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;tas&#39;</span><span class="p">]</span>
             
                     
-<div class="viewcode-block" id="CMIP_Data.Total_data"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data.Total_data">[docs]</a>    <span class="k">class</span> <span class="nc">Total_data</span><span class="p">:</span>
+    <span class="k">class</span> <span class="nc">Total_data</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Total_data class used for storing resulting data from all models.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -481,8 +496,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">CI_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_years</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">delT_list_reg</span> <span class="o">=</span> <span class="kc">None</span>
             
-<div class="viewcode-block" id="CMIP_Data.Total_data.compute_error"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data.Total_data.compute_error">[docs]</a>        <span class="k">def</span> <span class="nf">compute_error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">avg_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">avg_error_list</span><span class="p">)</span></div></div>
+        <span class="k">def</span> <span class="nf">compute_error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">avg_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">avg_error_list</span><span class="p">)</span>
             
             
     <span class="k">def</span> <span class="nf">_yearly_dataset_temps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model_object</span><span class="p">,</span><span class="n">total_object</span><span class="p">):</span>
@@ -664,9 +679,11 @@
 
 <div class="viewcode-block" id="CMIP_Data.results1"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data.results1">[docs]</a>    <span class="k">def</span> <span class="nf">results1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">scatter_display</span><span class="o">=</span><span class="p">[</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">],</span><span class="n">regression_display</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">],</span><span class="n">CI_display</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">]):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        obj.results1(scatter_display=[False,False,False,False,False,False],</span>
-<span class="sd">                    regression_display=[True,True,True,True,True,True],</span>
-<span class="sd">                    CI_display=[True,False,True,False,True,False])</span>
+<span class="sd">        Plots the temperature change values for the scenarios for the years 1950-2100.</span>
+
+<span class="sd">        &gt;&gt;&gt; obj.results1(scatter_display=[False,False,False,False,False,False],</span>
+<span class="sd">                         regression_display=[True,True,True,True,True,True],</span>
+<span class="sd">                         CI_display=[True,False,True,False,True,False])</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -685,9 +702,8 @@
 <span class="sd">        </span>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        </span>
-<span class="sd">        None - plots the temperature change values for the scenarios for the years</span>
-<span class="sd">        1950-2100.</span>
+<span class="sd">        None</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">display_plots</span><span class="p">:</span> 
             <span class="n">historical_years</span> <span class="o">=</span> <span class="p">[</span><span class="n">year</span> <span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1850</span><span class="p">,</span><span class="mi">2015</span><span class="p">,</span><span class="mi">1</span><span class="p">)]</span>
@@ -730,29 +746,31 @@
     
 <div class="viewcode-block" id="CMIP_Data.results2"><a class="viewcode-back" href="../../../mews.data_requests.CMIP6.html#mews.data_requests.CMIP6.CMIP_Data.results2">[docs]</a>    <span class="k">def</span> <span class="nf">results2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">desired_scenario</span><span class="p">,</span><span class="n">resolution</span><span class="o">=</span><span class="s1">&#39;low&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        obj.results2(desired_scenario,</span>
-<span class="sd">                     resolution=&#39;low&#39;)</span>
+<span class="sd">        Plots the temperature change heat map of the United States from year_baseline</span>
+<span class="sd">        to year_desired for a selected scenario.</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; obj.results2(desired_scenario,</span>
+<span class="sd">                         resolution=&#39;low&#39;)</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        </span>
 <span class="sd">        desired_scenario : str </span>
 <span class="sd">            A str that selectes the future scenario heat map that will be calculated and</span>
-<span class="sd">            displayed. The possible strings are: &quot;SSP119&quot;,&quot;SSP126&quot;,&quot;SSP245&quot;,&quot;SSP370&quot;,&quot;SSP585&quot;.</span>
+<span class="sd">            displayed. The possible strings are: &quot;SSP119&quot;, &quot;SSP126&quot;, &quot;SSP245&quot;, &quot;SSP370&quot;, &quot;SSP585&quot;.</span>
 <span class="sd">            Any other strings will return an error.</span>
 <span class="sd">            </span>
 <span class="sd">        resolution : str : optional : Default = &#39;low&#39;</span>
 <span class="sd">            A string that selectes the resolution of the heat map plotted. The default </span>
 <span class="sd">            setting is low so the simulation can be run quicker. Higher qualities can</span>
 <span class="sd">            take much longer to calculate and display. All possible resolutions are:</span>
-<span class="sd">            &quot;low&quot;,&quot;medium&quot;,&quot;high&quot;,&quot;extreme&quot;. &quot;test&quot; is very inaccurate, only used for</span>
+<span class="sd">            &quot;low&quot;, &quot;medium&quot;, &quot;high&quot;, &quot;extreme&quot;. &quot;test&quot; is very inaccurate; only used for</span>
 <span class="sd">            unittesting.</span>
 <span class="sd">            </span>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
+<span class="sd">        None</span>
 <span class="sd">        </span>
-<span class="sd">        None - plots the heat map of the change of temperature from a baseline year</span>
-<span class="sd">        to a future year for the United States for a selected scenario.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">resolution_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;test&quot;</span><span class="p">:[</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span><span class="s2">&quot;low&quot;</span><span class="p">:[</span><span class="mi">60</span><span class="p">,</span><span class="mi">27</span><span class="p">],</span><span class="s2">&quot;medium&quot;</span><span class="p">:[</span><span class="mi">120</span><span class="p">,</span><span class="mi">54</span><span class="p">],</span><span class="s2">&quot;high&quot;</span><span class="p">:[</span><span class="mi">240</span><span class="p">,</span><span class="mi">108</span><span class="p">],</span><span class="s2">&quot;extreme&quot;</span><span class="p">:[</span><span class="mi">480</span><span class="p">,</span><span class="mi">216</span><span class="p">]}</span>
  

@@ -1,41 +1,18 @@
-# -*- coding: utf-8 -*-
 """
+CMIP6 data collection and calculations. Used when accounting for global warming
+in MEWS.
 
-EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files
-EPW is not the EPW downloaded from pypi.org, it must be downloaded
-from https://github.com/building-energy/epw
-
-EPW License
-===========
-
-MIT License
-
-Copyright (c) 2019 Building Energy Research Group (BERG)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
+Calculates temperature change values from a baseline year to a future year
+for a specific latitude-longitude input. Compiles information from historical
+global climate models and 5 SSP scenario models.
 
 Created on Wed Jun 20 13:00:31 2022
 
 @author: tschoste
+
+----
+
 """
-###May need to be Changed ^^^^####
 
 import openpyxl
 import os
@@ -65,20 +42,61 @@ os.environ['HTTPS_PROXY'] = proxy
 ########## Initial Startup ##############
 warnings.simplefilter(action='ignore') #Removes depreciation warnings
 
-
-class CMIP_Data():
+class CMIP_Data(object):
     """
-    Calculates temperature change values from a baseline year to a future year
-    for 5 SSP scenarios for a specific latitude-longitude input. Can also be 
-    used to generate global warming plots. Used for CMIP6 data collection when
-    accounting for global warming in MEWS.
-  
+    
     >>> obj = CMIP_Data(lat_desired,
                         lon_desired,
                         year_baseline,
                         year_desired,
                         model_guide,
                         file_path)
+    
+    
+    Results can be found in obj.delT which returns a dictionary of the 
+    temperature change values for each scenario based on year_desired.
+    
+    More complete results can be found in obj.total_model_data. This is a 
+    dictionary seperated based on scenario, that contains the following
+    information based on the latitude-longitude input.
+    
+    .. list-table::
+       :widths: 25 75
+       :header-rows: 1
+
+       * - Attribute
+         - Description
+       * - .start_year
+         - The first year of data available for the scenario
+       * - .end_year
+         - The last year of data available for the scenario
+       * - .year_temp_dict
+         - A dictionary of lists containing the temperature values for each model
+       * - .scenario
+         - The selected scenario
+       * - .avg_error_list
+         - A list of the normalized interpolation error values for each model
+       * - .delT_list
+         - A list of all averaged temperature change values with the first entry 
+           corresponding to the start_year and the last entry corresponding to the 
+           end_year
+       * - .CI_list
+         - A list of the 95% confidence interval bounds for delT_list
+       * - .delT_list_reg
+         - A list of all regressed temperature change values with the first entry
+           corresponding to the start_year and the last entry corresponding to the
+           end_year
+       * - .avg_error
+         - The averaged error value for every model used in the scenario
+         
+    Example
+    -------
+    
+    >>> obj.total_model_data["SSP119"].start_year
+    2015
+    
+    Plots can be generated through obj.results1 and obj.results2 (see below).
+    
     
     Parameters
     ----------
@@ -129,10 +147,8 @@ class CMIP_Data():
     
     Returns
     -------
-    None - Results found in obj.del_T which returns a dictionary of the 
-        temperature change values for each scenario based on year_desired.
+    None 
     
-        Plots can be generated through obj.results1 and obj.results2
     """
     def __init__(self, lat_desired, 
                  lon_desired,
@@ -146,7 +162,6 @@ class CMIP_Data():
                  calculate_error=True,
                  display_logging=False,
                  display_plots=True):
-        
 
         if data_folder != None: 
             self.dirname = os.path.join(os.path.abspath(os.getcwd()),data_folder)
@@ -597,9 +612,11 @@ class CMIP_Data():
 
     def results1(self,scatter_display=[False,False,False,False,False,False],regression_display=[True,True,True,True,True,True],CI_display=[True,False,True,False,True,False]):
         """
-        obj.results1(scatter_display=[False,False,False,False,False,False],
-                    regression_display=[True,True,True,True,True,True],
-                    CI_display=[True,False,True,False,True,False])
+        Plots the temperature change values for the scenarios for the years 1950-2100.
+
+        >>> obj.results1(scatter_display=[False,False,False,False,False,False],
+                         regression_display=[True,True,True,True,True,True],
+                         CI_display=[True,False,True,False,True,False])
         
         Parameters
         ----------
@@ -618,9 +635,8 @@ class CMIP_Data():
         
         Returns
         -------
-        
-        None - plots the temperature change values for the scenarios for the years
-        1950-2100.
+        None
+
         """
         if self.display_plots: 
             historical_years = [year for year in range(1850,2015,1)]
@@ -663,29 +679,31 @@ class CMIP_Data():
     
     def results2(self,desired_scenario,resolution='low'):
         """
-        obj.results2(desired_scenario,
-                     resolution='low')
+        Plots the temperature change heat map of the United States from year_baseline
+        to year_desired for a selected scenario.
+        
+        >>> obj.results2(desired_scenario,
+                         resolution='low')
         
         Parameters
         ----------
         
         desired_scenario : str 
             A str that selectes the future scenario heat map that will be calculated and
-            displayed. The possible strings are: "SSP119","SSP126","SSP245","SSP370","SSP585".
+            displayed. The possible strings are: "SSP119", "SSP126", "SSP245", "SSP370", "SSP585".
             Any other strings will return an error.
             
         resolution : str : optional : Default = 'low'
             A string that selectes the resolution of the heat map plotted. The default 
             setting is low so the simulation can be run quicker. Higher qualities can
             take much longer to calculate and display. All possible resolutions are:
-            "low","medium","high","extreme". "test" is very inaccurate, only used for
+            "low", "medium", "high", "extreme". "test" is very inaccurate; only used for
             unittesting.
             
         Returns
         -------
+        None
         
-        None - plots the heat map of the change of temperature from a baseline year
-        to a future year for the United States for a selected scenario.
         """
         resolution_dict = {"test":[2,2],"low":[60,27],"medium":[120,54],"high":[240,108],"extreme":[480,216]}
  
