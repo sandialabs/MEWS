@@ -14,13 +14,14 @@ autodoc_mock_imports = ['mews.cython.markov']
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'MEWS'
-author = 'Daniel Villa'
+project = 'MEWS_autodoc_test'
+copyright = '2022, Tyler'
+author = 'Tyler'
 
 # The full version, including alpha/beta/rc tags
 release = '0.1'

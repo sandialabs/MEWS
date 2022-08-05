@@ -13,11 +13,9 @@ Subpackages
    :maxdepth: 1
    
    mews.cython
-   mews.data_requests
    mews.epw
    mews.errors
    mews.events
    mews.graphics
    mews.stats
    mews.weather
-   
