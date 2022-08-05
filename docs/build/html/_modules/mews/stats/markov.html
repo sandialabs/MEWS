@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mews.stats.markov &mdash; MEWS 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> MEWS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MEWS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>mews.stats.markov</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mews.stats.markov</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Tue Apr 27 20:20:54 2021</span>
+
+<span class="sd">Copyright Notice</span>
+<span class="sd">=================</span>
+
+<span class="sd">Copyright 2021 National Technology and Engineering Solutions of Sandia, LLC. </span>
+<span class="sd">Under the terms of Contract DE-NA0003525, there is a non-exclusive license </span>
+<span class="sd">for use of this work by or on behalf of the U.S. Government. </span>
+<span class="sd">Export of this program may require a license from the </span>
+<span class="sd">United States Government.</span>
+
+<span class="sd">Please refer to the LICENSE.md file for a full description of the license</span>
+<span class="sd">terms for MEWS. </span>
+
+<span class="sd">The license for MEWS is the Modified BSD License and copyright information</span>
+<span class="sd">must be replicated in any derivative works that use the source code.</span>
+
+<span class="sd">@author: dlvilla</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">zeros</span>
+
+<div class="viewcode-block" id="MarkovPy"><a class="viewcode-back" href="../../../mews.stats.markov.html#mews.stats.markov.MarkovPy">[docs]</a><span class="k">class</span> <span class="nc">MarkovPy</span><span class="p">():</span>
+<div class="viewcode-block" id="MarkovPy.markov_chain_py"><a class="viewcode-back" href="../../../mews.stats.markov.html#mews.stats.markov.MarkovPy.markov_chain_py">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">markov_chain_py</span><span class="p">(</span><span class="n">cdf</span><span class="p">,</span> <span class="n">rand</span><span class="p">,</span> <span class="n">state0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        markov_chain_py(cdf, rand, state0)</span>
+<span class="sd">        </span>
+<span class="sd">        evaluate a chain of markov states based on cumulative probability matrix,</span>
+<span class="sd">        random numbers and initial state</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cfd : np.ndarray : </span>
+<span class="sd">            must be a 2-D square matrix whose elements are the </span>
+<span class="sd">            cumulative sum of a markov right stochastic matrix</span>
+<span class="sd">        rand : np.ndarray : </span>
+<span class="sd">            1-D array of random probabilities 0 &lt;= p &lt;= 1</span>
+<span class="sd">        state0 : int, np.integer :</span>
+<span class="sd">            Integer indicating the initial markov state (determines row of cfd to</span>
+<span class="sd">            start on). 0 &lt;= state0 &lt;= cfd.shape[0]</span>
+<span class="sd">        </span>
+<span class="sd">        This function does not have Type and Value protections and should only</span>
+<span class="sd">        be used in the context of such checks having already occured!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c1"># assign initial values</span>
+        <span class="n">num_step</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rand</span><span class="p">)</span>
+        <span class="n">yy</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">(</span><span class="n">num_step</span><span class="p">)</span>
+        
+        <span class="n">num_state</span> <span class="o">=</span> <span class="n">cdf</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_step</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">idy</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_state</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">cdf</span><span class="p">[</span><span class="n">state0</span><span class="p">,</span><span class="n">idy</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">rand</span><span class="p">[</span><span class="n">idx</span><span class="p">]:</span>
+                    <span class="n">yy</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">idy</span>
+                    <span class="n">state0</span> <span class="o">=</span> <span class="n">idy</span>
+                    <span class="k">break</span>
+                <span class="k">if</span> <span class="n">idy</span> <span class="o">==</span> <span class="n">num_state</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">yy</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">idy</span>
+        
+        <span class="k">return</span> <span class="n">yy</span></div></div>
+    
+    
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

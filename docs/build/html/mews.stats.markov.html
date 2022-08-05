@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mews.stats.markov module &mdash; MEWS 0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mews.weather package" href="mews.weather.html" />
+    <link rel="prev" title="mews.stats.extreme module" href="mews.stats.extreme.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> MEWS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">API Documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html#module-mews">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="mews.cython.html">mews.cython package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.data_requests.html">mews.data_requests package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.epw.html">mews.epw package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.errors.html">mews.errors package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.events.html">mews.events package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.graphics.html">mews.graphics package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="mews.stats.html">mews.stats package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="mews.stats.html#submodules">Submodules</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mews.weather.html">mews.weather package</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MEWS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="modules.html">API Documentation</a> &raquo;</li>
+          <li><a href="mews.stats.html">mews.stats package</a> &raquo;</li>
+      <li>mews.stats.markov module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/mews.stats.markov.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="mews-stats-markov-module">
+<h1>mews.stats.markov module<a class="headerlink" href="#mews-stats-markov-module" title="Permalink to this heading"></a></h1>
+<div class="section" id="module-mews.stats.markov">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-mews.stats.markov" title="Permalink to this heading"></a></h2>
+<p>Created on Tue Apr 27 20:20:54 2021</p>
+<div class="section" id="copyright-notice">
+<h3>Copyright Notice<a class="headerlink" href="#copyright-notice" title="Permalink to this heading"></a></h3>
+<p>Copyright 2021 National Technology and Engineering Solutions of Sandia, LLC.
+Under the terms of Contract DE-NA0003525, there is a non-exclusive license
+for use of this work by or on behalf of the U.S. Government.
+Export of this program may require a license from the
+United States Government.</p>
+<p>Please refer to the LICENSE.md file for a full description of the license
+terms for MEWS.</p>
+<p>The license for MEWS is the Modified BSD License and copyright information
+must be replicated in any derivative works that use the source code.</p>
+<p>&#64;author: dlvilla</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="mews.stats.markov.MarkovPy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mews.stats.markov.</span></span><span class="sig-name descname"><span class="pre">MarkovPy</span></span><a class="reference internal" href="_modules/mews/stats/markov.html#MarkovPy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.stats.markov.MarkovPy" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.stats.markov.MarkovPy.markov_chain_py">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">markov_chain_py</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cdf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rand</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/stats/markov.html#MarkovPy.markov_chain_py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.stats.markov.MarkovPy.markov_chain_py" title="Permalink to this definition"></a></dt>
+<dd><p>evaluate a chain of markov states based on cumulative probability matrix,
+random numbers and initial state</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cfd</strong> (<em>np.ndarray :</em>) – must be a 2-D square matrix whose elements are the
+cumulative sum of a markov right stochastic matrix</p></li>
+<li><p><strong>rand</strong> (<em>np.ndarray :</em>) – 1-D array of random probabilities 0 &lt;= p &lt;= 1</p></li>
+<li><p><strong>state0</strong> (<em>int</em><em>, </em><em>np.integer :</em>) – Integer indicating the initial markov state (determines row of cfd to
+start on). 0 &lt;= state0 &lt;= cfd.shape[0]</p></li>
+<li><p><strong>only</strong> (<em>This function does not have Type and Value protections and should</em>) – </p></li>
+<li><p><strong>occured!</strong> (<em>be used in the context of such checks having already</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mews.stats.extreme.html" class="btn btn-neutral float-left" title="mews.stats.extreme module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mews.weather.html" class="btn btn-neutral float-right" title="mews.weather package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

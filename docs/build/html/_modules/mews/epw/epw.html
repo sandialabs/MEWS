@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mews.epw.epw &mdash; MEWS 0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../../index.html" class="icon icon-home"> MEWS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MEWS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+      <li>mews.epw.epw</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mews.epw.epw</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files</span>
+<span class="sd">EPW is not the EPW downloaded from pypi.org, it must be downloaded</span>
+<span class="sd">from https://github.com/building-energy/epw</span>
+
+<span class="sd">EPW License</span>
+<span class="sd">===========</span>
+
+<span class="sd">MIT License</span>
+
+<span class="sd">Copyright (c) 2019 Building Energy Research Group (BERG)</span>
+
+<span class="sd">Permission is hereby granted, free of charge, to any person obtaining a copy</span>
+<span class="sd">of this software and associated documentation files (the &quot;Software&quot;), to deal</span>
+<span class="sd">in the Software without restriction, including without limitation the rights</span>
+<span class="sd">to use, copy, modify, merge, publish, distribute, sublicense, and/or sell</span>
+<span class="sd">copies of the Software, and to permit persons to whom the Software is</span>
+<span class="sd">furnished to do so, subject to the following conditions:</span>
+
+<span class="sd">The above copyright notice and this permission notice shall be included in all</span>
+<span class="sd">copies or substantial portions of the Software.</span>
+
+<span class="sd">THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</span>
+<span class="sd">IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</span>
+<span class="sd">FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE</span>
+<span class="sd">AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER</span>
+<span class="sd">LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,</span>
+<span class="sd">OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE</span>
+<span class="sd">SOFTWARE.</span>
+
+
+<span class="sd">Author - Building Energy Research Group (BERG)</span>
+<span class="sd">Used in MEWS as allowed by the license.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+
+<div class="viewcode-block" id="epw"><a class="viewcode-back" href="../../../mews.epw.epw.html#mews.epw.epw.epw">[docs]</a><span class="k">class</span> <span class="nc">epw</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;A class which represents an EnergyPlus weather (epw) file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">=</span><span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+            
+    
+<div class="viewcode-block" id="epw.read"><a class="viewcode-back" href="../../../mews.epw.epw.html#mews.epw.epw.epw.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reads an epw file </span>
+<span class="sd">        </span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_headers</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_read_data</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span></div>
+                
+        
+    <span class="k">def</span> <span class="nf">_read_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reads the headers of an epw file</span>
+<span class="sd">        </span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">            </span>
+<span class="sd">        Return value:</span>
+<span class="sd">            - d (dict): a dictionary containing the header rows </span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">d</span><span class="o">=</span><span class="p">{}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+            <span class="n">csvreader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">csvreader</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">d</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">d</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reads the climate data of an epw file</span>
+<span class="sd">        </span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">            </span>
+<span class="sd">        Return value:</span>
+<span class="sd">            - df (pd.DataFrame): a DataFrame comtaining the climate data</span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Year&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Month&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Day&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Hour&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Minute&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Data Source and Uncertainty Flags&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Dry Bulb Temperature&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Dew Point Temperature&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Relative Humidity&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Atmospheric Station Pressure&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Extraterrestrial Horizontal Radiation&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Extraterrestrial Direct Normal Radiation&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Horizontal Infrared Radiation Intensity&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Global Horizontal Radiation&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Direct Normal Radiation&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Diffuse Horizontal Radiation&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Global Horizontal Illuminance&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Direct Normal Illuminance&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Diffuse Horizontal Illuminance&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Zenith Luminance&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Wind Direction&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Wind Speed&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Total Sky Cover&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Opaque Sky Cover (used if Horizontal IR Intensity missing)&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Visibility&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Ceiling Height&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Present Weather Observation&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Present Weather Codes&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Precipitable Water&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Aerosol Optical Depth&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Snow Depth&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Days Since Last Snowfall&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Albedo&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Liquid Precipitation Depth&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;Liquid Precipitation Quantity&#39;</span><span class="p">]</span>
+        
+        <span class="n">first_row</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_first_row_with_climate_data</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
+        <span class="n">df</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span>
+                       <span class="n">skiprows</span><span class="o">=</span><span class="n">first_row</span><span class="p">,</span>
+                       <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span>
+        
+        
+    <span class="k">def</span> <span class="nf">_first_row_with_climate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finds the first row with the climate data of an epw file</span>
+<span class="sd">        </span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">            </span>
+<span class="sd">        Return value:</span>
+<span class="sd">            - i (int): the row number</span>
+<span class="sd">            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+            <span class="n">csvreader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">csvreader</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">i</span>
+        
+        
+<div class="viewcode-block" id="epw.write"><a class="viewcode-back" href="../../../mews.epw.epw.html#mews.epw.epw.epw.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Writes an epw file </span>
+<span class="sd">        </span>
+<span class="sd">        Arguments:</span>
+<span class="sd">            - fp (str): the file path of the new epw file   </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+            <span class="n">csvwriter</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span>
+                                    <span class="n">quotechar</span><span class="o">=</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">csvwriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">k</span><span class="p">]</span><span class="o">+</span><span class="n">v</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                <span class="n">csvwriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">row</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

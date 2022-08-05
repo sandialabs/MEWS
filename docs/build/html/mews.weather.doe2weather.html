@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mews.weather.doe2weather module &mdash; MEWS 0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mews.weather.psychrometrics module" href="mews.weather.psychrometrics.html" />
+    <link rel="prev" title="mews.weather.climate module" href="mews.weather.climate.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> MEWS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">API Documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html#module-mews">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="mews.cython.html">mews.cython package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.data_requests.html">mews.data_requests package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.epw.html">mews.epw package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.errors.html">mews.errors package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.events.html">mews.events package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.graphics.html">mews.graphics package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mews.stats.html">mews.stats package</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="mews.weather.html">mews.weather package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="mews.weather.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MEWS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="modules.html">API Documentation</a> &raquo;</li>
+          <li><a href="mews.weather.html">mews.weather package</a> &raquo;</li>
+      <li>mews.weather.doe2weather module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/mews.weather.doe2weather.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-mews.weather.doe2weather">
+<span id="mews-weather-doe2weather-module"></span><h1>mews.weather.doe2weather module<a class="headerlink" href="#module-mews.weather.doe2weather" title="Permalink to this heading"></a></h1>
+<p>Created on Thu Jul  1 10:26:52 2021</p>
+<p>&#64;author: dlvilla</p>
+<p>Created on Tue Apr 20 14:50:39 2021</p>
+<div class="section" id="copyright-notice">
+<h2>Copyright Notice<a class="headerlink" href="#copyright-notice" title="Permalink to this heading"></a></h2>
+<p>Copyright 2021 National Technology and Engineering Solutions of Sandia, LLC.
+Under the terms of Contract DE-NA0003525, there is a non-exclusive license
+for use of this work by or on behalf of the U.S. Government.
+Export of this program may require a license from the
+United States Government.</p>
+<p>Please refer to the LICENSE.md file for a full description of the license
+terms for MEWS.</p>
+<p>The license for MEWS is the Modified BSD License and copyright information
+must be replicated in any derivative works that use the source code.</p>
+<p>&#64;author: dlvilla</p>
+<p>MEWS = Multi-senario Extreme Weather Simulator</p>
+<dl>
+<dt>METHODS   mews.weather.DOE2Weather.read_doe2_bin and</dt><dd><blockquote>
+<div><p>mews.weather.DOE2Weather.write_doe2_bin</p>
+</div></blockquote>
+<p>Are translations of parts of BIN2TXT.F and TXT2BIN.F translated with permission
+from James and Jeff Hirsch and Associates (JJH&amp;A). The license for these utilities
+must be formed with (JJH&amp;A) before they are distributed in any other package
+besides MEWS</p>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mews.weather.doe2weather.</span></span><span class="sig-name descname"><span class="pre">DOE2Weather</span></span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.bin2df">
+<span class="sig-name descname"><span class="pre">bin2df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_datetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hour_in_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin2txt_exepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timezone</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.bin2df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.bin2df" title="Permalink to this definition"></a></dt>
+<dd><p>This function was originally written in matlab and is the
+“ReadDOE2BINTXTFile.m” function except that it also includes conversion
+of the BIN file into a text file</p>
+<p>DST is a list of the start of daylight savings and end so that
+adjustments can be made and the time stamps adjusted for daylight savings.
+the input filename.txt must come from a DOE2 bin file that has been
+converted to a text file. It has the following columns of information:</p>
+<p>%Column Number   Variable       Description        Units
+%C 1             IM2            MONTH              (1-12)
+%C 2             ID             DAY OF MONTH
+%C 3             IH             HOUR OF DAY
+%C 4             CALC(1)        WET BULB TEMP      (DEG F)
+%C 5             CALC(2)        DRY BULB TEMP      (DEG F)
+%C 6             CALC(3)        PRESSURE           (INCHES OF HG)
+%C 7             CALC(4)        CLOUD AMOUNT       (0 - 10)
+%C 8             ISNOW          SNOW FLAG          (1 = SNOWFALL)
+%C 9             IRAIN          RAIN FLAG          (1 = RAINFALL)
+%C 10            IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)
+%C 11            CALC(8)        HUMIDITY RATIO     (LB H2O/LB AIR)
+%C 12            CALC(9)        DENSITY OF AIR     (LB/CU FT)
+%C 13            CALC(10)       SPECIFIC ENTHALPY  (BTU/LB)
+%C 14            CALC(11)       TOTAL HOR. SOLAR   (BTU/HR-SQFT)
+%C 15            CALC(12)       DIR. NORMAL SOLAR  (BTU/HR-SQFT)
+%C 16            ICLDTY         CLOUD TYPE         (0 - 2)
+%C 17            CALC(14)       WIND SPEED         KNOTS</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.bin2txt">
+<span class="sig-name descname"><span class="pre">bin2txt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin2txtpath</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.bin2txt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.bin2txt" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.df2bin">
+<span class="sig-name descname"><span class="pre">df2bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_datetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hour_in_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txt2bin_exepath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fyear</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timezone</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iwsz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iftyp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clearness_number</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ground_temp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.df2bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.df2bin" title="Permalink to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>df2bin(df, binfilename, start_datetime, hour_in_file, txt2bin_exepath,</dt><dd><p>location=None,fyear=None,latitude=None,longitude=None,timezone=None,
+iwsz=2,iftyp=3,clearness_number=None,ground_temp=None)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pd.Dataframe: must contain the columns originally read from a</em>) – DOE2 BIN weather file format (in the table below)
+if use_exe = False, df must have a</p></li>
+<li><p><strong>binfilename</strong> (<em>str : path and filename that will be output with the</em>) – weather signals in df.</p></li>
+<li><p><strong>use_exe</strong> (<em>bool : optional : Default=False</em>) – Set to True if using TXT2BIN is desired
+instead of python. Changing use_exe between
+reads and writes is not allowed</p></li>
+<li><p><strong>True</strong> (<em>All other parameters only apply if use_exe =</em>) – </p></li>
+<li><p><strong>start_datetime</strong> (<em>datetime :start date and time to be output in the weather file</em>) – typically this is Jan 1st, fyear</p></li>
+<li><p><strong>hour_in_file</strong> (<em>int : Either 8760</em><em> or </em><em>8784</em>) – </p></li>
+<li><p><strong>txt2bin_exepath</strong> (<em>str : path and filename that point to TXT2BIN.EXE</em>) – DOE2 utility that can be obtained from www.doe2.com
+after forming a license agreement with James Hirsch
+and associates.</p></li>
+<li><p><strong>inputs</strong> (<em>location .. and all other</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<p>%% From TXT2BIN.FMT - this gives the exact format needed to output a
+%                     text file that TXT2BIN.EXE can process.
+%       THIS DOCUMENTS A FORMATTED WEATHER FILE (WEATHER.FMT) MADE FROM
+%       A PACKED BINARY DOE2 WEATHER FILE (WEATHER.BIN) USING WTHFMT2.EXE
+%       AND THE EXTRA FILE NEEDED (not really!) TO PACK IT WITH FMTWTH2.EXE
+%
+% on input.dat:
+%
+% Record 1       IWSZ,IFTYP
+%                FORMAT(12X,I1,17X,I1)
+%
+%       IWSZ           WORD SIZE          1 = 60-BIT, 2 = 30-BIT
+%       IFTYP          FILE TYPE          1 = OLD, 2 = NORMAL (NO SOLAR),
+%                                         3 = THE DATA HAS SOLAR
+% on weather.fmt:
+%
+% Record 1       (IWDID(I),I=1,5),IWYR,WLAT,WLONG,IWTZN,IWSOL
+%                FORMAT(5A4,I5,2F8.2,2I5)
+%
+% Record 2       (CLN(I),I=1,12)
+%                FORMAT(12F6.2)
+%
+% Record 3       (GT(I),I=1,12)
+%                FORMAT(12F6.1)
+%
+% Records 4,8763
+%                KMON, KDAY, KH, WBT, DBT, PATM, CLDAMT, ISNOW,
+%                IRAIN, IWNDDR, HUMRAT, DENSTY, ENTHAL, SOLRAD,
+%                DIRSOL, ICLDTY, WNDSPD
+%                FORMAT(3I2,2F5.0,F6.1,F5.0,2I3,I4,F7.4,F6.3,F6.1,2F7.1,I3,F5.0)
+%       IWDID          LOCATION I.D.
+%       IWYR           YEAR
+%       WLAT           LATITUDE
+%       WLONG          LONGITUDE
+%       IWTZN          TIME ZONE NUMBER
+%       IWSOL          SOLAR FLAG         IWSOL = IWSZ + (IFTYP-1)*2 - 1
+%       CLN            CLEARNESS NO.
+%       GT             GROUND TEMP.       (DEG R)
+%       KMON           MONTH              (1-12)
+%       KDAY           DAY OF MONTH
+%       KH             HOUR OF DAY
+%       WBT            WET BULB TEMP      (DEG F)
+%       DBT            DRY BULB TEMP      (DEG F)
+%       PATM           PRESSURE           (INCHES OF HG)
+%       CLDAMT         CLOUD AMOUNT       (0 - 10)
+%       ISNOW          SNOW FLAG          (1 = SNOWFALL)
+%       IRAIN          RAIN FLAG          (1 = RAINFALL)
+%       IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)
+%       HUMRAT         HUMIDITY RATIO     (LB H2O/LB AIR)
+%       DENSTY         DENSITY OF AIR     (LB/CU FT)
+%       ENTHAL         SPECIFIC ENTHALPY  (BTU/LB)
+%       SOLRAD         TOTAL HOR. SOLAR   (BTU/HR-SQFT)
+%       DIRSOL         DIR. NORMAL SOLAR  (BTU/HR-SQFT)
+%       ICLDTY         CLOUD TYPE         (0 - 2)
+%       WNDSPD         WIND SPEED         KNOTS</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.read_doe2_bin">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">read_doe2_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.read_doe2_bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.read_doe2_bin" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.txt2bin">
+<span class="sig-name descname"><span class="pre">txt2bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">txtfilename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txt2binpath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.txt2bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.txt2bin" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2Weather.write_doe2_bin">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">write_doe2_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">headers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binfilename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IWSZ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IFTYP</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2Weather.write_doe2_bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2Weather.write_doe2_bin" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<em>np.array</em><em>(</em><em>x</em><em>,</em><em>17</em><em>) </em><em>: x = length of BIN file</em><em> (</em><em>ussually 8760</em><em>)</em>) – <p>The columns of this array are:</p>
+<p>% Column Number   Variable      Description         Units
+%C 1              IM2            MOMTH              (1-12)
+%C 2             ID             DAY OF MONTH
+%C 3             IH             HOUR OF DAY
+%C 4             CALC(1)        WET BULB TEMP      (DEG F)
+%C 5             CALC(2)        DRY BULB TEMP      (DEG F)
+%C 6             CALC(3)        PRESSURE           (INCHES OF HG)
+%C 7             CALC(4)        CLOUD AMOUNT       (0 - 10)
+%C 8             ISNOW          SNOW FLAG          (1 = SNOWFALL)
+%C 9             IRAIN          RAIN FLAG          (1 = RAINFALL)
+%C 10            IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)
+%C 11            CALC(8)        HUMIDITY RATIO     (LB H2O/LB AIR)
+%C 12            CALC(9)        DENSITY OF AIR     (LB/CU FT)
+%C 13            CALC(10)       SPECIFIC ENTHALPY  (BTU/LB)
+%C 14            CALC(11)       TOTAL HOR. SOLAR   (BTU/HR-SQFT)
+%C 15            CALC(12)       DIR. NORMAL SOLAR  (BTU/HR-SQFT)
+%C 16            ICLDTY         CLOUD TYPE         (0 - 2)
+%C 17            CALC(14)       WIND SPEED         KNOTS</p>
+</p></li>
+<li><p><strong>headers</strong> (<em>list : list of np.array with specialized dtype to capture</em>) – <p>the header for each month of data in the DOE-2 filename.BIN file.
+The dtype spec is as follows:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>np.dtype([(‘location_IWDID’,’a20’),</dt><dd><p>(‘year_IWYR’, ‘i4’),
+(‘latitude_WLAT’,’f4’),
+(‘longitude_WLONG’,’f4’),
+(‘timezone_IWTZN’,’i4’),
+(‘record_length_LRECX’,’i4’),
+(‘number_days_NUMDAY’,’i4’),
+(‘clearness_number_CLN_IM1’,’f4’),
+(‘ground_temperature_GT_IM1’,’f4’),
+(‘solar_flag_IWSOL’,’i4’)])</p>
+</dd>
+</dl>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>binfilename<span class="classifier">str</span><span class="classifier">valid path/filename for which a file will be</span></dt><dd><p>written.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><em>None</em></p></li>
+<li><p><em>License Note</em></p></li>
+<li><p><em>=============</em></p></li>
+<li><p><em># THIS IS A TRANSLATION OF TXT2BIN.F except the TXT file is never read</em></p></li>
+<li><p><em># from because data is coming from Python.</em></p></li>
+<li><p><em># THIS reverse engineering was approved by Jeff Hirsch on behalf of</em></p></li>
+<li><p><em># James and Jeff Hirsch and Associates (JJH&amp;A)</em></p></li>
+<li><p><em># along with putting the code on GITHUB with the contingency that the</em></p></li>
+<li><p><em># JJH&amp;A license be acknowledged. The original correspondence is provided</em></p></li>
+<li><p><em># below</em></p></li>
+<li><p><strong># Wed 7/7/2021 4</strong> (<em>10 PM</em>)</p></li>
+<li><p><em>Yes, you have my permission to distribute your DOE-2 weather file</em></p></li>
+<li><p><em>python libraries with TXT2BIN and BIN2TXT executables on Github or</em></p></li>
+<li><p><em>also translate the fortran source versions of those apps into python</em></p></li>
+<li><p><em>and then distribute on Github as long as your acknowledge the</em></p></li>
+<li><p><em>JJH&amp;A license</em></p></li>
+<li><p><em>________________________________________</em></p></li>
+<li><p><em>Jeff Hirsch</em></p></li>
+<li><p><em>James J. Hirsch &amp; Associates</em></p></li>
+<li><p><strong>Voice mail</strong> (<em>(XXX) XXX-XXXX</em>)</p></li>
+<li><p><strong>mobile</strong> (<em>(XXX) XXX-XXXX</em>)</p></li>
+<li><p><em>—————————————————–</em></p></li>
+<li><p><strong>From</strong> (<em>Villa, Daniel L</em>)</p></li>
+<li><p><strong>Sent</strong> (<em>Wednesday, July 7, 2021 11:02 AM</em>)</p></li>
+<li><p><strong>To</strong> (<em>Jeff.Hirsch&#64;DOE2.com</em>)</p></li>
+<li><p><strong>Subject</strong> (<em>Tranlate TXT2BIN.F and BIN2TXT.F into Python and distribute</em>) – as open source??</p></li>
+<li><p><em>Jeff,</em></p></li>
+<li><p><em>I have built a tool that inputs and outputs DOE-2 weather files with</em></p></li>
+<li><p><em>extreme events. I use the TXT2BIN.F and BIN2TXT.F executables with</em></p></li>
+<li><p><em>the version of DOE-2 that I have licensed with Hirsch and Associates.</em></p></li>
+<li><p><em>I would like to be able to distribute the python libraries with these</em></p></li>
+<li><p><em>executables on Github or else be able to translate the *.F files into</em></p></li>
+<li><p><em>python but know that the code is distributed under your license.</em></p></li>
+<li><p><em>Would Hirsch and Associates be willing to let me create Python</em></p></li>
+<li><p><em>versions of TXT2BIN.F and BIN2TXT.F and to distribute them as open</em></p></li>
+<li><p><em>source code on GitHUB? I understand and respect Hirsch and Associate’s</em></p></li>
+<li><p><em>decision if this is not allowed. Thank you.</em></p></li>
+<li><p><em>Daniel Villa</em></p></li>
+<li><p><em>Energy-Water System Integration Department 08825</em></p></li>
+<li><p><em>Sandia National Laboratories</em></p></li>
+<li><p><em>dlvilla&#64;sandia.gov</em></p></li>
+<li><p><em>XXX-XXX-XXXX</em></p></li>
+<li><p><em>FORTRAN VARIABLE MEANING KEY</em> – C
+C     IWSZ           WORD SIZE          1 = 60-BIT, 2 = 30-BIT
+C     IFTYP          FILE TYPE          1 = OLD, 2 = NORMAL (NO SOLAR),
+C                                       3 = THE DATA HAS SOLAR
+C     IWDID          LOCATION I.D.
+C     IWYR           YEAR
+C     WLAT           LATITUDE
+C     WLONG          LONGITUDE
+C     IWTZN          TIME ZONE NUMBER
+C     IWSOL          SOLAR FLAG         FUNCTION OF IWSZ + IFTYP
+C     CLN            CLEARNESS NO.
+C     GT             GROUND TEMP.       (DEG R)
+C     KMON           MONTH              (1-12)
+C     KDAY           DAY OF MONTH
+C     KH             HOUR OF DAY
+C     WBT            WET BULB TEMP      (DEG F)
+C     DBT            DRY BULB TEMP      (DEG F)
+C     PATM           PRESSURE           (INCHES OF HG)
+C     CLDAMT         CLOUD AMOUNT       (0 - 10)
+C     ISNOW          SNOW FLAG          (1 = SNOWFALL)
+C     IRAIN          RAIN FLAG          (1 = RAINFALL)
+C     IWNDDR         WIND DIRECTION     (0 - 15; 0=N, 1=NNE, ETC)
+C     HUMRAT         HUMIDITY RATIO     (LB H2O/LB AIR)
+C     DENSTY         DENSITY OF AIR     (LB/CU FT)
+C     ENTHAL         SPECIFIC ENTHALPY  (BTU/LB)
+C     SOLRAD         TOTAL HOR. SOLAR   (BTU/HR-SQFT)
+C     DIRSOL         DIR. NORMAL SOLAR  (BTU/HR-SQFT)
+C     ICLDTY         CLOUD TYPE         (0 - 2)
+C     WNDSPD         WIND SPEED         KNOTS</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DOE2_Weather_Error">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mews.weather.doe2weather.</span></span><span class="sig-name descname"><span class="pre">DOE2_Weather_Error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">error_message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DOE2_Weather_Error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DOE2_Weather_Error" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DataFormats">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mews.weather.doe2weather.</span></span><span class="sig-name descname"><span class="pre">DataFormats</span></span><a class="reference internal" href="_modules/mews/weather/doe2weather.html#DataFormats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.weather.doe2weather.DataFormats" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DataFormats.column_description">
+<span class="sig-name descname"><span class="pre">column_description</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['MONTH</span> <span class="pre">(1-12)',</span> <span class="pre">'DAY</span> <span class="pre">OF</span> <span class="pre">MONTH',</span> <span class="pre">'HOUR</span> <span class="pre">OF</span> <span class="pre">DAY',</span> <span class="pre">'WET</span> <span class="pre">BULB</span> <span class="pre">TEMP</span> <span class="pre">(DEG</span> <span class="pre">F)',</span> <span class="pre">'DRY</span> <span class="pre">BULB</span> <span class="pre">TEMP</span> <span class="pre">(DEG</span> <span class="pre">F)',</span> <span class="pre">'PRESSURE</span> <span class="pre">(INCHES</span> <span class="pre">OF</span> <span class="pre">HG)',</span> <span class="pre">'CLOUD</span> <span class="pre">AMOUNT</span> <span class="pre">(0</span> <span class="pre">-</span> <span class="pre">10)',</span> <span class="pre">'SNOW</span> <span class="pre">FLAG</span> <span class="pre">(1</span> <span class="pre">=</span> <span class="pre">SNOWFALL)',</span> <span class="pre">'RAIN</span> <span class="pre">FLAG</span> <span class="pre">(1</span> <span class="pre">=</span> <span class="pre">RAINFALL)',</span> <span class="pre">'WIND</span> <span class="pre">DIRECTION</span> <span class="pre">(0</span> <span class="pre">-</span> <span class="pre">15;</span> <span class="pre">0=N,</span> <span class="pre">1=NNE,</span> <span class="pre">ETC)',</span> <span class="pre">'HUMIDITY</span> <span class="pre">RATIO</span> <span class="pre">(LB</span> <span class="pre">H2O/LB</span> <span class="pre">AIR)',</span> <span class="pre">'DENSITY</span> <span class="pre">OF</span> <span class="pre">AIR</span> <span class="pre">(LB/CU</span> <span class="pre">FT)',</span> <span class="pre">'SPECIFIC</span> <span class="pre">ENTHALPY</span> <span class="pre">(BTU/LB)',</span> <span class="pre">'TOTAL</span> <span class="pre">HOR.</span> <span class="pre">SOLAR</span> <span class="pre">(BTU/HR-SQFT)',</span> <span class="pre">'DIR.</span> <span class="pre">NORMAL</span> <span class="pre">SOLAR</span> <span class="pre">(BTU/HR-SQFT)',</span> <span class="pre">'CLOUD</span> <span class="pre">TYPE</span> <span class="pre">(0</span> <span class="pre">-</span> <span class="pre">2)',</span> <span class="pre">'WIND</span> <span class="pre">SPEED</span> <span class="pre">(KNOTS)']</span></em><a class="headerlink" href="#mews.weather.doe2weather.DataFormats.column_description" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mews.weather.doe2weather.DataFormats.header_dtype">
+<span class="sig-name descname"><span class="pre">header_dtype</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">dtype([('location_IWDID',</span> <span class="pre">'S20'),</span> <span class="pre">('year_IWYR',</span> <span class="pre">'&lt;i4'),</span> <span class="pre">('latitude_WLAT',</span> <span class="pre">'&lt;f4'),</span> <span class="pre">('longitude_WLONG',</span> <span class="pre">'&lt;f4'),</span> <span class="pre">('timezone_IWTZN',</span> <span class="pre">'&lt;i4'),</span> <span class="pre">('record_length_LRECX',</span> <span class="pre">'&lt;i4'),</span> <span class="pre">('number_days_NUMDAY',</span> <span class="pre">'&lt;i4'),</span> <span class="pre">('clearness_number_CLN_IM1',</span> <span class="pre">'&lt;f4'),</span> <span class="pre">('ground_temperature_GT_IM1',</span> <span class="pre">'&lt;f4'),</span> <span class="pre">('solar_flag_IWSOL',</span> <span class="pre">'&lt;i4')])</span></em><a class="headerlink" href="#mews.weather.doe2weather.DataFormats.header_dtype" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mews.weather.climate.html" class="btn btn-neutral float-left" title="mews.weather.climate module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mews.weather.psychrometrics.html" class="btn btn-neutral float-right" title="mews.weather.psychrometrics module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
