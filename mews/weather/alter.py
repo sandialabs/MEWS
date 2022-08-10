@@ -36,73 +36,78 @@ import warnings
 from copy import deepcopy
 
 class Alter(object):
+
     """
-    Alter energy plus or doe2 weather files - shorter or longer than a year permitted
+    Alter energy plus or doe2 weather files - shorter or longer than a year permitted.
+    
+    >>> obj = Alter(weather_file_path,
+                    replace_year,
+                    check_types)
+    
+    This is effectively the "read" function.
+    
+    If replace_year causes new coincidence with leap years, then an 
+    extra day is added (Feb 28th if repeated). If a replace_year moves
+    from a leap year to a non-leap year, then Feb 29th is deleted if it 
+    is present.
+    
+    Returns the altered object.
+    
+    Parameters
+    ----------
+    weather_file_path : str 
+        A valid path to an energy plus weather file.
+    replace_year : int : optional : Default = None
+        If None:
+            Leave the year in the energy plus file unaltered.
+        If int: 
+            Change the year to the value for all rows.
+    check_types : bool : optional : Default = True
+        If True:
+            Check types in all functions (slow but safe).
+        If False: 
+            Do not check types (likely to get less understandable errors
+            if something goes wrong)
+    clear_alterations : optional: bool 
+        NOT CURRENTLY USED.
+        Remove previous alterations from the current 
+        object. Reissuing a read command to an Alter object allows a new set
+        of weather to recieve the same alterations a previous set recieved.            
+    
+    isdoe2 : optional: bool : ONLY NEEDED IF DOE2
+        Read in a DOE2 weather file instead of an EPW and then
+        wrangle that data into an EP format for the self.epwobj database.
+    use_exe : optional : bool : ONLY NEEDED IF DOE2
+        etermine whether to use BIN2TXT and TXT2BIN
+        executables (True) or native Python to read BIN files.
+    doe2_bin2txt_path : str : optional : ONLY NEEDED IF DOE2
+        A valid path to an executable
+        that converts a DOE2 filename.BIN weather file to an ASCII text file. 
+        The executable is assumed to be named BIN2TXT.EXE and comes with
+        any distribution of DOE2 which can be obtained by forming a license
+        agreement with James Hirsch and Associates (www.doe2.com). A folder
+        in mews "third_party_software" can be used to put the filename.EXE
+    doe2_start_datetime : datetime : optional : ONLY NEEDED IF DOE2
+    Input the start time for the weather file.
+    doe2_hour_in_file : optional : ONLY NEEDED IF DOE2
+        Must be 8760 or 8784 for leap years.
+    doe2_timezone : str : optional : ONLY NEEDED IF DOE2
+        Name of time zone applicable to the doe2 file.
+    doe2_dst : optional : ONLY NEEDED IF DOE2
+        List/tuple with 2 entries that are datetimes with begin and 
+        end times for day light savings time.
+    
+    Returns
+    ------
+    None
+   
     """
     
     def __init__(self,weather_file_path,replace_year=None,check_types=True,
                  isdoe2=False,use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
                  doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
         
-        """
-        Alter(weather_file_path,replace_year,check_types)
-        
-        This is effectively the "read" function
-        
-        If replace_year causes new coincidence with leap years, then an 
-        extra day is added (Feb 28th if repeated). If a replace_year moves
-        from a leap year to a non-leap year, then Feb 29th is deleted if it 
-        is present.
-        
-        Inputs
-        ------
-        weather_file_path : str : a valid path to an energy plus weather file
-        replace_year : int : optional : default = None
-            If None, then leave the year in the energy plus file unaltered
-            If an int, then change the year to the value for all rows
-        check_types : bool : optional : default = True
-            True - check types in all functions (slow but safe)
-            False - do not check types (likely to get less understandable errors
-            if something goes wrong)
-        clear_alterations : optional: bool : remove previous alterations from the current 
-            object. Reissuing a read command to an Alter object allows a new set
-            of weather to recieve the same alterations a previous set recieved            
-        ONLY NEEDED IF DOE2
-        isdoe2 : optional: bool : read in a DOE2 weather file instead of an EPW and then
-            wrangle that data into an EP format for the self.epwobj database
-        use_exe : optional : bool : determine whether to use BIN2TXT and TXT2BIN
-            executables (True) or native Python to read BIN files.
-        doe2_bin2txt_path : optional : string : a valid path to an executable
-            that converts a DOE2 filename.BIN weather file to an ASCII text file. 
-            The executable is assumed to be named BIN2TXT.EXE and comes with
-            any distribution of DOE2 which can be obtained by forming a license
-            agreement with James Hirsch and Associates (www.doe2.com). A folder
-            in mews "third_party_software" can be used to put the filename.EXE
-        doe2_start_datetime : optional : datetime : Input the start time for
-            the weather file. required if isdoe2=True. 
-        doe2_hour_in_file : optional : must be 8760 or 8784 for leap years.
-            required if isdoe2=True
-        doe2_timezone : optional : required if isdoe2=True: str : name of time
-            zone applicable to the doe2 file
-        doe2_dst : optional : required if isdoe2=True: list/tuple with 2 entries
-            that are datetimes with begin and end times for day light savings
-            time.
-        
-        returns
-        ------
-        Alter object
-        
-        Methods
-        -------
-        add_alteration - alter weather file by adding a shape function and delta
-                      to one weather variable
-        
-        remove_alteration - undo an add_alteration via name of the alteration
-        
-        reindex_2_datetime - return a dataframe that has date-time as the index
-        
-        
-        """
+
         obj = DOE2Weather()
         self.df2bin = obj.df2bin
         self.bin2df = obj.bin2df
@@ -232,47 +237,52 @@ class Alter(object):
                       alteration_name=None,
                       averaging_steps=1):
         """
-        add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column):
+        add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column)
+        
+        Alter weather file by adding a shape function and delta to one weather variable.
+        
+        Internal epwobj is altered use "write" to write the result.
             
         Parameters
         ----------
-        
-            year  : int : year of start date
-            day   : int : day of month on which the heat wave starts        
-            month : int : month of year on which the heat wave starts
-            hour  : int : hour of day on which the heat wave starts (1-24)
-            
-            duration : int : number of hours that the heat wave lasts. if = -1
-                then the change is applied to the end of the weather file
-            
-            peak_delta   : float : peak value change from original weather 
-                at "shape_func" maximum
-            
-            shape_func     : function|list|tuple|np.array : a function or array 
-                whose range interval [0,1] will be mapped to [0,duration] in hours. 
-                The function will be normalized to have a peak of 1 for its 
-                peak value over [0,1]. For example, a sine function could be
-                lambda x: sin(pi*x). This shape is applied in adding the heat wave.
-                from the start time to duration_hours later. If the input is an
-                array, it must have 'duration' number of entries.
-            column : str : optional : default = 'Dry Bulb Temperature'
-                must be an entry in the column names of the energy plus weather
-                file.
-            alteration_name : any type that can be a key for dict : optional : 
-                Default = None:
-                    If none then name is "Alteration X" where X is the current
+        year : int 
+            Year of start date.
+        day : int 
+            Day of month on which the heat wave starts.     
+        month : int 
+            Month of year on which the heat wave starts.
+        hour : int 
+            Hour of day on which the heat wave starts (1-24).
+        Duration : int 
+            Number of hours that the heat wave lasts. if = -1
+            then the change is applied to the end of the weather file.
+        peak_delta : float 
+            Peak value change from original weather at "shape_func" maximum.
+        shape_func : function|list|tuple|np.array 
+            A function or array whose range interval [0,1] will be mapped to 
+            [0,duration] in hours. The function will be normalized to have a peak 
+            of 1 for its peak value over [0,1]. For example, a sine function could 
+            be lambda x: sin(pi*x). This shape is applied in adding the heat wave.
+            from the start time to duration_hours later. If the input is an
+            array, it must have 'duration' number of entries.
+        column : str : optional : Default = 'Dry Bulb Temperature'
+            Must be an entry in the column names of the energy plus weather
+            file.
+        alteration_name : any type that can be a key for dict : optional : Default = None
+                If None:
+                    Name is "Alteration X" where X is the current
                     number of alterations + 1.
-                    If any other type, it must not be a repeat of previously
-                    added alterations.
-            averaging_steps : int : optional Default = 1
-                 The number of steps to average the weather signal over when
-                 adding the heat wave. For example, if heat wave statistics
-                 come from daily data, then additions need to be made w/r to
-                 the daily average and this should be 24
+                If any other type: 
+                    Must not be a repeat of previously added alterations.
+        averaging_steps : int : optional : Default = 1
+             The number of steps to average the weather signal over when
+             adding the heat wave. For example, if heat wave statistics
+             come from daily data, then additions need to be made w/r to
+             the daily average and this should be 24.
                 
         Returns
         -------
-            None - internal epwobj is altered use "write" to write the result.
+        None 
             
         """
         df = self.epwobj.dataframe
@@ -390,13 +400,20 @@ class Alter(object):
              doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
         
         """
-        read a new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally 
-        keeping previously added alterations in obj.alterations
+        Reads an new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally 
+        keeping previously added alterations in obj.alterations.
         
-        obj.read(weather_file_path,replace_year=None,check_types=True,
-             clear_alterations=False,isdoe2=False,
-             use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
-             doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None)
+        >>> obj.read(weather_file_path,
+                     replace_year=None,
+                     check_types=True,
+                     clear_alterations=False,
+                     isdoe2=False,
+                     use_exe=False,
+                     doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
+                     doe2_start_datetime=None,
+                     doe2_tz=None,
+                     doe2_hour_in_file=8760,
+                     doe2_dst=None)
         
         The input has three valid modes:
             Energy Plus: only input weather_file_path and optionally:
@@ -409,62 +426,78 @@ class Alter(object):
                 
         Once you have used one mode, there is no crossing over to another mode
         
-        Warning: This function resets the entire object and is equivalent 
-                 to creating a new object except that the previously entered 
-                 alterations are left intact. This allows for these altertions
-                 to be applied in proportionately the same positions for a new
-                 weather history.
+        Warning: 
+            This function resets the entire object and is equivalent 
+            to creating a new object except that the previously entered 
+            alterations are left intact. This allows for these altertions
+            to be applied in proportionately the same positions for a new
+            weather history.
                 
         If replace_year causes new coincidence with leap years, then an 
         extra day is added (Feb 28th if repeated). If a replace_year moves
         from a leap year to a non-leap year, then Feb 29th is deleted if it 
         is present.
         
+        obj.epwobj has a new dataset afterwards.
+        
         Parameters
-        ------
-        weather_file_path : str : a valid path to an energy plus weather file
+        ----------
+        weather_file_path : str 
+            Avalid path to an energy plus weather file
             or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl
             inputs are needed for the doe2 option.
-        replace_year : optional : int : optional - required if isdoe2=True : default = None
-            If None, then leave the year in the energy plus file unaltered
-            If an int, then change the year to the value for all rows
-            If a tup, then first entry is the begin year and second is the hour
-            at which to change to the next year.
+        replace_year : int : optional : Default = None : REQUIRED IF isdoe2=True
+            If None:
+                Leave the year in the energy plus file unaltered.
+            If an int:
+                Change the year to the value for all rows.
+            If a tup:
+                First entry is the begin year and second is the hour
+                at which to change to the next year.
+                
             This is useful to give TMY or other multi-year compilations a single
             year within a scenario history. 
-        check_types : optional: bool : optional : default = True
-            True - check types in all functions (slower but safer)
-            False - do not check types (likely to get less understandable errors
-            if something goes wrong)
-        clear_alterations : optional: bool : remove previous alterations from the current 
+        check_types : bool : optional : Default = True
+            If True: 
+                Check types in all functions (slower but safer).
+            If False:
+                Do not check types (likely to get less understandable errors
+                if something goes wrong).
+        clear_alterations : bool : optional : Default = False
+            Remove previous alterations from the current 
             object. Reissuing a read command to an Alter object allows a new set
-            of weather to recieve the same alterations a previous set recieved
-        isdoe2 : optional: bool : read in a DOE2 weather file instead of an EPW and then
-            wrangle that data into an EP format for the self.epwobj database
-        use_exe : optional : bool : True = Use BIN2TXT.EXE to read DOE-2 BIN file
-            False = Use Python to read DOE-2 BIN (PREFERRED).
-        doe2_bin2txt_path : optional : string : a valid path to an executable
+            of weather to recieve the same alterations a previous set recieved.
+        isdoe2 : bool : optional 
+            Read in a DOE2 weather file instead of an EPW and then
+            wrangle that data into an EP format for the self.epwobj database.
+        use_exe : bool : optional
+            If True: 
+                Use BIN2TXT.EXE to read DOE-2 BIN file.
+            If False:
+                Use Python to read DOE-2 BIN (PREFERRED).
+        doe2_bin2txt_path : str : optional : 
+            A valid path to an executable
             that converts a DOE2 filename.BIN weather file to an ASCII text file. 
             The executable is assumed to be named BIN2TXT.EXE and comes with
             any distribution of DOE2 which can be obtained by forming a license
             agreement with James Hirsch and Associates (www.doe2.com). A folder
-            in mews "third_party_software" can be used to put the filename.EXE
-        doe2_start_datetime : optional : datetime : Input the start time for
-            the weather file. if not entered, then the value in the BIN file
-            is used. 
-        doe2_hour_in_file : optional : must be 8760 or 8784 for leap years.
-            required if isdoe2=True. This allows a non-leap year to be forced
-            into a leap year for consistency. Feb28th is just repeated for such
-            cases.
-        doe2_timezone : optional : required if isdoe2=True: str : name of time
-            zone applicable to the doe2 file
-        doe2_dst : optional : required if isdoe2=True: list/tuple with 2 entries
-            that are datetimes with begin and end times for day light savings
-            time.
+            in mews "third_party_software" can be used to put the filename.EXE.
+        doe2_start_datetime : datetime : optional 
+            Input the start time for the weather file. If not entered, then the 
+            value in the BIN file is used. 
+        doe2_hour_in_file : optional : REQUIRED IF isdoe2=True
+            Must be 8760 or 8784 for leap years. This allows a non-leap year to 
+            be forced into a leap year for consistency. Feb28th is just repeated 
+            for such cases.
+        doe2_timezone : str: optional : REQUIRED IF isdoe2=True
+            Name of time zone applicable to the doe2 file.
+        doe2_dst : optional : REQUIRED IF isdoe2=True
+            List/tuple with 2 entries that are datetimes with begin and end 
+            times for day light savings time.
         
         Returns
-        ------
-        None - obj.epwobj has a new dataset afterwards.
+        -------
+        None 
         """
         
         epwobj = epw()
@@ -615,18 +648,18 @@ class Alter(object):
             
     def remove_alteration(self,alteration_name):
         """
-        Remove an alteration that has already been added
+        Removes an alteration that has already been added.
         
-        obj.remove_alteration(alteration_name)
+        >>> obj.remove_alteration(alteration_name)
         
         Parameters
         ----------
         alteration_name : str
-            a name that must exist in the obj.alterations already added
+            A name that must exist in the obj.alterations already added.
 
         Returns
         -------
-        None.
+        None
 
         """
         if alteration_name in self.alterations:
@@ -644,16 +677,18 @@ class Alter(object):
         
     def reindex_2_datetime(self,tzname=None,original=False):
         """
-        obj.reindex_2_datetime(tzname=None)
+        >>> obj.reindex_2_datetime(tzname=None)
         
         Parameters
         ----------
-        tzname : str : optional : a valid time zone name
-                Default - None - keep data time zone naive
+        tzname : str : optional : Default = None
+            A valid time zone name. When None, the data is kept in the native
+            time zone.
         
         Returns
         -------
-        df_out - Dataframe with a DatetimeIndex index and weather data.
+        df_out
+            Dataframe with a DatetimeIndex index and weather data.
         
         """
         
@@ -704,25 +739,31 @@ class Alter(object):
     def write(self,out_file_name=None,overwrite=False,create_dir=False,
               use_exe=False,txt2bin_exepath=r"../third_party_software/TXT2BIN.EXE"):
         """
-        write an Energy Plus Weather file with alterations
+        Writes to an Energy Plus Weather file with alterations.
+        
+        >>> obj.write(out_file_name=None,
+                      overwrite=False,
+                      create_dir=False,
+                      use_exe=False,
+                      txt2bin_exepath=r"../third_party_software/TXT2BIN.EXE")
 
         Parameters
         ----------
-        out_file_name : str, optional
+        out_file_name : str : optional : Default = None
             File name and path to output altered epw weather to. 
-            The default is None. If None, then use the original file name with
-            "_Altered" appended to it
-        overwrite : bool, optional
+            If None, then use the original file name with "_Altered" appended to it.
+        overwrite : bool : optional : Default = False
             If True, overwrite an existing file otherwise throw an error if the 
-            file exists. The default is False.
-        create_dir : bool, optional
+            file exists.
+        create_dir : bool : optional : Default = False
             If True create a new directory, otherwise throw an error if the 
-            folder does not exsit. The default is False.
+            folder does not exsit.
         txt2bin_exepath : str : optional
+            ...
 
         Returns
         -------
-        None.
+        None
 
         """
         if out_file_name is None:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files
+EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files. 
 EPW is not the EPW downloaded from pypi.org, it must be downloaded
 from https://github.com/building-energy/epw
 
@@ -40,7 +40,8 @@ import pandas as pd
 import csv
 
 class epw():
-    """A class which represents an EnergyPlus weather (epw) file
+    """
+    A class which represents an EnergyPlus weather (epw) file.
     """
     
     def __init__(self):
@@ -51,10 +52,13 @@ class epw():
             
     
     def read(self,fp):
-        """Reads an epw file 
+        """
+        Reads an epw file. 
         
-        Arguments:
-            - fp (str): the file path of the epw file   
+        Parameters
+        ----------
+        fp : str 
+            The file path of the epw file   
         
         """
         
@@ -63,13 +67,18 @@ class epw():
                 
         
     def _read_headers(self,fp):
-        """Reads the headers of an epw file
+        """
+        Reads the headers of an epw file.
         
-        Arguments:
-            - fp (str): the file path of the epw file   
+        Parameters
+        ----------
+        fp : str 
+            The file path of the epw file   
             
-        Return value:
-            - d (dict): a dictionary containing the header rows 
+        Returns
+        -------
+        d : dict 
+            A dictionary containing the header rows 
             
         """
         
@@ -85,13 +94,18 @@ class epw():
     
     
     def _read_data(self,fp):
-        """Reads the climate data of an epw file
+        """
+        Reads the climate data of an epw file.
         
-        Arguments:
-            - fp (str): the file path of the epw file   
+        Parameters
+        ----------
+        fp : str 
+            The file path of the epw file   
             
-        Return value:
-            - df (pd.DataFrame): a DataFrame comtaining the climate data
+        Returns
+        -------
+        df : pd.DataFrame 
+            A DataFrame comtaining the climate data
             
         """
         
@@ -140,13 +154,18 @@ class epw():
         
         
     def _first_row_with_climate_data(self,fp):
-        """Finds the first row with the climate data of an epw file
+        """
+        Finds the first row with the climate data of an epw file.
         
-        Arguments:
-            - fp (str): the file path of the epw file   
+        Parameters
+        ----------
+        fp : str 
+            The file path of the epw file   
             
-        Return value:
-            - i (int): the row number
+        Returns
+        -------
+        i : int 
+            The row number
             
         """
         
@@ -159,10 +178,13 @@ class epw():
         
         
     def write(self,fp):
-        """Writes an epw file 
+        """
+        Writes to an epw file.
         
-        Arguments:
-            - fp (str): the file path of the new epw file   
+        Parameters
+        ----------
+        fp : str 
+            The file path of the new epw file   
         
         """
         

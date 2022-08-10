@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'MEWS'
-copyright = '2022, Sandia National Labs'
+copyright = '2021, National Technology and Engineering Solutions of Sandia, LLC'
 author = 'Tyler Schostek'
 
 # The full version, including alpha/beta/rc tags

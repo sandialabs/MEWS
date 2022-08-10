@@ -1,3 +1,10 @@
+"""
+Error Handling for MEWS.
+
+----
+
+"""
+
 class EPWMissingDataFromFile(Exception):
     pass
 

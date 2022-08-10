@@ -34,48 +34,38 @@ import warnings
 
 class DiscreteMarkov():
     """
-    obj = MarkovChain(transition_matrix,state_names,use_cython=True)
+    >>> obj = MarkovChain(transition_matrix,
+                          state_names,
+                          use_cython=True)
     
-    Object to work with Discrete Markov Chains
+    Object to work with discrete Markov chains.
     
-    Methods
+    Parameters
     ----------
-    .history(self, num_step, state0):
-        Calculate a history of num_step for the markov process
-    
-    .steady(self)
-        Calculate steady-state (stationary) probabilities of each state
-        given the transition matrix
-    
+    rng : numpy.random.default_rng()
+        Random number generator
+        
+    transition_matrix : np.ndarray of np.float
+        Square matrix that is a right stochastic matrix (i.e. the rows 
+        sum to 1).
+        
+    state_names : list of strings : optional : Default = None
+        list of names that must be of the same dimension as the dimension
+        as the transition_matrix. The default is None and a list of 
+        ["0","1",...] is assigned.
+        
+    use_cython : bool : optional : Default = True
+        Use cython to calculate markov chain histories (~20x faster). 
+        The default is True.
+
+    Returns
+    -------
+    None
+
     """
     
     def __init__(self,rng,transition_matrix,state_names=None,use_cython=True):
-        """
-        DiscreteMarkov
 
-        Parameters
-        ----------
-        rng : numpy.random.default_rng() :
-            Random number generator
-            
-        transition_matrix : np.ndarray of np.float
-            Square matrix that is a right stochastic matrix (i.e. the rows 
-            sum to 1)
-            
-        state_names : list of strings, optional
-            list of names that must be of the same dimension as the dimension
-            as the transition_matrix
-            The default is None and a list of ["0","1",...] is assigned 
-            
-        use_cython : bool, optional
-            Use cython to calculate markov chain histories (~20x faster). 
-            The default is True.
-
-        Returns
-        -------
-        DiscreteMarkof Object
-
-        """
         self.rng = rng
         # special handling
         if state_names is None:
@@ -103,30 +93,33 @@ class DiscreteMarkov():
         
     def history(self,num_step,state0,min_steps=24,skip_steps=0,count_in_min_steps_intervals=True):
         """
-        obj.history(num_step,state0, min_steps, skip_steps)
+        >>> obj.history(num_step,state0, 
+                        min_steps, 
+                        skip_steps)
         
-        calculate a history for a discrete markov chain of 'num_step' length
-        and initial 'state0'
+        Calculate a history for a discrete markov chain of 'num_step' length
+        and initial 'state0'.
         
         Parameters
         ----------
         num_step : int or np.int
-            number of steps to simulate for the object's defined transition_matrix
+            Number of steps to simulate for the object's defined transition_matrix.
         state0 : int or str
-            initial state of the history
+            Initial state of the history.
         min_steps : int : optional
-            minimum number of steps before a state can transition
-        skip_steps : int :
+            Minimum number of steps before a state can transition.
+        skip_steps : int
             Number of steps at the beginning of the markov chain to assign to
-                    state0 (this is used for weather files that may begin in the middle
-                    of the day to avoid applying heat waves out of sync with
-                    day-night cycles)
+            state0 (this is used for weather files that may begin in the middle
+            of the day to avoid applying heat waves out of sync with
+            day-night cycles).
         count_in_min_steps_intervals : bool : optional : Default = True
             True = apply markov transition matrix as a discrete process that 
-                   is randomly tested every min_steps interval (i.e. min_steps = 24
-                   means the markov chain state is only tested 1 in 24 steps)
+            is randomly tested every min_steps interval (i.e. min_steps = 24
+            means the markov chain state is only tested 1 in 24 steps).
             False = apply markov transition matrix every step but only transition
-                   at every min_steps step.
+            at every min_steps step.
+            
         Raises
         ------
         ValueError
@@ -134,11 +127,11 @@ class DiscreteMarkov():
             than the dimension-1 of the transition_matrix or a string that is 
             in the self._names dictionary.
         TypeError
-            All incorrect types are rejected from this method
+            All incorrect types are rejected from this method.
 
         Returns
         -------
-        None.
+        None
 
         """
         
@@ -207,19 +200,20 @@ class DiscreteMarkov():
             
     def steady(self):
         """
-        obj.steady()
+        >>> obj.steady()
         
-        Calculate stationary probabilities vector for each state based on the
-        transition probabilities matrix
+        Calculates a stationary probability vector for each state based on the
+        transition probability matrix.
         
-        Parameter:
-            None
+        Parameters
+        ----------
+        None
 
         Returns
         -------
         steady : np.ndarray
-            vector of stationary probabilities of each state given the 
-            transition matrix assigned to the process
+            Vector of stationary probabilities of each state given the 
+            transition matrix assigned to the process.
 
         """
         # transpose needed because eig must work with a left hand stochastic
@@ -279,13 +273,194 @@ class Extremes():
     """
     Fit weather data with a model for extreme hot and cold that can
     then be modified to produce increasing intensity and duration
-    by adjustment of the statistical parameters involved
-    
-    for now this is written like it is the 
+    by adjustment of the statistical parameters involved.
     
     
+    >>> obj = Extremes(start_year,
+                       max_avg_dist,
+                       max_avg_delta,
+                       min_avg_dist,
+                       min_avg_delta,
+                       transition_matrix,
+                       transition_matrix_delta,
+                       weather_files,
+                       num_realizations,
+                       num_repeat=1,
+                       use_cython=True,
+                       column='Dry Bulb Temperature',
+                       tzname=None,
+                       write_results=True,
+                       results_folder="",
+                       results_append_to_name="",
+                       run_parallel=True,
+                       min_steps=24,
+                       test_shape_func=False,
+                       doe2_input=None,
+                       random_seed=None,
+                       max_E_dist=None,
+                       del_max_E_dist=None,
+                       min_E_dist=None,
+                       del_min_E_dist=None,
+                       frac_long_wave=0.8,
+                       current_year=None,
+                       climate_temp_func=None,
+                       averaging_steps=1,
+                       no_climate_trend=False)
+    
+    look for results in obj.results - files are output as specified in the inputs.
+    
+    Parameters
+    ----------
+    start_year : int
+        Year to begin a new history that will replace other years in 
+        weather files.
+    
+    max_avg_dist : function or dict
+        If function: 
+            High extreme (for temperature extreme heat) statistical
+            distribution function that returns random numbers that indicate
+            how much energy/hr is associated with an extreme event.
+        If dict: 
+            A dictionary of functions where each...
+        
+    max_avg_delta : float or dict
+        If float:
+            Gradient of change for the average value of 
+            max_avg_dist per year. Change is included step-wise on a yearly
+            basis.
+        If dict:
+            Contains elements 'func' and 'param' where 'param' is a dictionary
+            of deltas on each parameter input to the function in 'func'
+            set of all monthly parameters needed by the max_avg_dist 
+            function. The number of parameters is distribution dependent.
+        
+    min_avg_dist : function or dict
+        If function:
+            A CDF that recieves one input.
+            
+            Low extreme (for temperature extreme cold) statistical distribution
+            function that returns random numbers that indicate how much 
+            reduction in energy/hr is associated with an extreme event.
+        
+        If dict:
+            ...
+        
+    min_avg_delta : float
+        Gradient of change for the average value of min_avg_dist per year.
+        Change is included step-wise on a yearly basis
+        
+    transition_matrix : np.array
+        Markov chain 3x3 matrix where index 0 = probability of "normal 
+        conditions", 1 = probability of maximum extreme conditions, and
+        2 = probability of minimum extreme conditions. Rows number is associated
+        with the probabilities for a given state (i.e. row 0 applies when the
+        the current state is 0). Rows must sum to 1.
+        
+    transition_matrix_delta : np.array
+        Rate per year that transition matrix probabilities are changing in
+        absolute (not percentage) change in probability. Rows must sum to zero so that the
+        transition matrix always has rows continue to sum to 1.
+        
+    weather_files : list 
+        Weather files that will be read and altered per the statistical specs above.
+        
+    num_realizations : int
+        The number of realizations per weather file that will be output for the
+        statistics. Number of output weather files is num_realizations * len(weather_files).
+        
+    num_repeat : int : optional : Default = 1
+        Number of repeat years that will be processed into a longer duration
+        than the original weather file.
+        
+    use_cython : bool : optional : Default = True
+        Flag to enable cython. If False, then much slower native python
+        is used for the Markov chain. 
+        
+    column : str : optional : Default = 'Dry Bulb Temperature'
+        Column for weather signal that will be altered. This input needs
+        to be different for a DOE2 weather file.
+        
+    tzname : str : optional : Default = None
+        Time zone name to apply the weather files to. Must be a valid
+        time zone for the tz Python library.
+        
+    write_results : bool : optional : Default = True
+        Flag to either write (True) or not write the weather files.
+        results can be accessed through obj.results if not written.
+        
+    results_folder : str : optional : Default = ""
+        String of a path to a location to write weather files.
+    
+    results_append_to_name : str : optional : Default = ""
+        String to append to the file names of output weather files.
+        
+    run_parallel : bool : optional : Default = True
+        Flag to either run parallel (True) or run on a single processor (False)
+        set to False if parallel run engine fails.
+        
+    min_steps : int > 0 : optional : Default=24
+        Minimum number of time steps for an extreme event .
+        
+    test_shape_func : bool : optional : Default = False
+        For testing purposes:
+            Boolean indicating whether computationally expensive testing is 
+            done to assure the shape function used integrates to the original
+            heat_added. Default value is False - True is needed for unittesting.
+        
+    doe2_input : dict : optional : Default = None
+       | Optional input required to perform the analysis using DOE2
+       | bin files. See mews.weather.alter. needs:
+       | {'doe2_bin2txt_path':OPTIONAL - path to bin2txt.exe DOE2 utility
+       | MEWS has a default location for this utility 
+       | which can be obtained from DOE2 (www.doe2.com),
+       | 'doe2_start_datetime':datetime indicating the start date and time
+       | for the weather DOE2 weather file,
+       | 'doe2_tz'=time zone for doe2 file,
+       | 'doe2_hour_in_file'=8760 or 8784 for leap year,
+       | 'doe2_dst'= Start and end of daylight savings time for the 
+       | doe2_start_datetime year,
+       | 'txt2bin_exepath' : OPTIONAL - path to txt2bin.exe DOE2 utility}
+    
+    random_seed : int : optional : Default = None
+        Use this to fix an analysis so that pseudo-random numbers are sampled
+        as the same sequence so that results can be replicated.
+        
+     max_E_dist : dict : optional : Default = None
+         A distribution that defines random sampling for energy of an 
+         extreme wave. If this is None, then the old way of using
+         Extreme applies if it is a dictionary, then it must be a CDF function
+         that allows random numbers to be used and has parameters as independent
+         inputs so that they can be shifted via the del_max_E_dist input.
+         
+    del_max_E_dist : dict : optional : Default = None
+        For every parameter in max_E_dist, a del_param is needed that shows
+        how the max_E_dist is stretched/shifted with changes in climate.
+        
+    frac_long_wave : float <= 1 > 0 
+        Old input style feature. The amount of energy that goes into a sinusoidal peak. 
+        
+    current_year : int : optional 
+        New input style feature. Used to add a global warming offset to the entire dataset.
+    
+
+     
+     no_climate_trend : Bool : Optional : Default = False
+          Exclude the climate trend gradual increase in temperature
+          while including the heat wave effects.
+    
+    Returns
+    -------
+    None 
     """
     
+    """
+    TODO finish documentation
+     ,
+     min_E_dist=None - optional, cold snap analog to max_E_dist
+     del_min_E_dist - optional, cold snap analog to del_max_E_dist
+     climate_temp_func
+     averaging_steps (see alter object)
+    """
     states = {"normal":0,"cold":1,"hot":2}
     max_recursion = 100
     
@@ -320,187 +495,7 @@ class Extremes():
                  averaging_steps=1,
                  no_climate_trend=False):
         
-        """
         
-        obj = Extremes(start_year,
-                 max_avg_dist,
-                 max_avg_delta,
-                 min_avg_dist,
-                 min_avg_delta,
-                 transition_matrix,
-                 transition_matrix_delta,
-                 weather_files,
-                 num_realizations,
-                 num_repeat=1,
-                 use_cython=True,
-                 column='Dry Bulb Temperature',
-                 tzname=None,
-                 write_results=True,
-                 results_folder="",
-                 results_append_to_name="",
-                 run_parallel=True,
-                 min_steps=24,
-                 test_shape_func=False,
-                 doe2_input=None,
-                 random_seed=None,
-                 max_E_dist=None,
-                 del_max_E_dist=None,
-                 min_E_dist=None,
-                 del_min_E_dist=None,
-                 frac_long_wave=0.8,
-                 current_year=None,
-                 climate_temp_func=None,
-                 averaging_steps=1,
-                 no_climate_trend=False)
-        
-        Parameters
-        ----------
-        
-        start_year : int
-            Year to begin a new history that will replace other years in 
-            weather files
-        
-        max_avg_dist : function or dict
-            if function:
-                high extreme (for temperature extreme heat) statistical
-                distribution function that returns random numbers that indicate
-                how much energy/hr is associated with an extreme event
-            if dict:
-                a dictionary of functions where each 
-            
-        max_avg_delta : float or dict
-            if float:
-                gradient of change for the average value of 
-                max_avg_dist per year. Change is included step-wise on a yearly
-                basis
-            if dict:
-                contains elements 'func' and 'param' where 'param' is a dictionary
-                of deltas on each parameter input to the function in 'func'
-                set of all monthly parameters needed by the max_avg_dist 
-                function. The number of parameters is distribution dependent
-            
-        min_avg_dist : function or dict
-            if function:
-                A CDF that recieves one input
-            low extreme (for temperature extreme cold) statistical distribution
-            function that returns random numbers that indicate how much 
-            reduction in energy/hr is associated with an extreme event
-            
-        min_avg_delta : float
-            gradient of change for the average value of min_avg_dist per year.
-            Change is included step-wise on a yearly basis
-            
-        transition_matrix : np.array
-            Markov chain 3x3 matrix where index 0 = probability of "normal 
-            conditions", 1 = probability of maximum extreme conditions, and
-            2 = probability of minimum extreme conditions. Rows number is associated
-            with the probabilities for a given state (i.e. row 0 applies when the
-            the current state is 0). Rows must sum to 1.
-            
-        transition_matrix_delta : np.array
-            Rate per year that transition matrix probabilities are changing in
-            absolute (not percentage) change in probability. Rows must sum to zero so that the
-            transition matrix always has rows continue to sum to 1.
-            
-        weather_files : list 
-            weather files that will be read and altered per the statistical specs above
-            
-        num_realizations : int
-            The number of realizations per weather file that will be output for the
-            statistics. Number of output weather files is num_realizations * len(weather_files)
-            
-        num_repeat : int : optional : Default = 1
-            number of repeat years that will be processed into a longer duration
-            than the original weather file.
-            
-        use_cython : bool : optional : Default = True
-            flag to enable cython. If False, then much slower native python
-            is used for the Markov chain 
-            
-        column : str : optional : Default = 'Dry Bulb Temperature'
-            column for weather signal that will be altered. This input needs
-            to be different for a DOE2 weather file.
-            
-        tzname : str : optional : Default = None
-            time zone name to apply the weather files to. Must be a valid
-            time zone for the tz Python library.
-            
-        write_results : bool : optional : Default = True
-            flag to either write (True) or not write the weather files.
-            results can be accessed through obj.results if not written.
-            
-        results_folder : str : optional : Default = ""
-            string of a path to a location to write weather files
-        
-        results_append_to_name : str : optional : Default = ""
-            string to append to the file names of output weather files
-            
-        run_parallel : bool : optional : Default = True
-            flag to either run parallel (True) or run on a single processor (False)
-            set to False if parallel run engine fails.
-            
-        min_steps : int > 0 : optional : Default=24
-            Minimum number of time steps for an extreme event 
-            
-        test_shape_func : bool : optional : Default = False
-            for testing purposes
-            Boolean indicating whether computationally expensive testing is 
-            done to assure the shape function used integrates to the original
-            heat_added. Default value is False - True is needed for unittesting
-            
-        doe2_input : dict : optional : Default = None
-            Optional input required to perform the analysis using DOE2
-            bin files. See mews.weather.alter:
-                needs:
-                    {'doe2_bin2txt_path':OPTIONAL - path to bin2txt.exe DOE2 utility
-                                MEWS has a default location for this utility 
-                                which can be obtained from DOE2 (www.doe2.com),
-                    'doe2_start_datetime':datetime indicating the start date and time
-                                          for the weather DOE2 weather file,
-                     'doe2_tz'=time zone for doe2 file,
-                     'doe2_hour_in_file'=8760 or 8784 for leap year,
-                     'doe2_dst'= Start and end of daylight savings time for the 
-                                 doe2_start_datetime year,
-                      'txt2bin_exepath' : OPTIONAL - path to txt2bin.exe DOE2 utility}
-        
-        random_seed : int : optional : Default = None
-            Use this to fix an analysis so that pseudo-random numbers are sampled
-            as the same sequence so that results can be replicated.
-            
-         max_E_dist : dict : optional : Default = None
-             A distribution that defines random sampling for energy of an 
-             extreme wave. If this is None, then the old way of using
-             Extreme applies if it is a dictionary, then it must be a CDF function
-             that allows random numbers to be used and has parameters as independent
-             inputs so that they can be shifted via the del_max_E_dist input
-             
-        del_max_E_dist : dict : optional : Default = None
-            For every parameter in max_E_dist, a del_param is needed that shows
-            how the max_E_dist is stretched/shifted with changes in climate.
-            
-        frac_long_wave : float <= 1 > 0 : old input style feature. The amount
-            of energy that goes into a sinusoidal peak 
-            
-        current_year : int : optional : new input style feature. Used to 
-           add a global warming offset to the entire dataset.
-        
-        TODO finish documentation
-         ,
-         min_E_dist=None - optional, cold snap analog to max_E_dist
-         del_min_E_dist - optional, cold snap analog to del_max_E_dist
-         climate_temp_func
-         averaging_steps (see alter object)
-         
-         no_climate_trend : Bool : Optional : Default = False
-              Exclude the climate trend gradual increase in temperature
-              while including the heat wave effects.
-        
-        Returns
-        -------
-        
-        None - look for results in obj.results - files are output as specified
-               in the inputs.
-        """
         self.wfile_names = []
         # perform some input checking
         new_input_format = self._monthly_input_checking([max_avg_dist, 
@@ -854,22 +849,29 @@ class Extremes():
                      shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None,
                      org_dates=None,rng=None):
         """
-        obj._add_extreme(org_vals,integral_dist,integral_delta,frac_long_wave=1.0,min_steps,
-                         shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None)
+        >>> obj._add_extreme(org_vals,
+                             integral_dist,
+                             integral_delta,
+                             frac_long_wave=1.0,
+                             min_steps,
+                             shape_func_type=None,
+                             test_shape_func=False,
+                             peak_dist=None,
+                             peak_delta=None)
 
         Parameters
         ----------
         org_vals : pandas.Series
             Original values for weather over the duration of an inserted 
-            extreme event
+            extreme event.
             
         integral_dist : function
-            random number generating function for the integral of total energy
-            over the duration of the extreme event (returns total energy)
+            Random number generating function for the integral of total energy
+            over the duration of the extreme event (returns total energy).
             
         integral_delta : float
-            delta amount to energy intensity of extreme event (due to climate
-            change)
+            Delta amount to energy intensity of extreme event (due to climate
+            change).
             
         frac_long_wave : float 1 > frac_long_wave > 0
             Amount of heat added that is attributed to a sinusoidal function 
@@ -879,35 +881,39 @@ class Extremes():
         min_steps : int > 0
             Minimum number of steps heat waves must begin and end on (e.g. if
             min_steps=24, then a heat wave can only begin and end at the 
-            beginning of a new day)
+            beginning of a new day).
             
-        shape_func_type : str : optional - default = None
+        shape_func_type : str : optional : Default = None
             The name of the function that is to be used. If a new shape
             is desired, then a new function has to be hard coded into extremes
             TODO - generalize this to any shape function input.
             
-            
-        test_shape_func : Bool, optional - for testing purposes
-            Boolean indicating whether computationally expensive testing is 
-            done to assure the shape function used integrates to the original
-            heat_added. Default value is False - True is needed for unittesting
+        test_shape_func : bool : optional  
+            For testing purposes:
+                Boolean indicating whether computationally expensive testing is 
+                done to assure the shape function used integrates to the original
+                heat_added. Default value is False - True is needed for unittesting.
 
-        peak_dist : function : optional - only for new input structure
-            random number generating function for the peak temperature per duration
+        peak_dist : function : optional 
+            Only for new input structure:
+                Random number generating function for the peak temperature per duration.
             
-        peak_delta : dict : optional - only for new input structure
-            delta on each parameter of peak_dist due to climate change.
+        peak_delta : dict : optional
+            Only for new input structure:
+                Delta on each parameter of peak_dist due to climate change.
             
-        org_dates : pd.Series : optional - only for new input structure
-            allows calculation of which months the heat wave start date began in.
+        org_dates : pd.Series : optional 
+            Only for new input structure:
+                Allows calculation of which months the heat wave start date began in.
             
-        rng : random number generator. If None, then use self.rng
+        rng : optional : Default = None
+            Random number generator. If None, then use self.rng
 
         Returns
         -------
         new_vals :  
-            values to add to org_vals in the weather history to produce a new
-            extreme event
+            Values to add to org_vals in the weather history to produce a new
+            extreme event.
         """        
         duration = len(org_vals)
         

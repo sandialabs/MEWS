@@ -56,6 +56,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 </ul>
 
         </div>
@@ -84,15 +85,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="mews-epw-epw-module">
-<h1>mews.epw.epw module<a class="headerlink" href="#mews-epw-epw-module" title="Permalink to this heading"></a></h1>
-<div class="section" id="module-mews.epw.epw">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-mews.epw.epw" title="Permalink to this heading"></a></h2>
-<p>EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files
+  <div class="section" id="module-mews.epw.epw">
+<span id="mews-epw-epw-module"></span><h1>mews.epw.epw module<a class="headerlink" href="#module-mews.epw.epw" title="Permalink to this heading"></a></h1>
+<p>EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files.
 EPW is not the EPW downloaded from pypi.org, it must be downloaded
 from <a class="reference external" href="https://github.com/building-energy/epw">https://github.com/building-energy/epw</a></p>
 <div class="section" id="epw-license">
-<h3>EPW License<a class="headerlink" href="#epw-license" title="Permalink to this heading"></a></h3>
+<h2>EPW License<a class="headerlink" href="#epw-license" title="Permalink to this heading"></a></h2>
 <p>MIT License</p>
 <p>Copyright (c) 2019 Building Energy Research Group (BERG)</p>
 <p>Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -116,14 +115,14 @@ Used in MEWS as allowed by the license.</p>
 <dt class="sig sig-object py" id="mews.epw.epw.epw">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mews.epw.epw.</span></span><span class="sig-name descname"><span class="pre">epw</span></span><a class="reference internal" href="_modules/mews/epw/epw.html#epw"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.epw.epw.epw" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>A class which represents an EnergyPlus weather (epw) file</p>
+<p>A class which represents an EnergyPlus weather (epw) file.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mews.epw.epw.epw.read">
 <span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/epw/epw.html#epw.read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.epw.epw.epw.read" title="Permalink to this definition"></a></dt>
-<dd><p>Reads an epw file</p>
+<dd><p>Reads an epw file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>fp</strong> (<em>-</em>) – the file path of the epw file</p>
+<dd class="field-odd"><p><strong>fp</strong> (<em>str</em>) – The file path of the epw file</p>
 </dd>
 </dl>
 </dd></dl>
@@ -131,17 +130,16 @@ Used in MEWS as allowed by the license.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mews.epw.epw.epw.write">
 <span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/epw/epw.html#epw.write"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.epw.epw.epw.write" title="Permalink to this definition"></a></dt>
-<dd><p>Writes an epw file</p>
+<dd><p>Writes to an epw file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>fp</strong> (<em>-</em>) – the file path of the new epw file</p>
+<dd class="field-odd"><p><strong>fp</strong> (<em>str</em>) – The file path of the new epw file</p>
 </dd>
 </dl>
 </dd></dl>
 
 </dd></dl>
 
-</div>
 </div>
 </div>
 
@@ -156,7 +154,7 @@ Used in MEWS as allowed by the license.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+    <p>&#169; Copyright 2021, National Technology and Engineering Solutions of Sandia, LLC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

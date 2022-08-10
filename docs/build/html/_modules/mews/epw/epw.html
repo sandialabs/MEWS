@@ -38,6 +38,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../license.html">License</a></li>
 </ul>
 
         </div>
@@ -68,7 +69,7 @@
 <span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="sd">EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files</span>
+<span class="sd">EPW - Lightweight Python package for editing EnergyPlus Weather (epw) files. </span>
 <span class="sd">EPW is not the EPW downloaded from pypi.org, it must be downloaded</span>
 <span class="sd">from https://github.com/building-energy/epw</span>
 
@@ -107,7 +108,8 @@
 <span class="kn">import</span> <span class="nn">csv</span>
 
 <div class="viewcode-block" id="epw"><a class="viewcode-back" href="../../../mews.epw.epw.html#mews.epw.epw.epw">[docs]</a><span class="k">class</span> <span class="nc">epw</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;A class which represents an EnergyPlus weather (epw) file</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class which represents an EnergyPlus weather (epw) file.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -118,10 +120,13 @@
             
     
 <div class="viewcode-block" id="epw.read"><a class="viewcode-back" href="../../../mews.epw.epw.html#mews.epw.epw.epw.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Reads an epw file </span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reads an epw file. </span>
 <span class="sd">        </span>
-<span class="sd">        Arguments:</span>
-<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fp : str </span>
+<span class="sd">            The file path of the epw file   </span>
 <span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
@@ -130,13 +135,18 @@
                 
         
     <span class="k">def</span> <span class="nf">_read_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Reads the headers of an epw file</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reads the headers of an epw file.</span>
 <span class="sd">        </span>
-<span class="sd">        Arguments:</span>
-<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fp : str </span>
+<span class="sd">            The file path of the epw file   </span>
 <span class="sd">            </span>
-<span class="sd">        Return value:</span>
-<span class="sd">            - d (dict): a dictionary containing the header rows </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        d : dict </span>
+<span class="sd">            A dictionary containing the header rows </span>
 <span class="sd">            </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
@@ -152,13 +162,18 @@
     
     
     <span class="k">def</span> <span class="nf">_read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Reads the climate data of an epw file</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reads the climate data of an epw file.</span>
 <span class="sd">        </span>
-<span class="sd">        Arguments:</span>
-<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fp : str </span>
+<span class="sd">            The file path of the epw file   </span>
 <span class="sd">            </span>
-<span class="sd">        Return value:</span>
-<span class="sd">            - df (pd.DataFrame): a DataFrame comtaining the climate data</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        df : pd.DataFrame </span>
+<span class="sd">            A DataFrame comtaining the climate data</span>
 <span class="sd">            </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
@@ -207,13 +222,18 @@
         
         
     <span class="k">def</span> <span class="nf">_first_row_with_climate_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Finds the first row with the climate data of an epw file</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finds the first row with the climate data of an epw file.</span>
 <span class="sd">        </span>
-<span class="sd">        Arguments:</span>
-<span class="sd">            - fp (str): the file path of the epw file   </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fp : str </span>
+<span class="sd">            The file path of the epw file   </span>
 <span class="sd">            </span>
-<span class="sd">        Return value:</span>
-<span class="sd">            - i (int): the row number</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        i : int </span>
+<span class="sd">            The row number</span>
 <span class="sd">            </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
@@ -226,10 +246,13 @@
         
         
 <div class="viewcode-block" id="epw.write"><a class="viewcode-back" href="../../../mews.epw.epw.html#mews.epw.epw.epw.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fp</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Writes an epw file </span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes to an epw file.</span>
 <span class="sd">        </span>
-<span class="sd">        Arguments:</span>
-<span class="sd">            - fp (str): the file path of the new epw file   </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fp : str </span>
+<span class="sd">            The file path of the new epw file   </span>
 <span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
@@ -249,7 +272,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+    <p>&#169; Copyright 2021, National Technology and Engineering Solutions of Sandia, LLC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

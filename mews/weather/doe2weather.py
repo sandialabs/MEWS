@@ -24,17 +24,21 @@ must be replicated in any derivative works that use the source code.
 
 @author: dlvilla
 
-MEWS = Multi-senario Extreme Weather Simulator
 
-METHODS   mews.weather.DOE2Weather.read_doe2_bin and  
-          mews.weather.DOE2Weather.write_doe2_bin
+Methods:   
+ * mews.weather.DOE2Weather.read_doe2_bin and  
+ * mews.weather.DOE2Weather.write_doe2_bin
  
-   Are translations of parts of BIN2TXT.F and TXT2BIN.F translated with permission
-   from James and Jeff Hirsch and Associates (JJH&A). The license for these utilities 
-   must be formed with (JJH&A) before they are distributed in any other package
-   besides MEWS
+Are translations of parts of BIN2TXT.F and TXT2BIN.F translated with permission
+from James and Jeff Hirsch and Associates (JJH&A). The license for these utilities 
+must be formed with (JJH&A) before they are distributed in any other package
+besides MEWS.
 
 
+"""
+
+"""
+Comments have not been restructed for ReadTheDocs
 """
 
 from numpy import zeros,cumsum,arange, int64, float64,array

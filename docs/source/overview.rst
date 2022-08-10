@@ -32,19 +32,14 @@ utilities that come with DOE-2.2 into the 'third_party_software' folder.
 MEWS has only been tested on Windows using Python 3.8.5 more robust testing is under development. 
 Documentation will also follow in the near future.
 
-License
-------------
-
-See the LICENSE.md file for license details
-
 Organization
 ------------
 
 Directories
   * mews - Python package
-  * documentation - UNDER CONSTRUCTION - eventually documentation on ReadTheDocs
-  * examples - two scripts showing how to use the 'Extremes' class to create
-               heat waves via Energy Plus and DOE2
+  * docs - UNDER CONSTRUCTION - inital build available on ReadTheDocs (https://mews.readthedocs.io/en/latest/)
+  * information - contains general information about MEWS
+  * examples - two scripts showing how to use the 'Extremes' class to create heat waves via Energy Plus and DOE2 and one script demonstrating how to accesss the CMIP6 database
 
 Installation
 ------------
