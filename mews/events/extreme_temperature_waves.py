@@ -74,6 +74,75 @@ def inverse_transform_fit(norm_signal, signal_max, signal_min):
 
 class ExtremeTemperatureWaves(Extremes):
     
+    """
+    >>> ExtremeTemperatureWaves(station,
+                                weather_files,
+                                num_year,
+                                use_local,
+                                include_plots)
+    
+    This initializer reads and processes the heat waves and cold snap statistics
+    for a specific NOAA station and corresponding weather data. After instantiation,
+    the "create_scenario" method can be used to create weather files.
+    
+    Parameters
+    ----------
+    
+    station : str
+        Must be a valid NOAA station number that has both daily-summary
+        and 1991-2020 hourly climate norms data. If use_local=True, then
+        this can be the path to a local csv file and <station>_norms.csv
+        is expected in the same location for the climate norm data.
+    
+    weather_files : list
+        List of path and file name strings that include all the weather files
+        to alter
+        
+    num_year : int
+        Number of years to simulate extreme wave events and global climate
+        change into the future.
+        
+    start_year : int
+        Year to start the weather files in.
+        
+    use_local : Bool : Optional: Default = False
+        Flag to indicate that that "station" input is actually a path to
+        local <station>.csv and <station>_norms.csv files for the NOAA data
+        
+    include_plots : Bool : Optional : Default = False
+        True : plot all kinds of diagnostic information to help determine 
+        if heat waves are well characterized statistically by the data. 
+        This adds run time but is highly advised for new weather stations
+        not previously analyzed.
+        
+    doe2_input : dict : Optional : Default = None
+       | If none - process the run as E+.
+       |
+       | Optional input required to perform the analysis using DOE2
+       | bin files. See mews.weather.alter. needs:
+       |     
+       | {'doe2_bin2txt_path':OPTIONAL - path to bin2txt.exe DOE2 utility
+       |  MEWS has a default location for this utility 
+       |  which can be obtained from DOE2 (www.doe2.com),
+       | 'doe2_start_datetime':datetime indicating the start date and time
+       | for the weather DOE2 weather file,
+       | 'doe2_tz'=time zone for doe2 file,
+       | 'doe2_hour_in_file'=8760 or 8784 for leap year,
+       | 'doe2_dst'= Start and end of daylight savings time for the 
+       | doe2_start_datetime year,
+       | 'txt2bin_exepath' : OPTIONAL - path to txt2bin.exe DOE2 utility}
+    
+    results_folder : str : Optional : Default = "mews_results"
+        Path to the location where MEWS will write all of the output files
+        for the requested analysis. Files will be the original weather file
+        name with "_<realization>_<year>" appended to it.
+    
+    Returns
+    -------
+    None
+    
+    """
+    
     #  These url's must end with "/" !
     
     # norms are provided in Fahrenheit!
@@ -89,72 +158,6 @@ class ExtremeTemperatureWaves(Extremes):
                  results_folder="mews_results",
                  random_seed=None,
                  run_parallel=True):
-        
-        """
-        ExtremeTemperatureWaves(station,weather_files,
-                                num_year,use_local,include_plots)
-        
-        Inputs:
-        -------
-        
-        station : str :
-            Must be a valid NOAA station number that has both daily-summary
-            and 1991-2020 hourly climate norms data. If use_local=True, then
-            this can be the path to a local csv file and <station>_norms.csv
-            is expected in the same location for the climate norm data.
-        
-        weather_files : list :
-            list of path and file name strings that include all the weather files
-            to alter
-            
-        num_year : int :
-            number of years to simulate extreme wave events and global climate
-            change into the future.
-            
-        start_year : int :
-            year to start the weather files in
-            
-        use_local : Bool : Optional: Default = False
-            Flag to indicate that that "station" input is actually a path to
-            local <station>.csv and <station>_norms.csv files for the NOAA data
-            
-        include_plots : Bool : Optional : Default = False
-            True : plot all kinds of diagnostic information to help determine 
-            if heat waves are well characterized statistically by the data. 
-            This adds run time but is highly advised for new weather stations
-            not previously analyzed.
-            
-        doe2_input : dict : Optional : Default = None
-            If none - process the run as E+
-
-            Optional input required to perform the analysis using DOE2
-            bin files. See mews.weather.alter:
-                needs:
-                    {'doe2_bin2txt_path':OPTIONAL - path to bin2txt.exe DOE2 utility
-                                MEWS has a default location for this utility 
-                                which can be obtained from DOE2 (www.doe2.com),
-                    'doe2_start_datetime':datetime indicating the start date and time
-                                          for the weather DOE2 weather file,
-                     'doe2_tz'=time zone for doe2 file,
-                     'doe2_hour_in_file'=8760 or 8784 for leap year,
-                     'doe2_dst'= Start and end of daylight savings time for the 
-                                 doe2_start_datetime year,
-                      'txt2bin_exepath' : OPTIONAL - path to txt2bin.exe DOE2 utility}
-        
-        results_folder : str : Optional : Default = "mews_results"
-            Path to the location where MEWS will write all of the output files
-            for the requested analysis. Files will be the original weather file
-            name with "_<realization>_<year>" appended to it.
-        
-        Returns:
-        -------
-        None
-        
-        This initializer reads and processes the heat waves and cold snap statistics
-        for a specific NOAA station and corresponding weather data. After instantiation,
-        the "create_scenario" method can be used to create weather files.
-        
-        """
         
         # consistency checks
         self._check_NOAA_url_validity()
@@ -190,21 +193,24 @@ class ExtremeTemperatureWaves(Extremes):
                         num_realization=1):
         
         """
-        obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func)
+        >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func)
         
+        Places results into self.extreme_results and self.ext_obj
         
         Parameters
         ----------
         
-        scenario_name : str : A string indicating the name of a scenario
+        scenario_name : str 
+            A string indicating the name of a scenario
         
-        start_year : int : A year (must be >= 2020) that is the starting point of the
-                     analysis
+        start_year : int 
+            A year (must be >= 2020) that is the starting point of the analysis
                      
-        num_year : int : number of subsequent years to include in the analysis
+        num_year : int 
+            Number of subsequent years to include in the analysis
         
-        climate_temp_func : func :
-            a function that provides a continuous change in temperature that
+        climate_temp_func : func 
+            A function that provides a continuous change in temperature that
             is scaled to a yearly time scale. time = 2020 is the begin of the 
             first year that is valid for the function.
             
@@ -212,13 +218,12 @@ class ExtremeTemperatureWaves(Extremes):
             IPCC for higher values.
             
         num_realization : int : Optional : Default = 1
-                Number of times to repeat the entire analysis of each weather file 
-                so that stochastic analysis can be carried out.
+            Number of times to repeat the entire analysis of each weather file 
+            so that stochastic analysis can be carried out.
         
         Returns
         -------    
-            Places results into self.extreme_results and
-                                self.ext_obj
+        None
         
         """
         
@@ -332,27 +337,29 @@ class ExtremeTemperatureWaves(Extremes):
         10/14/2021 for the NOAA data repositories and will likely need significant
         updating if new data conventions are used by NOAA.
         
-        Inputs:
-        -------
+        Parameters
+        ----------
+        station : str 
+            Must be a valid weather station ID that has a valid representation 
+            for both the self.norms_url and self.daily_url web locations
+            the error handling provides a list of valid station ID's that
+            meets this criterion if a valid ID is not provded.
         
-        station : str : must be a valid weather station ID that has a valid representation 
-                  for both the self.norms_url and self.daily_url web locations
-                  the error handling provides a list of valid station ID's that
-                  meets this criterion if a valid ID is not provded.
+        year : int 
+            The year to be assigned to the climate norms data for 
+            dataframe purposes. This year is later overlaid accross
+            the range of the daily data
         
-        year : int : The year to be assigned to the climate norms data for 
-                     dataframe purposes. This year is later overlaid accross
-                     the range of the daily data
-        
-        use_local : if MEWS is not reading web-urls use this to indicate to look
-                    for local files at "station" file path location. The
+        use_local 
+            If MEWS is not reading web-urls use this to indicate to look
+            for local files at "station" file path location. 
                     
-        Returns:
-        --------
-        
-        NOAA_data : DataFrame : contains the daily summaries with statistical summary
-                    daily data from the climate normals overlaid so that heat and cold 
-                    wave comparisons can be made.
+        Returns
+        -------
+        NOAA_data : DataFrame 
+            Contains the daily summaries with statistical summary
+            daily data from the climate normals overlaid so that heat and cold 
+            wave comparisons can be made.
         
         """
         df_temp = []
@@ -458,8 +465,6 @@ class ExtremeTemperatureWaves(Extremes):
         """
         This function overlays the climate norms 90th percentile and all other columns 
         over the daily data so that heat wave statistics can be quantified. 
-        
-        
         """
         
         df_combined = df_daily
@@ -809,17 +814,20 @@ class ExtremeTemperatureWaves(Extremes):
         """
         wave_stats(df_combined,is_heat)
         
-        Calculate the statistical parameter per month for heat waves or cold snaps
+        Calculates the statistical parameter per month for heat waves or cold snaps
         
-        Inputs:
-        -------    
-            df_combined : pd.DataFrame : A combined data set of NOAA historical
-                          daily data and NOAA climate 10%, 50%, and 90% data
-                          Violation of the 90% (for heat waves) or 10% data
-                          is how heat wave days are identified.
-        Returns:
-        --------
-            mews_stats : dict : A dictionary 
+        Parameters
+        ----------    
+        df_combined : pd.DataFrame
+            A combined data set of NOAA historical
+            daily data and NOAA climate 10%, 50%, and 90% data
+            Violation of the 90% (for heat waves) or 10% data
+            is how heat wave days are identified.
+            
+        Returns
+        -------
+        mews_stats : dict 
+            A dictionary of mews statstics.
         """
         
         # total time covered by the dataset
@@ -979,6 +987,11 @@ class ExtremeTemperatureWaves(Extremes):
             
 class DeltaTransition_IPCC_FigureSPM6():
     """
+    >>> obj = DeltaTransition_IPCC_FigureSPM6(hot_param,
+                                              cold_param,
+                                              climate_temp_func,
+                                              year)
+    
     This class assumes that we can divide by the 1.0 C multipliers for the present
     day and then multiply. We interpolate linearly or extrapolate linearly from
     the sparse data available.

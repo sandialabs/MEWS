@@ -56,6 +56,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 </ul>
 
         </div>
@@ -84,13 +85,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="mews-stats-markov-module">
-<h1>mews.stats.markov module<a class="headerlink" href="#mews-stats-markov-module" title="Permalink to this heading"></a></h1>
-<div class="section" id="module-mews.stats.markov">
-<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-mews.stats.markov" title="Permalink to this heading"></a></h2>
+  <div class="section" id="module-mews.stats.markov">
+<span id="mews-stats-markov-module"></span><h1>mews.stats.markov module<a class="headerlink" href="#module-mews.stats.markov" title="Permalink to this heading"></a></h1>
 <p>Created on Tue Apr 27 20:20:54 2021</p>
 <div class="section" id="copyright-notice">
-<h3>Copyright Notice<a class="headerlink" href="#copyright-notice" title="Permalink to this heading"></a></h3>
+<h2>Copyright Notice<a class="headerlink" href="#copyright-notice" title="Permalink to this heading"></a></h2>
 <p>Copyright 2021 National Technology and Engineering Solutions of Sandia, LLC.
 Under the terms of Contract DE-NA0003525, there is a non-exclusive license
 for use of this work by or on behalf of the U.S. Government.
@@ -108,18 +107,18 @@ must be replicated in any derivative works that use the source code.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="mews.stats.markov.MarkovPy.markov_chain_py">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">markov_chain_py</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cdf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rand</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mews/stats/markov.html#MarkovPy.markov_chain_py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mews.stats.markov.MarkovPy.markov_chain_py" title="Permalink to this definition"></a></dt>
-<dd><p>evaluate a chain of markov states based on cumulative probability matrix,
-random numbers and initial state</p>
+<dd><p>Evaluates a chain of markov states based on a cumulative probability matrix,
+random numbers and initial state.</p>
+<p>This function does not have Type and Value protections and should only
+be used in the context of such checks having already occured!</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>cfd</strong> (<em>np.ndarray :</em>) – must be a 2-D square matrix whose elements are the
-cumulative sum of a markov right stochastic matrix</p></li>
-<li><p><strong>rand</strong> (<em>np.ndarray :</em>) – 1-D array of random probabilities 0 &lt;= p &lt;= 1</p></li>
-<li><p><strong>state0</strong> (<em>int</em><em>, </em><em>np.integer :</em>) – Integer indicating the initial markov state (determines row of cfd to
-start on). 0 &lt;= state0 &lt;= cfd.shape[0]</p></li>
-<li><p><strong>only</strong> (<em>This function does not have Type and Value protections and should</em>) – </p></li>
-<li><p><strong>occured!</strong> (<em>be used in the context of such checks having already</em>) – </p></li>
+<li><p><strong>cfd</strong> (<em>np.ndarray</em>) – Must be a 2-D square matrix whose elements are the
+cumulative sum of a markov right stochastic matrix.</p></li>
+<li><p><strong>rand</strong> (<em>np.ndarray</em>) – 1-D array of random probabilities 0 &lt;= p &lt;= 1.</p></li>
+<li><p><strong>state0</strong> (<em>int</em><em>, </em><em>np.integer</em>) – Integer indicating the initial markov state (determines row of cfd to
+start on). 0 &lt;= state0 &lt;= cfd.shape[0].</p></li>
 </ul>
 </dd>
 </dl>
@@ -127,7 +126,6 @@ start on). 0 &lt;= state0 &lt;= cfd.shape[0]</p></li>
 
 </dd></dl>
 
-</div>
 </div>
 </div>
 
@@ -142,7 +140,7 @@ start on). 0 &lt;= state0 &lt;= cfd.shape[0]</p></li>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+    <p>&#169; Copyright 2021, National Technology and Engineering Solutions of Sandia, LLC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -27,22 +27,23 @@ class MarkovPy():
         """
         markov_chain_py(cdf, rand, state0)
         
-        evaluate a chain of markov states based on cumulative probability matrix,
-        random numbers and initial state
-        
-        Parameters
-        ----------
-        cfd : np.ndarray : 
-            must be a 2-D square matrix whose elements are the 
-            cumulative sum of a markov right stochastic matrix
-        rand : np.ndarray : 
-            1-D array of random probabilities 0 <= p <= 1
-        state0 : int, np.integer :
-            Integer indicating the initial markov state (determines row of cfd to
-            start on). 0 <= state0 <= cfd.shape[0]
+        Evaluates a chain of markov states based on a cumulative probability matrix,
+        random numbers and initial state.
         
         This function does not have Type and Value protections and should only
         be used in the context of such checks having already occured!
+        
+        Parameters
+        ----------
+        cfd : np.ndarray 
+            Must be a 2-D square matrix whose elements are the 
+            cumulative sum of a markov right stochastic matrix.
+        rand : np.ndarray 
+            1-D array of random probabilities 0 <= p <= 1.
+        state0 : int, np.integer
+            Integer indicating the initial markov state (determines row of cfd to
+            start on). 0 <= state0 <= cfd.shape[0].
+        
         """
         
         # assign initial values

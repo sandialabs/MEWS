@@ -38,6 +38,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../license.html">License</a></li>
 </ul>
 
         </div>
@@ -94,22 +95,23 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        markov_chain_py(cdf, rand, state0)</span>
 <span class="sd">        </span>
-<span class="sd">        evaluate a chain of markov states based on cumulative probability matrix,</span>
-<span class="sd">        random numbers and initial state</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        cfd : np.ndarray : </span>
-<span class="sd">            must be a 2-D square matrix whose elements are the </span>
-<span class="sd">            cumulative sum of a markov right stochastic matrix</span>
-<span class="sd">        rand : np.ndarray : </span>
-<span class="sd">            1-D array of random probabilities 0 &lt;= p &lt;= 1</span>
-<span class="sd">        state0 : int, np.integer :</span>
-<span class="sd">            Integer indicating the initial markov state (determines row of cfd to</span>
-<span class="sd">            start on). 0 &lt;= state0 &lt;= cfd.shape[0]</span>
+<span class="sd">        Evaluates a chain of markov states based on a cumulative probability matrix,</span>
+<span class="sd">        random numbers and initial state.</span>
 <span class="sd">        </span>
 <span class="sd">        This function does not have Type and Value protections and should only</span>
 <span class="sd">        be used in the context of such checks having already occured!</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cfd : np.ndarray </span>
+<span class="sd">            Must be a 2-D square matrix whose elements are the </span>
+<span class="sd">            cumulative sum of a markov right stochastic matrix.</span>
+<span class="sd">        rand : np.ndarray </span>
+<span class="sd">            1-D array of random probabilities 0 &lt;= p &lt;= 1.</span>
+<span class="sd">        state0 : int, np.integer</span>
+<span class="sd">            Integer indicating the initial markov state (determines row of cfd to</span>
+<span class="sd">            start on). 0 &lt;= state0 &lt;= cfd.shape[0].</span>
+<span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
         <span class="c1"># assign initial values</span>
@@ -140,7 +142,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+    <p>&#169; Copyright 2021, National Technology and Engineering Solutions of Sandia, LLC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
