@@ -10,8 +10,8 @@ from mews.data_requests.CMIP6 import CMIP_Data
 import os
 
 def main():
-    obj = CMIP_Data(lat_desired = 35.0433,
-                    lon_desired = -106.6129,
+    obj = CMIP_Data(lat_desired = 39.2202,
+                    lon_desired = -105.2783,
                     year_baseline = 2014,
                     year_desired = 2050,
                     file_path = os.path.abspath(os.getcwd()),

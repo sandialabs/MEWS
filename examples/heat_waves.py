@@ -54,7 +54,7 @@ trans_mat = np.array([[1.0-2*p_ee,p_ee,p_ee],[0.15,0.85,0.0],[0.15,0.0,0.85]])
 # between heat waves, cold waves, and normal weather.
 trans_mat_delta = np.array([[p_ee/100,-p_ee/200,-p_ee/200],[-0.0001,0.00005,0.00005],[-0.0001,0.00005,0.00005]])
 
-wfiles = [os.path.join(".","example_data","USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw")]
+wfiles = [os.path.join(".","example_data","USA_CO_Golden-NREL.724666_TMY3.epw")]
 
  
 max_avg_delta = 1.0   # increase in C*hr/hr per year of heat waves

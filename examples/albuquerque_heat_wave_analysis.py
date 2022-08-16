@@ -42,7 +42,14 @@ that will need adjustment
 It is not advised that other inputs be changed.
 
 """
-from mews.events import ExtremeTemperatureWaves, ClimateScenario
+import os
+import sys
+
+sys.path.append('C:\\Users\\mmacmill\\OneDrive - NREL\\PhD Materials\\MEWS\\mews')
+sys.path.append('C:\\Users\\mmacmill\\OneDrive - NREL\\PhD Materials\\MEWS\\examples')
+
+
+from events import ExtremeTemperatureWaves, ClimateScenario
 from mews.graphics import Graphics
 import matplotlib.pyplot as plt
 import numpy as np
@@ -59,7 +66,6 @@ import warnings
 from copy import deepcopy
 import pickle as pkl
 import getopt
-import sys
 from matplotlib import rc
 
 
@@ -74,7 +80,7 @@ class Input():
     rc('font', **font)
     
     # provide a path to energy plus' latest executable.
-    ep_path = r"C:\Users\dlvilla\Documents\BuildingEnergyModeling\EnergyPlusV9-6-0"
+    ep_path = r"C:\Users\mmacmill\OneDrive - NREL\PhD Materials\MEWS\mews_virtual\Lib\site-packages\EnergyPlusV9-6-0"
     post_process_path = os.path.join(ep_path,"PostProcess",'ReadVarsESO.exe')
     # much faster to run parallel but sometimes there are platform or changes
     # that cause this to fail.
@@ -87,7 +93,7 @@ class Input():
     
     building_area = 4982.19 #m2
     
-    plot_locations = r"C:\Users\dlvilla\Documents\BuildingEnergyModeling\MEWS\mews_temp\SimbuildPaper\from_python\plots"
+    plot_locations = r"C:\Users\mmacmill\OneDrive - NREL\PhD Materials\test\MEWS\examples\plots"
     
     #mews
     station = os.path.join("example_data","USW00023050.csv")
@@ -616,8 +622,8 @@ if __name__ == "__main__":
      run_local = True
      if run_local:
          scenarios = ["SSP5-8.5"]
-         start_years = [2025]
-         random_seed = 519419765
+         start_years = [2050]
+         random_seed = 543654351
      else:
          try:
             opts, args = getopt.getopt(sys.argv[1:],"s:y:r",["scenario=","start_year=","random_seed="])

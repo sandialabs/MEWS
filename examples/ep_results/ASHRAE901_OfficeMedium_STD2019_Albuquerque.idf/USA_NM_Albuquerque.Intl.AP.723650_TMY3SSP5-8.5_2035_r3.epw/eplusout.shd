@@ -1,0 +1,923 @@
+Shadowing Combinations
+..Solar Distribution=FullInteriorAndExterior
+..In the following, only the first 10 reference surfaces will be shown.
+..But all surfaces are used in the calculations.
+==================================
+Surface=CORE_BOT_ZN_5_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_BOT_ZN_5_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_BOT_ZN_5_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_BOT_ZN_5_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_BOT_ZN_5_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_BOT_ZN_5_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_BOTTOM_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_PLENUM_WALL_NORTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_PLENUM_WALL_EAST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_PLENUM_WALL_SOUTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_PLENUM_WALL_WEST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_1_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_2_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_3_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_4_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_TOP_ZN_5_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=BUILDING_ROOF is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_PLENUM_WALL_NORTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_PLENUM_WALL_EAST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_PLENUM_WALL_SOUTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_PLENUM_WALL_WEST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_1_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_2_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_3_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_4_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_MID_ZN_5_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_1_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_2_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_3_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_4_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_TOP_ZN_5_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_PLENUM_WALL_NORTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_PLENUM_WALL_EAST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_PLENUM_WALL_SOUTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_PLENUM_WALL_WEST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_1_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_2_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_3_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_4_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_BOT_ZN_5_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_1_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_2_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_3_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_4_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_MID_ZN_5_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_ZN_5_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_ZN_5_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_ZN_5_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_ZN_5_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_ZN_5_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_ZN_5_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_MID_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_ZN_5_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_ZN_5_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_ZN_5_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_ZN_5_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_ZN_5_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_ZN_5_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=CORE_TOP_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_3_WALL_NORTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_TOP_ZN_3_WALL_WEST
+...Surface=iz-PERIMETER_TOP_ZN_2_WALL_NORTH
+...Surface=iz-CORE_TOP_ZN_5_WALL_NORTH
+...Surface=PERIMETER_TOP_ZN_3_FLOOR
+...Surface=PERIMETER_TOP_ZN_3_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_TOP_ZN_3_WALL_NORTH_WINDOW
+==================================
+Surface=PERIMETER_TOP_ZN_3_WALL_NORTH_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_3_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_2_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_TOP_ZN_5_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_3_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_3_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_3_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_2_WALL_EAST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_TOP_ZN_2_WALL_NORTH
+...Surface=iz-PERIMETER_TOP_ZN_1_WALL_EAST
+...Surface=iz-CORE_TOP_ZN_5_WALL_EAST
+...Surface=PERIMETER_TOP_ZN_2_FLOOR
+...Surface=PERIMETER_TOP_ZN_2_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_TOP_ZN_2_WALL_EAST_WINDOW
+==================================
+Surface=PERIMETER_TOP_ZN_2_WALL_EAST_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_2_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_1_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_TOP_ZN_5_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_2_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_2_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_2_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_1_WALL_SOUTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_TOP_ZN_1_WALL_EAST
+...Surface=iz-PERIMETER_TOP_ZN_4_WALL_SOUTH
+...Surface=iz-CORE_TOP_ZN_5_WALL_SOUTH
+...Surface=PERIMETER_TOP_ZN_1_FLOOR
+...Surface=PERIMETER_TOP_ZN_1_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_TOP_ZN_1_WALL_SOUTH_WINDOW
+==================================
+Surface=PERIMETER_TOP_ZN_1_WALL_SOUTH_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_1_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_4_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_TOP_ZN_5_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_1_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_1_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_1_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_4_WALL_WEST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_TOP_ZN_4_WALL_SOUTH
+...Surface=iz-PERIMETER_TOP_ZN_3_WALL_WEST
+...Surface=iz-CORE_TOP_ZN_5_WALL_WEST
+...Surface=PERIMETER_TOP_ZN_4_FLOOR
+...Surface=PERIMETER_TOP_ZN_4_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_TOP_ZN_4_WALL_WEST_WINDOW
+==================================
+Surface=PERIMETER_TOP_ZN_4_WALL_WEST_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_4_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_TOP_ZN_3_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_TOP_ZN_5_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_4_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_4_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_TOP_ZN_4_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_NORTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_BOT_ZN_3_WALL_WEST
+...Surface=iz-PERIMETER_BOT_ZN_2_WALL_NORTH
+...Surface=iz-CORE_BOT_ZN_5_WALL_NORTH
+...Surface=PERIMETER_BOT_ZN_3_FLOOR
+...Surface=PERIMETER_BOT_ZN_3_CEILING
+Number of receiving sub surfaces=5
+....Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_DOOR1
+....Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_DOOR2
+....Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_WINDOW1
+....Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_WINDOW2
+....Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_WINDOW3
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_WINDOW1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_WINDOW2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_WINDOW3 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_DOOR1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_NORTH_DOOR2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_2_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_BOT_ZN_5_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_3_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_WALL_EAST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_BOT_ZN_2_WALL_NORTH
+...Surface=iz-PERIMETER_BOT_ZN_1_WALL_EAST
+...Surface=iz-CORE_BOT_ZN_5_WALL_EAST
+...Surface=PERIMETER_BOT_ZN_2_FLOOR
+...Surface=PERIMETER_BOT_ZN_2_CEILING
+Number of receiving sub surfaces=3
+....Surface=PERIMETER_BOT_ZN_2_WALL_EAST_DOOR
+....Surface=PERIMETER_BOT_ZN_2_WALL_EAST_WINDOW1
+....Surface=PERIMETER_BOT_ZN_2_WALL_EAST_WINDOW2
+==================================
+Surface=PERIMETER_BOT_ZN_2_WALL_EAST_WINDOW1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_WALL_EAST_WINDOW2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_WALL_EAST_DOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_1_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_BOT_ZN_5_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_2_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_BOT_ZN_1_WALL_EAST
+...Surface=iz-PERIMETER_BOT_ZN_4_WALL_SOUTH
+...Surface=iz-CORE_BOT_ZN_5_WALL_SOUTH
+...Surface=PERIMETER_BOT_ZN_1_FLOOR
+...Surface=PERIMETER_BOT_ZN_1_CEILING
+Number of receiving sub surfaces=5
+....Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_DOOR1
+....Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_DOOR2
+....Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_WINDOW1
+....Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_WINDOW2
+....Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_WINDOW3
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_WINDOW1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_WINDOW2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_WINDOW3 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_DOOR1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_SOUTH_DOOR2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_4_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_BOT_ZN_5_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_1_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_WALL_WEST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_BOT_ZN_4_WALL_SOUTH
+...Surface=iz-PERIMETER_BOT_ZN_3_WALL_WEST
+...Surface=iz-CORE_BOT_ZN_5_WALL_WEST
+...Surface=PERIMETER_BOT_ZN_4_FLOOR
+...Surface=PERIMETER_BOT_ZN_4_CEILING
+Number of receiving sub surfaces=3
+....Surface=PERIMETER_BOT_ZN_4_WALL_WEST_DOOR
+....Surface=PERIMETER_BOT_ZN_4_WALL_WEST_WINDOW1
+....Surface=PERIMETER_BOT_ZN_4_WALL_WEST_WINDOW2
+==================================
+Surface=PERIMETER_BOT_ZN_4_WALL_WEST_WINDOW1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_WALL_WEST_WINDOW2 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_WALL_WEST_DOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_BOT_ZN_3_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_BOT_ZN_5_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_BOT_ZN_4_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_3_WALL_NORTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_MID_ZN_3_WALL_WEST
+...Surface=iz-PERIMETER_MID_ZN_2_WALL_NORTH
+...Surface=iz-CORE_MID_ZN_5_WALL_NORTH
+...Surface=PERIMETER_MID_ZN_3_FLOOR
+...Surface=PERIMETER_MID_ZN_3_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_MID_ZN_3_WALL_NORTH_WINDOW
+==================================
+Surface=PERIMETER_MID_ZN_3_WALL_NORTH_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_3_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_2_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_MID_ZN_5_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_3_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_3_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_3_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_2_WALL_EAST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_MID_ZN_2_WALL_NORTH
+...Surface=iz-PERIMETER_MID_ZN_1_WALL_EAST
+...Surface=iz-CORE_MID_ZN_5_WALL_EAST
+...Surface=PERIMETER_MID_ZN_2_FLOOR
+...Surface=PERIMETER_MID_ZN_2_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_MID_ZN_2_WALL_EAST_WINDOW
+==================================
+Surface=PERIMETER_MID_ZN_2_WALL_EAST_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_2_WALL_NORTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_1_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_MID_ZN_5_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_2_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_2_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_2_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_1_WALL_SOUTH is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_MID_ZN_1_WALL_EAST
+...Surface=iz-PERIMETER_MID_ZN_4_WALL_SOUTH
+...Surface=iz-CORE_MID_ZN_5_WALL_SOUTH
+...Surface=PERIMETER_MID_ZN_1_FLOOR
+...Surface=PERIMETER_MID_ZN_1_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_MID_ZN_1_WALL_SOUTH_WINDOW
+==================================
+Surface=PERIMETER_MID_ZN_1_WALL_SOUTH_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_1_WALL_EAST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_4_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_MID_ZN_5_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_1_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_1_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_1_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_4_WALL_WEST is used as Receiving Surface in calculations and is convex.
+Number of general casting surfaces=0
+Number of back surfaces=5
+...Surface=PERIMETER_MID_ZN_4_WALL_SOUTH
+...Surface=iz-PERIMETER_MID_ZN_3_WALL_WEST
+...Surface=iz-CORE_MID_ZN_5_WALL_WEST
+...Surface=PERIMETER_MID_ZN_4_FLOOR
+...Surface=PERIMETER_MID_ZN_4_CEILING
+Number of receiving sub surfaces=1
+....Surface=PERIMETER_MID_ZN_4_WALL_WEST_WINDOW
+==================================
+Surface=PERIMETER_MID_ZN_4_WALL_WEST_WINDOW is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_4_WALL_SOUTH is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-PERIMETER_MID_ZN_3_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=iz-CORE_MID_ZN_5_WALL_WEST is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_4_FLOOR is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_4_CEILING is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
+==================================
+Surface=PERIMETER_MID_ZN_4_INTERNALMASS_1 is not used as Receiving Surface in calculations.
+Number of general casting surfaces=0
+Number of back surfaces=0
+Number of receiving sub surfaces=0
