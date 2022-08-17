@@ -38,6 +38,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../license.html">License</a></li>
 </ul>
 
         </div>
@@ -101,48 +102,38 @@
 
 <div class="viewcode-block" id="DiscreteMarkov"><a class="viewcode-back" href="../../../mews.stats.extreme.html#mews.stats.extreme.DiscreteMarkov">[docs]</a><span class="k">class</span> <span class="nc">DiscreteMarkov</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    obj = MarkovChain(transition_matrix,state_names,use_cython=True)</span>
+<span class="sd">    &gt;&gt;&gt; obj = MarkovChain(transition_matrix,</span>
+<span class="sd">                          state_names,</span>
+<span class="sd">                          use_cython=True)</span>
 <span class="sd">    </span>
-<span class="sd">    Object to work with Discrete Markov Chains</span>
+<span class="sd">    Object to work with discrete Markov chains.</span>
 <span class="sd">    </span>
-<span class="sd">    Methods</span>
+<span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    .history(self, num_step, state0):</span>
-<span class="sd">        Calculate a history of num_step for the markov process</span>
-<span class="sd">    </span>
-<span class="sd">    .steady(self)</span>
-<span class="sd">        Calculate steady-state (stationary) probabilities of each state</span>
-<span class="sd">        given the transition matrix</span>
-<span class="sd">    </span>
+<span class="sd">    rng : numpy.random.default_rng()</span>
+<span class="sd">        Random number generator</span>
+<span class="sd">        </span>
+<span class="sd">    transition_matrix : np.ndarray of np.float</span>
+<span class="sd">        Square matrix that is a right stochastic matrix (i.e. the rows </span>
+<span class="sd">        sum to 1).</span>
+<span class="sd">        </span>
+<span class="sd">    state_names : list of strings : optional : Default = None</span>
+<span class="sd">        list of names that must be of the same dimension as the dimension</span>
+<span class="sd">        as the transition_matrix. The default is None and a list of </span>
+<span class="sd">        [&quot;0&quot;,&quot;1&quot;,...] is assigned.</span>
+<span class="sd">        </span>
+<span class="sd">    use_cython : bool : optional : Default = True</span>
+<span class="sd">        Use cython to calculate markov chain histories (~20x faster). </span>
+<span class="sd">        The default is True.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">rng</span><span class="p">,</span><span class="n">transition_matrix</span><span class="p">,</span><span class="n">state_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">use_cython</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        DiscreteMarkov</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        rng : numpy.random.default_rng() :</span>
-<span class="sd">            Random number generator</span>
-<span class="sd">            </span>
-<span class="sd">        transition_matrix : np.ndarray of np.float</span>
-<span class="sd">            Square matrix that is a right stochastic matrix (i.e. the rows </span>
-<span class="sd">            sum to 1)</span>
-<span class="sd">            </span>
-<span class="sd">        state_names : list of strings, optional</span>
-<span class="sd">            list of names that must be of the same dimension as the dimension</span>
-<span class="sd">            as the transition_matrix</span>
-<span class="sd">            The default is None and a list of [&quot;0&quot;,&quot;1&quot;,...] is assigned </span>
-<span class="sd">            </span>
-<span class="sd">        use_cython : bool, optional</span>
-<span class="sd">            Use cython to calculate markov chain histories (~20x faster). </span>
-<span class="sd">            The default is True.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        DiscreteMarkof Object</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">rng</span>
         <span class="c1"># special handling</span>
         <span class="k">if</span> <span class="n">state_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -170,30 +161,33 @@
         
 <div class="viewcode-block" id="DiscreteMarkov.history"><a class="viewcode-back" href="../../../mews.stats.extreme.html#mews.stats.extreme.DiscreteMarkov.history">[docs]</a>    <span class="k">def</span> <span class="nf">history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">num_step</span><span class="p">,</span><span class="n">state0</span><span class="p">,</span><span class="n">min_steps</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span><span class="n">skip_steps</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">count_in_min_steps_intervals</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        obj.history(num_step,state0, min_steps, skip_steps)</span>
+<span class="sd">        &gt;&gt;&gt; obj.history(num_step,state0, </span>
+<span class="sd">                        min_steps, </span>
+<span class="sd">                        skip_steps)</span>
 <span class="sd">        </span>
-<span class="sd">        calculate a history for a discrete markov chain of &#39;num_step&#39; length</span>
-<span class="sd">        and initial &#39;state0&#39;</span>
+<span class="sd">        Calculate a history for a discrete markov chain of &#39;num_step&#39; length</span>
+<span class="sd">        and initial &#39;state0&#39;.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        num_step : int or np.int</span>
-<span class="sd">            number of steps to simulate for the object&#39;s defined transition_matrix</span>
+<span class="sd">            Number of steps to simulate for the object&#39;s defined transition_matrix.</span>
 <span class="sd">        state0 : int or str</span>
-<span class="sd">            initial state of the history</span>
+<span class="sd">            Initial state of the history.</span>
 <span class="sd">        min_steps : int : optional</span>
-<span class="sd">            minimum number of steps before a state can transition</span>
-<span class="sd">        skip_steps : int :</span>
+<span class="sd">            Minimum number of steps before a state can transition.</span>
+<span class="sd">        skip_steps : int</span>
 <span class="sd">            Number of steps at the beginning of the markov chain to assign to</span>
-<span class="sd">                    state0 (this is used for weather files that may begin in the middle</span>
-<span class="sd">                    of the day to avoid applying heat waves out of sync with</span>
-<span class="sd">                    day-night cycles)</span>
+<span class="sd">            state0 (this is used for weather files that may begin in the middle</span>
+<span class="sd">            of the day to avoid applying heat waves out of sync with</span>
+<span class="sd">            day-night cycles).</span>
 <span class="sd">        count_in_min_steps_intervals : bool : optional : Default = True</span>
 <span class="sd">            True = apply markov transition matrix as a discrete process that </span>
-<span class="sd">                   is randomly tested every min_steps interval (i.e. min_steps = 24</span>
-<span class="sd">                   means the markov chain state is only tested 1 in 24 steps)</span>
+<span class="sd">            is randomly tested every min_steps interval (i.e. min_steps = 24</span>
+<span class="sd">            means the markov chain state is only tested 1 in 24 steps).</span>
 <span class="sd">            False = apply markov transition matrix every step but only transition</span>
-<span class="sd">                   at every min_steps step.</span>
+<span class="sd">            at every min_steps step.</span>
+<span class="sd">            </span>
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
@@ -201,11 +195,11 @@
 <span class="sd">            than the dimension-1 of the transition_matrix or a string that is </span>
 <span class="sd">            in the self._names dictionary.</span>
 <span class="sd">        TypeError</span>
-<span class="sd">            All incorrect types are rejected from this method</span>
+<span class="sd">            All incorrect types are rejected from this method.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        None.</span>
+<span class="sd">        None</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         
@@ -274,19 +268,20 @@
             
 <div class="viewcode-block" id="DiscreteMarkov.steady"><a class="viewcode-back" href="../../../mews.stats.extreme.html#mews.stats.extreme.DiscreteMarkov.steady">[docs]</a>    <span class="k">def</span> <span class="nf">steady</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        obj.steady()</span>
+<span class="sd">        &gt;&gt;&gt; obj.steady()</span>
 <span class="sd">        </span>
-<span class="sd">        Calculate stationary probabilities vector for each state based on the</span>
-<span class="sd">        transition probabilities matrix</span>
+<span class="sd">        Calculates a stationary probability vector for each state based on the</span>
+<span class="sd">        transition probability matrix.</span>
 <span class="sd">        </span>
-<span class="sd">        Parameter:</span>
-<span class="sd">            None</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        None</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        steady : np.ndarray</span>
-<span class="sd">            vector of stationary probabilities of each state given the </span>
-<span class="sd">            transition matrix assigned to the process</span>
+<span class="sd">            Vector of stationary probabilities of each state given the </span>
+<span class="sd">            transition matrix assigned to the process.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># transpose needed because eig must work with a left hand stochastic</span>
@@ -346,13 +341,194 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fit weather data with a model for extreme hot and cold that can</span>
 <span class="sd">    then be modified to produce increasing intensity and duration</span>
-<span class="sd">    by adjustment of the statistical parameters involved</span>
-<span class="sd">    </span>
-<span class="sd">    for now this is written like it is the </span>
+<span class="sd">    by adjustment of the statistical parameters involved.</span>
 <span class="sd">    </span>
 <span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; obj = Extremes(start_year,</span>
+<span class="sd">                       max_avg_dist,</span>
+<span class="sd">                       max_avg_delta,</span>
+<span class="sd">                       min_avg_dist,</span>
+<span class="sd">                       min_avg_delta,</span>
+<span class="sd">                       transition_matrix,</span>
+<span class="sd">                       transition_matrix_delta,</span>
+<span class="sd">                       weather_files,</span>
+<span class="sd">                       num_realizations,</span>
+<span class="sd">                       num_repeat=1,</span>
+<span class="sd">                       use_cython=True,</span>
+<span class="sd">                       column=&#39;Dry Bulb Temperature&#39;,</span>
+<span class="sd">                       tzname=None,</span>
+<span class="sd">                       write_results=True,</span>
+<span class="sd">                       results_folder=&quot;&quot;,</span>
+<span class="sd">                       results_append_to_name=&quot;&quot;,</span>
+<span class="sd">                       run_parallel=True,</span>
+<span class="sd">                       min_steps=24,</span>
+<span class="sd">                       test_shape_func=False,</span>
+<span class="sd">                       doe2_input=None,</span>
+<span class="sd">                       random_seed=None,</span>
+<span class="sd">                       max_E_dist=None,</span>
+<span class="sd">                       del_max_E_dist=None,</span>
+<span class="sd">                       min_E_dist=None,</span>
+<span class="sd">                       del_min_E_dist=None,</span>
+<span class="sd">                       frac_long_wave=0.8,</span>
+<span class="sd">                       current_year=None,</span>
+<span class="sd">                       climate_temp_func=None,</span>
+<span class="sd">                       averaging_steps=1,</span>
+<span class="sd">                       no_climate_trend=False)</span>
+<span class="sd">    </span>
+<span class="sd">    look for results in obj.results - files are output as specified in the inputs.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_year : int</span>
+<span class="sd">        Year to begin a new history that will replace other years in </span>
+<span class="sd">        weather files.</span>
+<span class="sd">    </span>
+<span class="sd">    max_avg_dist : function or dict</span>
+<span class="sd">        If function: </span>
+<span class="sd">            High extreme (for temperature extreme heat) statistical</span>
+<span class="sd">            distribution function that returns random numbers that indicate</span>
+<span class="sd">            how much energy/hr is associated with an extreme event.</span>
+<span class="sd">        If dict: </span>
+<span class="sd">            A dictionary of functions where each...</span>
+<span class="sd">        </span>
+<span class="sd">    max_avg_delta : float or dict</span>
+<span class="sd">        If float:</span>
+<span class="sd">            Gradient of change for the average value of </span>
+<span class="sd">            max_avg_dist per year. Change is included step-wise on a yearly</span>
+<span class="sd">            basis.</span>
+<span class="sd">        If dict:</span>
+<span class="sd">            Contains elements &#39;func&#39; and &#39;param&#39; where &#39;param&#39; is a dictionary</span>
+<span class="sd">            of deltas on each parameter input to the function in &#39;func&#39;</span>
+<span class="sd">            set of all monthly parameters needed by the max_avg_dist </span>
+<span class="sd">            function. The number of parameters is distribution dependent.</span>
+<span class="sd">        </span>
+<span class="sd">    min_avg_dist : function or dict</span>
+<span class="sd">        If function:</span>
+<span class="sd">            A CDF that recieves one input.</span>
+<span class="sd">            </span>
+<span class="sd">            Low extreme (for temperature extreme cold) statistical distribution</span>
+<span class="sd">            function that returns random numbers that indicate how much </span>
+<span class="sd">            reduction in energy/hr is associated with an extreme event.</span>
+<span class="sd">        </span>
+<span class="sd">        If dict:</span>
+<span class="sd">            ...</span>
+<span class="sd">        </span>
+<span class="sd">    min_avg_delta : float</span>
+<span class="sd">        Gradient of change for the average value of min_avg_dist per year.</span>
+<span class="sd">        Change is included step-wise on a yearly basis</span>
+<span class="sd">        </span>
+<span class="sd">    transition_matrix : np.array</span>
+<span class="sd">        Markov chain 3x3 matrix where index 0 = probability of &quot;normal </span>
+<span class="sd">        conditions&quot;, 1 = probability of maximum extreme conditions, and</span>
+<span class="sd">        2 = probability of minimum extreme conditions. Rows number is associated</span>
+<span class="sd">        with the probabilities for a given state (i.e. row 0 applies when the</span>
+<span class="sd">        the current state is 0). Rows must sum to 1.</span>
+<span class="sd">        </span>
+<span class="sd">    transition_matrix_delta : np.array</span>
+<span class="sd">        Rate per year that transition matrix probabilities are changing in</span>
+<span class="sd">        absolute (not percentage) change in probability. Rows must sum to zero so that the</span>
+<span class="sd">        transition matrix always has rows continue to sum to 1.</span>
+<span class="sd">        </span>
+<span class="sd">    weather_files : list </span>
+<span class="sd">        Weather files that will be read and altered per the statistical specs above.</span>
+<span class="sd">        </span>
+<span class="sd">    num_realizations : int</span>
+<span class="sd">        The number of realizations per weather file that will be output for the</span>
+<span class="sd">        statistics. Number of output weather files is num_realizations * len(weather_files).</span>
+<span class="sd">        </span>
+<span class="sd">    num_repeat : int : optional : Default = 1</span>
+<span class="sd">        Number of repeat years that will be processed into a longer duration</span>
+<span class="sd">        than the original weather file.</span>
+<span class="sd">        </span>
+<span class="sd">    use_cython : bool : optional : Default = True</span>
+<span class="sd">        Flag to enable cython. If False, then much slower native python</span>
+<span class="sd">        is used for the Markov chain. </span>
+<span class="sd">        </span>
+<span class="sd">    column : str : optional : Default = &#39;Dry Bulb Temperature&#39;</span>
+<span class="sd">        Column for weather signal that will be altered. This input needs</span>
+<span class="sd">        to be different for a DOE2 weather file.</span>
+<span class="sd">        </span>
+<span class="sd">    tzname : str : optional : Default = None</span>
+<span class="sd">        Time zone name to apply the weather files to. Must be a valid</span>
+<span class="sd">        time zone for the tz Python library.</span>
+<span class="sd">        </span>
+<span class="sd">    write_results : bool : optional : Default = True</span>
+<span class="sd">        Flag to either write (True) or not write the weather files.</span>
+<span class="sd">        results can be accessed through obj.results if not written.</span>
+<span class="sd">        </span>
+<span class="sd">    results_folder : str : optional : Default = &quot;&quot;</span>
+<span class="sd">        String of a path to a location to write weather files.</span>
+<span class="sd">    </span>
+<span class="sd">    results_append_to_name : str : optional : Default = &quot;&quot;</span>
+<span class="sd">        String to append to the file names of output weather files.</span>
+<span class="sd">        </span>
+<span class="sd">    run_parallel : bool : optional : Default = True</span>
+<span class="sd">        Flag to either run parallel (True) or run on a single processor (False)</span>
+<span class="sd">        set to False if parallel run engine fails.</span>
+<span class="sd">        </span>
+<span class="sd">    min_steps : int &gt; 0 : optional : Default=24</span>
+<span class="sd">        Minimum number of time steps for an extreme event .</span>
+<span class="sd">        </span>
+<span class="sd">    test_shape_func : bool : optional : Default = False</span>
+<span class="sd">        For testing purposes:</span>
+<span class="sd">            Boolean indicating whether computationally expensive testing is </span>
+<span class="sd">            done to assure the shape function used integrates to the original</span>
+<span class="sd">            heat_added. Default value is False - True is needed for unittesting.</span>
+<span class="sd">        </span>
+<span class="sd">    doe2_input : dict : optional : Default = None</span>
+<span class="sd">       | Optional input required to perform the analysis using DOE2</span>
+<span class="sd">       | bin files. See mews.weather.alter. needs:</span>
+<span class="sd">       | {&#39;doe2_bin2txt_path&#39;:OPTIONAL - path to bin2txt.exe DOE2 utility</span>
+<span class="sd">       | MEWS has a default location for this utility </span>
+<span class="sd">       | which can be obtained from DOE2 (www.doe2.com),</span>
+<span class="sd">       | &#39;doe2_start_datetime&#39;:datetime indicating the start date and time</span>
+<span class="sd">       | for the weather DOE2 weather file,</span>
+<span class="sd">       | &#39;doe2_tz&#39;=time zone for doe2 file,</span>
+<span class="sd">       | &#39;doe2_hour_in_file&#39;=8760 or 8784 for leap year,</span>
+<span class="sd">       | &#39;doe2_dst&#39;= Start and end of daylight savings time for the </span>
+<span class="sd">       | doe2_start_datetime year,</span>
+<span class="sd">       | &#39;txt2bin_exepath&#39; : OPTIONAL - path to txt2bin.exe DOE2 utility}</span>
+<span class="sd">    </span>
+<span class="sd">    random_seed : int : optional : Default = None</span>
+<span class="sd">        Use this to fix an analysis so that pseudo-random numbers are sampled</span>
+<span class="sd">        as the same sequence so that results can be replicated.</span>
+<span class="sd">        </span>
+<span class="sd">     max_E_dist : dict : optional : Default = None</span>
+<span class="sd">         A distribution that defines random sampling for energy of an </span>
+<span class="sd">         extreme wave. If this is None, then the old way of using</span>
+<span class="sd">         Extreme applies if it is a dictionary, then it must be a CDF function</span>
+<span class="sd">         that allows random numbers to be used and has parameters as independent</span>
+<span class="sd">         inputs so that they can be shifted via the del_max_E_dist input.</span>
+<span class="sd">         </span>
+<span class="sd">    del_max_E_dist : dict : optional : Default = None</span>
+<span class="sd">        For every parameter in max_E_dist, a del_param is needed that shows</span>
+<span class="sd">        how the max_E_dist is stretched/shifted with changes in climate.</span>
+<span class="sd">        </span>
+<span class="sd">    frac_long_wave : float &lt;= 1 &gt; 0 </span>
+<span class="sd">        Old input style feature. The amount of energy that goes into a sinusoidal peak. </span>
+<span class="sd">        </span>
+<span class="sd">    current_year : int : optional </span>
+<span class="sd">        New input style feature. Used to add a global warming offset to the entire dataset.</span>
+<span class="sd">    </span>
+
+<span class="sd">     </span>
+<span class="sd">     no_climate_trend : Bool : Optional : Default = False</span>
+<span class="sd">          Exclude the climate trend gradual increase in temperature</span>
+<span class="sd">          while including the heat wave effects.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    TODO finish documentation</span>
+<span class="sd">     ,</span>
+<span class="sd">     min_E_dist=None - optional, cold snap analog to max_E_dist</span>
+<span class="sd">     del_min_E_dist - optional, cold snap analog to del_max_E_dist</span>
+<span class="sd">     climate_temp_func</span>
+<span class="sd">     averaging_steps (see alter object)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">states</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;normal&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s2">&quot;cold&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;hot&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">}</span>
     <span class="n">max_recursion</span> <span class="o">=</span> <span class="mi">100</span>
     
@@ -387,187 +563,7 @@
                  <span class="n">averaging_steps</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                  <span class="n">no_climate_trend</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        </span>
-<span class="sd">        obj = Extremes(start_year,</span>
-<span class="sd">                 max_avg_dist,</span>
-<span class="sd">                 max_avg_delta,</span>
-<span class="sd">                 min_avg_dist,</span>
-<span class="sd">                 min_avg_delta,</span>
-<span class="sd">                 transition_matrix,</span>
-<span class="sd">                 transition_matrix_delta,</span>
-<span class="sd">                 weather_files,</span>
-<span class="sd">                 num_realizations,</span>
-<span class="sd">                 num_repeat=1,</span>
-<span class="sd">                 use_cython=True,</span>
-<span class="sd">                 column=&#39;Dry Bulb Temperature&#39;,</span>
-<span class="sd">                 tzname=None,</span>
-<span class="sd">                 write_results=True,</span>
-<span class="sd">                 results_folder=&quot;&quot;,</span>
-<span class="sd">                 results_append_to_name=&quot;&quot;,</span>
-<span class="sd">                 run_parallel=True,</span>
-<span class="sd">                 min_steps=24,</span>
-<span class="sd">                 test_shape_func=False,</span>
-<span class="sd">                 doe2_input=None,</span>
-<span class="sd">                 random_seed=None,</span>
-<span class="sd">                 max_E_dist=None,</span>
-<span class="sd">                 del_max_E_dist=None,</span>
-<span class="sd">                 min_E_dist=None,</span>
-<span class="sd">                 del_min_E_dist=None,</span>
-<span class="sd">                 frac_long_wave=0.8,</span>
-<span class="sd">                 current_year=None,</span>
-<span class="sd">                 climate_temp_func=None,</span>
-<span class="sd">                 averaging_steps=1,</span>
-<span class="sd">                 no_climate_trend=False)</span>
-<span class="sd">        </span>
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        </span>
-<span class="sd">        start_year : int</span>
-<span class="sd">            Year to begin a new history that will replace other years in </span>
-<span class="sd">            weather files</span>
-<span class="sd">        </span>
-<span class="sd">        max_avg_dist : function or dict</span>
-<span class="sd">            if function:</span>
-<span class="sd">                high extreme (for temperature extreme heat) statistical</span>
-<span class="sd">                distribution function that returns random numbers that indicate</span>
-<span class="sd">                how much energy/hr is associated with an extreme event</span>
-<span class="sd">            if dict:</span>
-<span class="sd">                a dictionary of functions where each </span>
-<span class="sd">            </span>
-<span class="sd">        max_avg_delta : float or dict</span>
-<span class="sd">            if float:</span>
-<span class="sd">                gradient of change for the average value of </span>
-<span class="sd">                max_avg_dist per year. Change is included step-wise on a yearly</span>
-<span class="sd">                basis</span>
-<span class="sd">            if dict:</span>
-<span class="sd">                contains elements &#39;func&#39; and &#39;param&#39; where &#39;param&#39; is a dictionary</span>
-<span class="sd">                of deltas on each parameter input to the function in &#39;func&#39;</span>
-<span class="sd">                set of all monthly parameters needed by the max_avg_dist </span>
-<span class="sd">                function. The number of parameters is distribution dependent</span>
-<span class="sd">            </span>
-<span class="sd">        min_avg_dist : function or dict</span>
-<span class="sd">            if function:</span>
-<span class="sd">                A CDF that recieves one input</span>
-<span class="sd">            low extreme (for temperature extreme cold) statistical distribution</span>
-<span class="sd">            function that returns random numbers that indicate how much </span>
-<span class="sd">            reduction in energy/hr is associated with an extreme event</span>
-<span class="sd">            </span>
-<span class="sd">        min_avg_delta : float</span>
-<span class="sd">            gradient of change for the average value of min_avg_dist per year.</span>
-<span class="sd">            Change is included step-wise on a yearly basis</span>
-<span class="sd">            </span>
-<span class="sd">        transition_matrix : np.array</span>
-<span class="sd">            Markov chain 3x3 matrix where index 0 = probability of &quot;normal </span>
-<span class="sd">            conditions&quot;, 1 = probability of maximum extreme conditions, and</span>
-<span class="sd">            2 = probability of minimum extreme conditions. Rows number is associated</span>
-<span class="sd">            with the probabilities for a given state (i.e. row 0 applies when the</span>
-<span class="sd">            the current state is 0). Rows must sum to 1.</span>
-<span class="sd">            </span>
-<span class="sd">        transition_matrix_delta : np.array</span>
-<span class="sd">            Rate per year that transition matrix probabilities are changing in</span>
-<span class="sd">            absolute (not percentage) change in probability. Rows must sum to zero so that the</span>
-<span class="sd">            transition matrix always has rows continue to sum to 1.</span>
-<span class="sd">            </span>
-<span class="sd">        weather_files : list </span>
-<span class="sd">            weather files that will be read and altered per the statistical specs above</span>
-<span class="sd">            </span>
-<span class="sd">        num_realizations : int</span>
-<span class="sd">            The number of realizations per weather file that will be output for the</span>
-<span class="sd">            statistics. Number of output weather files is num_realizations * len(weather_files)</span>
-<span class="sd">            </span>
-<span class="sd">        num_repeat : int : optional : Default = 1</span>
-<span class="sd">            number of repeat years that will be processed into a longer duration</span>
-<span class="sd">            than the original weather file.</span>
-<span class="sd">            </span>
-<span class="sd">        use_cython : bool : optional : Default = True</span>
-<span class="sd">            flag to enable cython. If False, then much slower native python</span>
-<span class="sd">            is used for the Markov chain </span>
-<span class="sd">            </span>
-<span class="sd">        column : str : optional : Default = &#39;Dry Bulb Temperature&#39;</span>
-<span class="sd">            column for weather signal that will be altered. This input needs</span>
-<span class="sd">            to be different for a DOE2 weather file.</span>
-<span class="sd">            </span>
-<span class="sd">        tzname : str : optional : Default = None</span>
-<span class="sd">            time zone name to apply the weather files to. Must be a valid</span>
-<span class="sd">            time zone for the tz Python library.</span>
-<span class="sd">            </span>
-<span class="sd">        write_results : bool : optional : Default = True</span>
-<span class="sd">            flag to either write (True) or not write the weather files.</span>
-<span class="sd">            results can be accessed through obj.results if not written.</span>
-<span class="sd">            </span>
-<span class="sd">        results_folder : str : optional : Default = &quot;&quot;</span>
-<span class="sd">            string of a path to a location to write weather files</span>
-<span class="sd">        </span>
-<span class="sd">        results_append_to_name : str : optional : Default = &quot;&quot;</span>
-<span class="sd">            string to append to the file names of output weather files</span>
-<span class="sd">            </span>
-<span class="sd">        run_parallel : bool : optional : Default = True</span>
-<span class="sd">            flag to either run parallel (True) or run on a single processor (False)</span>
-<span class="sd">            set to False if parallel run engine fails.</span>
-<span class="sd">            </span>
-<span class="sd">        min_steps : int &gt; 0 : optional : Default=24</span>
-<span class="sd">            Minimum number of time steps for an extreme event </span>
-<span class="sd">            </span>
-<span class="sd">        test_shape_func : bool : optional : Default = False</span>
-<span class="sd">            for testing purposes</span>
-<span class="sd">            Boolean indicating whether computationally expensive testing is </span>
-<span class="sd">            done to assure the shape function used integrates to the original</span>
-<span class="sd">            heat_added. Default value is False - True is needed for unittesting</span>
-<span class="sd">            </span>
-<span class="sd">        doe2_input : dict : optional : Default = None</span>
-<span class="sd">            Optional input required to perform the analysis using DOE2</span>
-<span class="sd">            bin files. See mews.weather.alter:</span>
-<span class="sd">                needs:</span>
-<span class="sd">                    {&#39;doe2_bin2txt_path&#39;:OPTIONAL - path to bin2txt.exe DOE2 utility</span>
-<span class="sd">                                MEWS has a default location for this utility </span>
-<span class="sd">                                which can be obtained from DOE2 (www.doe2.com),</span>
-<span class="sd">                    &#39;doe2_start_datetime&#39;:datetime indicating the start date and time</span>
-<span class="sd">                                          for the weather DOE2 weather file,</span>
-<span class="sd">                     &#39;doe2_tz&#39;=time zone for doe2 file,</span>
-<span class="sd">                     &#39;doe2_hour_in_file&#39;=8760 or 8784 for leap year,</span>
-<span class="sd">                     &#39;doe2_dst&#39;= Start and end of daylight savings time for the </span>
-<span class="sd">                                 doe2_start_datetime year,</span>
-<span class="sd">                      &#39;txt2bin_exepath&#39; : OPTIONAL - path to txt2bin.exe DOE2 utility}</span>
-<span class="sd">        </span>
-<span class="sd">        random_seed : int : optional : Default = None</span>
-<span class="sd">            Use this to fix an analysis so that pseudo-random numbers are sampled</span>
-<span class="sd">            as the same sequence so that results can be replicated.</span>
-<span class="sd">            </span>
-<span class="sd">         max_E_dist : dict : optional : Default = None</span>
-<span class="sd">             A distribution that defines random sampling for energy of an </span>
-<span class="sd">             extreme wave. If this is None, then the old way of using</span>
-<span class="sd">             Extreme applies if it is a dictionary, then it must be a CDF function</span>
-<span class="sd">             that allows random numbers to be used and has parameters as independent</span>
-<span class="sd">             inputs so that they can be shifted via the del_max_E_dist input</span>
-<span class="sd">             </span>
-<span class="sd">        del_max_E_dist : dict : optional : Default = None</span>
-<span class="sd">            For every parameter in max_E_dist, a del_param is needed that shows</span>
-<span class="sd">            how the max_E_dist is stretched/shifted with changes in climate.</span>
-<span class="sd">            </span>
-<span class="sd">        frac_long_wave : float &lt;= 1 &gt; 0 : old input style feature. The amount</span>
-<span class="sd">            of energy that goes into a sinusoidal peak </span>
-<span class="sd">            </span>
-<span class="sd">        current_year : int : optional : new input style feature. Used to </span>
-<span class="sd">           add a global warming offset to the entire dataset.</span>
-<span class="sd">        </span>
-<span class="sd">        TODO finish documentation</span>
-<span class="sd">         ,</span>
-<span class="sd">         min_E_dist=None - optional, cold snap analog to max_E_dist</span>
-<span class="sd">         del_min_E_dist - optional, cold snap analog to del_max_E_dist</span>
-<span class="sd">         climate_temp_func</span>
-<span class="sd">         averaging_steps (see alter object)</span>
-<span class="sd">         </span>
-<span class="sd">         no_climate_trend : Bool : Optional : Default = False</span>
-<span class="sd">              Exclude the climate trend gradual increase in temperature</span>
-<span class="sd">              while including the heat wave effects.</span>
-<span class="sd">        </span>
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        </span>
-<span class="sd">        None - look for results in obj.results - files are output as specified</span>
-<span class="sd">               in the inputs.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+        
         <span class="bp">self</span><span class="o">.</span><span class="n">wfile_names</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="c1"># perform some input checking</span>
         <span class="n">new_input_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_monthly_input_checking</span><span class="p">([</span><span class="n">max_avg_dist</span><span class="p">,</span> 
@@ -921,22 +917,29 @@
                      <span class="n">shape_func_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test_shape_func</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">peak_dist</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">peak_delta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                      <span class="n">org_dates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        obj._add_extreme(org_vals,integral_dist,integral_delta,frac_long_wave=1.0,min_steps,</span>
-<span class="sd">                         shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None)</span>
+<span class="sd">        &gt;&gt;&gt; obj._add_extreme(org_vals,</span>
+<span class="sd">                             integral_dist,</span>
+<span class="sd">                             integral_delta,</span>
+<span class="sd">                             frac_long_wave=1.0,</span>
+<span class="sd">                             min_steps,</span>
+<span class="sd">                             shape_func_type=None,</span>
+<span class="sd">                             test_shape_func=False,</span>
+<span class="sd">                             peak_dist=None,</span>
+<span class="sd">                             peak_delta=None)</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        org_vals : pandas.Series</span>
 <span class="sd">            Original values for weather over the duration of an inserted </span>
-<span class="sd">            extreme event</span>
+<span class="sd">            extreme event.</span>
 <span class="sd">            </span>
 <span class="sd">        integral_dist : function</span>
-<span class="sd">            random number generating function for the integral of total energy</span>
-<span class="sd">            over the duration of the extreme event (returns total energy)</span>
+<span class="sd">            Random number generating function for the integral of total energy</span>
+<span class="sd">            over the duration of the extreme event (returns total energy).</span>
 <span class="sd">            </span>
 <span class="sd">        integral_delta : float</span>
-<span class="sd">            delta amount to energy intensity of extreme event (due to climate</span>
-<span class="sd">            change)</span>
+<span class="sd">            Delta amount to energy intensity of extreme event (due to climate</span>
+<span class="sd">            change).</span>
 <span class="sd">            </span>
 <span class="sd">        frac_long_wave : float 1 &gt; frac_long_wave &gt; 0</span>
 <span class="sd">            Amount of heat added that is attributed to a sinusoidal function </span>
@@ -946,35 +949,39 @@
 <span class="sd">        min_steps : int &gt; 0</span>
 <span class="sd">            Minimum number of steps heat waves must begin and end on (e.g. if</span>
 <span class="sd">            min_steps=24, then a heat wave can only begin and end at the </span>
-<span class="sd">            beginning of a new day)</span>
+<span class="sd">            beginning of a new day).</span>
 <span class="sd">            </span>
-<span class="sd">        shape_func_type : str : optional - default = None</span>
+<span class="sd">        shape_func_type : str : optional : Default = None</span>
 <span class="sd">            The name of the function that is to be used. If a new shape</span>
 <span class="sd">            is desired, then a new function has to be hard coded into extremes</span>
 <span class="sd">            TODO - generalize this to any shape function input.</span>
 <span class="sd">            </span>
-<span class="sd">            </span>
-<span class="sd">        test_shape_func : Bool, optional - for testing purposes</span>
-<span class="sd">            Boolean indicating whether computationally expensive testing is </span>
-<span class="sd">            done to assure the shape function used integrates to the original</span>
-<span class="sd">            heat_added. Default value is False - True is needed for unittesting</span>
+<span class="sd">        test_shape_func : bool : optional  </span>
+<span class="sd">            For testing purposes:</span>
+<span class="sd">                Boolean indicating whether computationally expensive testing is </span>
+<span class="sd">                done to assure the shape function used integrates to the original</span>
+<span class="sd">                heat_added. Default value is False - True is needed for unittesting.</span>
 
-<span class="sd">        peak_dist : function : optional - only for new input structure</span>
-<span class="sd">            random number generating function for the peak temperature per duration</span>
+<span class="sd">        peak_dist : function : optional </span>
+<span class="sd">            Only for new input structure:</span>
+<span class="sd">                Random number generating function for the peak temperature per duration.</span>
 <span class="sd">            </span>
-<span class="sd">        peak_delta : dict : optional - only for new input structure</span>
-<span class="sd">            delta on each parameter of peak_dist due to climate change.</span>
+<span class="sd">        peak_delta : dict : optional</span>
+<span class="sd">            Only for new input structure:</span>
+<span class="sd">                Delta on each parameter of peak_dist due to climate change.</span>
 <span class="sd">            </span>
-<span class="sd">        org_dates : pd.Series : optional - only for new input structure</span>
-<span class="sd">            allows calculation of which months the heat wave start date began in.</span>
+<span class="sd">        org_dates : pd.Series : optional </span>
+<span class="sd">            Only for new input structure:</span>
+<span class="sd">                Allows calculation of which months the heat wave start date began in.</span>
 <span class="sd">            </span>
-<span class="sd">        rng : random number generator. If None, then use self.rng</span>
+<span class="sd">        rng : optional : Default = None</span>
+<span class="sd">            Random number generator. If None, then use self.rng</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        new_vals :  </span>
-<span class="sd">            values to add to org_vals in the weather history to produce a new</span>
-<span class="sd">            extreme event</span>
+<span class="sd">            Values to add to org_vals in the weather history to produce a new</span>
+<span class="sd">            extreme event.</span>
 <span class="sd">        &quot;&quot;&quot;</span>        
         <span class="n">duration</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">org_vals</span><span class="p">)</span>
         
@@ -1186,7 +1193,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+    <p>&#169; Copyright 2021, National Technology and Engineering Solutions of Sandia, LLC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

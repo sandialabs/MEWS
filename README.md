@@ -1,4 +1,4 @@
-![MEWS](documentation/figures/logo.png)
+![MEWS](information/figures/logo.png)
 
 ![workflow](https://github.com/sandialabs/mews/actions/workflows/pytest.yml/badge.svg)
 
@@ -43,9 +43,11 @@ Organization
 
 Directories
   * mews - Python package
-  * documentation - UNDER CONSTRUCTION - eventually documentation on ReadTheDocs
+  * docs - UNDER CONSTRUCTION - inital build available on ReadTheDocs (https://mews.readthedocs.io/en/latest/)
+  * information - contains general information about MEWS
   * examples - two scripts showing how to use the 'Extremes' class to create
-               heat waves via Energy Plus and DOE2
+               heat waves via Energy Plus and DOE2 and one script demonstrating 
+			   how to accesss the CMIP6 database
 
 Installation
 ------------
