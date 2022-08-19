@@ -91,9 +91,9 @@ class Input():
     
     #mews
     station = {'summaries':os.path.join("example_data","ClimateZone5B_Denver","Denver_daily.csv"),
-               'norms':os.path.join("example_data","ClimateZone5B_Denver","Denver_norms.csv")'
+               'norms':os.path.join("example_data","ClimateZone5B_Denver","Denver_norms.csv")}
     weather_file_name = "USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw" 
-    weather_files = [os.path.join("example_data",weather_file_name)]
+    weather_files = [os.path.join("example_data","ClimateZone4B_Albuquerque",weather_file_name)]
     #random_seed = 54564863
     # recommend keeping num_year = 1 and adding to start year if greater resolution is desired.
     num_year = 1
@@ -112,6 +112,8 @@ class Input():
     # Parameters to be set for the plots
     zn = ['CLASSROOM_BOT']
     vn = ['Temperature']
+    
+    unit_conversion = (5/9, -32 * 5/9)  # Denver's data is in Fahrenheit
     
     def __init__(self,start_years,scenarios,random_seed):
         self.start_years = start_years
@@ -441,6 +443,7 @@ class MEWSWrapper(Input):
         self.random_seed = Inp.random_seed
         
         
+        
         # run MEWS only if it has not been run before and the needed files 
         # do not exist
         if not os.path.exists("mews_results"):
@@ -449,6 +452,7 @@ class MEWSWrapper(Input):
         clim_scen = ClimateScenario()
         obj = ExtremeTemperatureWaves(self.station, 
                                       self.weather_files,
+                                      Inp.unit_conversion,
                                          use_local=True,random_seed=self.random_seed,
                                          include_plots=False,run_parallel=False)
         
@@ -653,20 +657,20 @@ if __name__ == "__main__":
          objMEWS = None
          Inp.wfile_names = None
      
-     if True: #not os.path.exists("study_results.pkl"):
+     # if True: #not os.path.exists("study_results.pkl"):
          
-         objEP = EnergyPlusWrapper(Inp)
+     #     objEP = EnergyPlusWrapper(Inp)
     
-         pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))
-     else:
-         pass
-         if not "objEP" in vars():
-             [objEP, objMEWS] = pkl.load(open('study_results.pkl','rb'))
+     #     pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))
+     # else:
+     #     pass
+     #     if not "objEP" in vars():
+     #         [objEP, objMEWS] = pkl.load(open('study_results.pkl','rb'))
      
 
-     if Inp.only_post_process:
-         plt.close('all')
-         FinalPostProcess(objEP,objMEWS)
+     # if Inp.only_post_process:
+     #     plt.close('all')
+     #     FinalPostProcess(objEP,objMEWS)
     
 
     

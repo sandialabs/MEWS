@@ -14,7 +14,9 @@ AUTHOR = 'MEWS Developers'
 MAINTAINER_EMAIL = 'dlvilla@sandia.gov'
 LICENSE = 'Revised BSD'
 URL = 'https://github.com/sandialabs/MEWS'
-DEPENDENCIES = ['numpy', 'pandas', 'matplotlib','scipy','statsmodels']
+DEPENDENCIES = ['numpy', 'pandas', 'matplotlib','scipy','statsmodels',
+                'openpyxl',
+                'xarray[complete]']
 
 try:
     from Cython.Distutils import build_ext

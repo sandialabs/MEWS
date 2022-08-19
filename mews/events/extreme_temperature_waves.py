@@ -77,6 +77,7 @@ class ExtremeTemperatureWaves(Extremes):
     """
     >>> ExtremeTemperatureWaves(station,
                                 weather_files,
+                                unit_conversion,
                                 num_year,
                                 use_local,
                                 include_plots)
@@ -97,6 +98,12 @@ class ExtremeTemperatureWaves(Extremes):
     weather_files : list
         List of path and file name strings that include all the weather files
         to alter
+        
+    unit_conversion : tuple
+        Index 0 = scale factor for NOAA daily summaries data to convert to Celcius
+        Index 1 = offset for NOAA daily summaries to convert to Celcius
+        For example if daily summarries are Fahrenheit, then (5/9, -(5/9)*32)
+        needs to be input. If Celcius then (1,0). Tenths of Celcius (1/10, 0)
         
     num_year : int
         Number of years to simulate extreme wave events and global climate
@@ -152,6 +159,7 @@ class ExtremeTemperatureWaves(Extremes):
     
     def __init__(self,station,
                  weather_files,
+                 unit_conversion,
                  use_local=False,
                  include_plots=False,
                  doe2_input=None,
@@ -169,7 +177,7 @@ class ExtremeTemperatureWaves(Extremes):
             plt.close("all")
 
         # The year is arbitrary and should simply not be a leap year
-        self._read_and_curate_NOAA_data(station,2001, use_local)
+        self._read_and_curate_NOAA_data(station,2001,unit_conversion,use_local)
         
         stats = self._wave_stats(self.NOAA_data,include_plots)
         self.stats = stats
@@ -322,7 +330,7 @@ class ExtremeTemperatureWaves(Extremes):
                 del_delTmax_dist)
         
 
-    def _read_and_curate_NOAA_data(self,station,year,use_local=False):
+    def _read_and_curate_NOAA_data(self,station,year,unit_conversion,use_local=False):
     
         """
         read_NOAA_data(station,year=None,use_local=False)
@@ -339,20 +347,29 @@ class ExtremeTemperatureWaves(Extremes):
         
         Parameters
         ----------
-        station : str 
-            Must be a valid weather station ID that has a valid representation 
+        station : str or dict
+            str: Must be a valid weather station ID that has a valid representation 
             for both the self.norms_url and self.daily_url web locations
             the error handling provides a list of valid station ID's that
             meets this criterion if a valid ID is not provded.
+            
+            dict: must be a dictionary of the following form
+                {'norms':<str with path to norms file>,
+                 'summaries':<str with path to the daily summaries file>}
         
         year : int 
             The year to be assigned to the climate norms data for 
             dataframe purposes. This year is later overlaid accross
             the range of the daily data
+            
+        unit_conversion : tuple
+            a tuple allowing index 0 to be a scale factor on the units in the
+            daily summary data and index 1 to be an offset factor. 
         
         use_local 
             If MEWS is not reading web-urls use this to indicate to look
             for local files at "station" file path location. 
+            if true 
                     
         Returns
         -------
@@ -365,32 +382,45 @@ class ExtremeTemperatureWaves(Extremes):
         df_temp = []
         for url,isdaily in zip([self.daily_url,self.norms_url],[True,False]):
     
-            if station[-4:] == ".csv":
-                ending = ""
-            else:
-                ending = ".csv"
-        
-            if use_local:
+            if isinstance(station,dict):
+                
                 if isdaily:
-                    df = pd.read_csv(station + ending,low_memory=False)
+                    df = pd.read_csv(station['summaries'],low_memory=False)
                 else:
-                    if len(ending) == 0:
-                        station = station[:-4]
-                        ending = ".csv"
-                    df = pd.read_csv(station + "_norms" + ending)
-        
+                    df = pd.read_csv(station['norms'],low_memory=False)
+                
+            elif isinstance(station,str):
+    
+                if station[-4:] == ".csv":
+                    ending = ""
+                else:
+                    ending = ".csv"
+            
+                if use_local:
+                    if isdaily:
+                        df = pd.read_csv(station + ending,low_memory=False)
+                    else:
+                        if len(ending) == 0:
+                            station = station[:-4]
+                            ending = ".csv"
+                        df = pd.read_csv(station + "_norms" + ending)
+            
+                else:
+                    
+                    # give a good error if the http and station number are not working.
+                    try:
+                        filestr = urllib.request.urlopen(urllib.parse.urljoin(url,station+ending)).read().decode()
+                    except urllib.error.HTTPError as exc:
+                        exc.msg = "The link to \n\n'" + exc.filename + "'\n\ncould not be found."
+                        raise(exc)
+                    except Exception as exc_unknown:
+                        raise(exc_unknown) 
+                    
+                    df = pd.read_csv(io.StringIO(filestr))
             else:
-                
-                # give a good error if the http and station number are not working.
-                try:
-                    filestr = urllib.request.urlopen(urllib.parse.urljoin(url,station+ending)).read().decode()
-                except urllib.error.HTTPError as exc:
-                    exc.msg = "The link to \n\n'" + exc.filename + "'\n\ncould not be found."
-                    raise(exc)
-                except Exception as exc_unknown:
-                    raise(exc_unknown) 
-                
-                df = pd.read_csv(io.StringIO(filestr))
+                raise TypeError("The station input must be a dict with two entries 'summaries', and 'norms' " +
+                                "or a string that indicates a valid station ID for NOAA summaries and " +
+                                "and norms data")
         
             
             if isdaily:
@@ -399,8 +429,8 @@ class ExtremeTemperatureWaves(Extremes):
                 df.index = df['DATE']
         
                 # numbers provided are degrees Celcius in tenths.
-                df['TMAX'] = df['TMAX']/10.0
-                df['TMIN'] = df['TMIN']/10.0
+                df['TMAX'] = unit_conversion[0] * df['TMAX'] + unit_conversion[1]
+                df['TMIN'] = unit_conversion[0] * df['TMIN'] + unit_conversion[1]
                 meta_data = {'STATION':df['STATION'].iloc[0],
                              'LONGITUDE':df['LONGITUDE'].iloc[0],
                              'LATITUDE':df['LATITUDE'].iloc[0],
@@ -473,7 +503,9 @@ class ExtremeTemperatureWaves(Extremes):
         
         # verify that every year is consecutive
         if np.diff(unique_year).sum() + 1 != len(unique_year):
-            raise ValueError("The daily data from NOAA has one or more gaps of a year! Please use a station that has continuous data!")
+            pass
+            # THIS WAS AN OVERLY RESTRICTIVE TEST
+            #raise ValueError("The daily data from NOAA has one or more gaps of a year! Please use a station that has continuous data!")
         
     
         
@@ -549,8 +581,11 @@ class ExtremeTemperatureWaves(Extremes):
             
             is_start_day = np.concatenate([np.diff(potential_start_days) > 1,np.array([True])])
             
-            start_days = potential_start_days[is_start_day]
-            
+            if len(is_start_day) != 1:
+                start_days = potential_start_days[is_start_day]
+            else:
+                start_days = np.array([],dtype=np.int64)
+                
             all_wave_days = np.concatenate([wave_consecutive_days,start_days])
             all_wave_days.sort()
             
@@ -560,16 +595,15 @@ class ExtremeTemperatureWaves(Extremes):
             waves = [all_wave_days[np.where(all_wave_days==s1)[0][0]:np.where(all_wave_days==s2)[0][0]] 
                           for s1,s2 in zip(start_days[:-1],start_days[1:])]
             # add the last heat wave.
-            waves.append(np.arange(start_days[-1],wave_consecutive_days[-1]))
+            if len(start_days) > 1:
+                waves.append(np.arange(start_days[-1],wave_consecutive_days[-1]))
             
             # Get rid of any heat waves that are outside or mostly in months. Any heat wave 
             # directly cut in half by between months is assigned to the current month but is added to
             # "taken" so that it will not be added to the next month in the next iteration.
             waves_by_month[month] = (self._delete_waves_fully_outside_this_month(
                 waves,df_wm,month,prev_month,next_month,taken),df_wm)
-            
-            # now calculate the statistics 
-            
+
         return waves_by_month
     
     def _determine_norm_param(self,dist_sample):
@@ -649,8 +683,11 @@ class ExtremeTemperatureWaves(Extremes):
             # calculate duration stats
             month_duration = np.array([len(arr) for arr in waves_cur])
             
-            max_duration = month_duration.max()
-            
+            try:
+                max_duration = month_duration.max()
+            except:
+                import pdb;pdb.set_trace()
+                
             num_day = np.arange(2,month_duration.max()+1)
             duration_history = np.array([(month_duration == x).sum() for x in num_day])
             temp_dict = {}
@@ -803,8 +840,6 @@ class ExtremeTemperatureWaves(Extremes):
             stats[month] = temp_dict
             
             col+=1
-            
-        
             
         return stats
     
