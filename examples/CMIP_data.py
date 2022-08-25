@@ -15,7 +15,7 @@ def main():
                     year_baseline = 2014,
                     year_desired = 2050,
                     file_path = os.path.abspath(os.getcwd()),
-                    model_guide = "Models_Used_Simplified.xlsx",
+                    model_guide = "Models_Used_Alpha.xlsx",
                     data_folder = "example_data",
                     world_map=True,
                     calculate_error=False,

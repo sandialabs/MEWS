@@ -87,7 +87,7 @@ class Input():
     
     building_area = 4982.19 #m2
     
-    plot_locations = r"C:\Users\dlvilla\Documents\BuildingEnergyModeling\MEWS\mews_temp\SimbuildPaper\from_python\plots"
+    plot_locations = r"mews_results\plots"
     
     #mews
     station = {'summaries':os.path.join("example_data","ClimateZone5B_Denver","Denver_daily.csv"),
@@ -607,7 +607,7 @@ class FinalPostProcess(Input):
                     ax.legend(fontsize=12)
                     if only_plot_next:
                         not_legend_plotted = False
-                fname = "AlbuquerqueStudy_" + vname + "_" + signame[idx] + ".png"
+                fname = "DenverStudy_" + vname + "_" + signame[idx] + ".png"
                 for char in r"$\/^()[] :":
                     fname = fname.replace(char,"_")
                 plt.tight_layout()

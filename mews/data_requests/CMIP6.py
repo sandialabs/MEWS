@@ -29,16 +29,6 @@ import multiprocessing as mp
 import threading as thr
 import logging
 
-########## Setting Proxies ##############
-# Needed if downloading files 
-# within Sandia
-proxy = 'http://proxy.sandia.gov:80'
-os.environ['http_proxy'] = proxy 
-os.environ['HTTP_PROXY'] = proxy
-os.environ['https_proxy'] = proxy
-os.environ['HTTPS_PROXY'] = proxy
-
-
 ########## Initial Startup ##############
 warnings.simplefilter(action='ignore') #Removes depreciation warnings
 
@@ -144,6 +134,19 @@ class CMIP_Data(object):
     display_plots : bool : optional : Default = True
         If set to False, the computation for the plotting will be done, but
         no plots will be shown. Used in unittesting.
+        
+    run_parallel : bool : optional : Default = True
+        If True, asyncronous paralellization will be used to speed up calculations
+        accross the various scenarios.
+        
+    output_folder : str : optional : Default = None
+        Indicates where to find already downloaded files or else where to download
+        files. Must be an area that python can write to.
+        Default leads to download in os.path.join("..","..","..","..","CMIP6_Data_Files"))
+    
+    proxy : str : optional : Default = None
+        Must indicate the proxy being used for downloads if a proxy server is
+        being used.
     
     Returns
     -------
@@ -161,7 +164,16 @@ class CMIP_Data(object):
                  world_map=False,
                  calculate_error=True,
                  display_logging=False,
-                 display_plots=True):
+                 display_plots=True,
+                 run_parallel=True,
+                 output_folder=None,
+                 proxy=None):
+        
+        if not proxy is None:
+            os.environ['http_proxy'] = proxy 
+            os.environ['HTTP_PROXY'] = proxy
+            os.environ['https_proxy'] = proxy
+            os.environ['HTTPS_PROXY'] = proxy
 
         if data_folder != None: 
             self.dirname = os.path.join(os.path.abspath(os.getcwd()),data_folder)
@@ -178,6 +190,7 @@ class CMIP_Data(object):
         self.data_folder = data_folder
         self.scenario_list = scenario_list
         self.display_plots = display_plots
+        self.output_folder = output_folder
 
         #Initializing logging
         global logger
@@ -217,9 +230,9 @@ class CMIP_Data(object):
         if self.lat_desired > 90 or self.lat_desired < -90:
             raise ValueError("Latitude input is out of range")
         
-        self._CMIP_Data_Collection()
+        self._CMIP_Data_Collection(run_parallel)
     
-    def _CMIP_Data_Collection(self):
+    def _CMIP_Data_Collection(self,run_parallel):
         """
         obj._CMIP_Data_Collection
         
@@ -229,10 +242,19 @@ class CMIP_Data(object):
         if self.world_map:
             self._World_map_plotting()
         
+        if self.output_folder is None:
+            folder_path = os.path.join("..","..","..","..","CMIP6_Data_Files")
+        else:
+            folder_path = self.output_folder
+        
+        model_guide_wb = openpyxl.load_workbook(os.path.join(self.dirname,self.model_guide))
         #Downloads necessary files for each scenario
         for scenario in self.scenario_list:
-            folder_path = "CMIP6_Data_Files" 
-            model_guide_wb = openpyxl.load_workbook(os.path.join(self.dirname,self.model_guide))
+            # we want for this large amount of data to be outside the MEWS
+            # code base. We also want for it to stay in place once it is 
+            # downloaded so that the user will not have to repeatedly wait for 
+            # the large amount of downloading to occur.
+             
             model_guide_ws = model_guide_wb[scenario]
             
             #Creates folders
@@ -241,31 +263,54 @@ class CMIP_Data(object):
             if os.path.exists(os.path.join(self.dirname,folder_path,scenario)) == False:
                 os.mkdir(os.path.join(self.dirname,folder_path,scenario))
         
-            #Performs all file downloads with threading
-            threads = []    
+            if run_parallel:
+                #Performs all file downloads with threading
+                threads = [] 
+                
+            # This process tends to hang and you have to check it 
+            # and see if it is working 
             for row in range(2,model_guide_ws.max_row+1):
                 link = model_guide_ws.cell(row,2).value
                 file_path_list = link.split("/")
-                file_name = file_path_list[-1] 
+                file_name = file_path_list[-1]
                 path = os.path.join(self.dirname,folder_path,scenario,file_name)
                 
-                t = thr.Thread(target=self._Download_File,args=[path, link])
-                t.start()
-                threads.append(t)
-            for thread in threads:
-                thread.join()
+                # only download (takes awhile) if the path does not exist. Otherwise, leave the files in place!
+                if not os.path.exists(path):                
+                    if run_parallel:  
+                        try:
+                            t = thr.Thread(target=self._Download_File,args=[path, link])
+                            t.start()
+                            threads.append(t)
+                        except:
+                            logger.info("Parallel processing failed for threading! Reverting to non-parallel")
+                            #start over
+                            self._CMIP_Data_Collection(False)
+                    else:
+                        self._Download_File(path,link)
+                    
+            if run_parallel:
+                for thread in threads:
+                    thread.join()
+                    
             logger.info(f"All {scenario} files downloaded")
                     
         #Runs bulk of calculations with multiprocessing
-        pool = mp.Pool(mp.cpu_count()-1)
-        total_model_list = []
-        for scenario in self.scenario_list:
-            total_model_list.append(pool.apply_async(self._Compiling_Data,(model_guide_wb,folder_path,scenario,)))
+        if run_parallel: 
+            pool = mp.Pool(mp.cpu_count()-1)
+            total_model_list = []
+        
+        self.total_model_data = {}
+        for idx,scenario in enumerate(self.scenario_list):
+            if run_parallel:
+                total_model_list.append(pool.apply_async(self._Compiling_Data,(model_guide_wb,folder_path,scenario,)))
+            else:
+                self.total_model_data[total_model_list[idx]] = self._Compiling_Data(model_guide_wb,folder_path,scenario)
         
         pool.close()
         pool.join()
         
-        self.total_model_data = {}
+        
         for index in range(len(self.scenario_list)):
             self.total_model_data[total_model_list[index].get().scenario] = total_model_list[index].get()
           
@@ -308,7 +353,8 @@ class CMIP_Data(object):
         nodes will be checked for a duplicate file.
         """
         if os.path.exists(path) == False:
-            logger.info("Downloading file:",path)
+            logger.info("Downloading file from:",link)
+            logger.info("Downloading file to:",path)
             try: 
                 urllib.request.urlretrieve(link, path)
             except:
@@ -874,8 +920,8 @@ if __name__ == '__main__':
                     lon_desired = -106.6129,
                     year_baseline = 2014,
                     year_desired = 2050,
-                    file_path = os.path.abspath(os.getcwd()),
-                    model_guide = "Models_Used_Simplified.xlsx",
+                    file_path = os.path.join(".","data"),
+                    model_guide = "Models_Used_Alpha.xlsx",
                     calculate_error=True,
                     world_map=True,
                     display_logging=False,
