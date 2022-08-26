@@ -1,4 +1,5 @@
 ![MEWS](information/figures/logo.png)
+![Documentation Status](https://readthedocs.org/projects/mews/badge/?version=latest)](https://mews.readthedocs.io/en/latest/?badge=latest)
 
 ![workflow](https://github.com/sandialabs/mews/actions/workflows/pytest.yml/badge.svg)
 
