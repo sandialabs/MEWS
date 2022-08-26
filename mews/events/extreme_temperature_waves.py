@@ -1319,7 +1319,7 @@ class ClimateScenario(object):
                       lon=None,
                       baseline_year=2020,
                       end_year=2060,
-                      model_guide="Models_Used_Alpha.xlsx",
+                      model_guide="Models_Used_alpha.xlsx",
                       data_folder="data",
                       run_parallel=True,
                       output_folder=None,

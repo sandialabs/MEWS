@@ -105,7 +105,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         """
         clim_scen = ClimateScenario(use_global=False,lat=45,lon=-105,
                                     data_folder=os.path.join("..","data_requests","data"),
-                                    run_parallel=False,proxy=None)  
+                                    run_parallel=True,proxy=self.proxy)  
         clim_func = clim_scen.calculate_coef(["SSP5-8.5","SSP1-1.9"],years_per_calc=10)                      
 
                         
