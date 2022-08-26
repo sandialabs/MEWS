@@ -6,7 +6,7 @@
 MEWS Documentation
 ===================
 
-.. figure:: ../../images/logo.png
+.. figure:: /images/logo.png
 
 The Multi-scenario Extreme Weather Simulator (MEWS) is a python-based software in development to predict the increased frequency
 and severity of various natural weather phenomena including: heat waves, cold snaps, and eventually hurricanes. This is the 
