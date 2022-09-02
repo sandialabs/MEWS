@@ -58,6 +58,12 @@ to assure the correct version of the build tools is installed. The stack exchang
 
 https://stackoverflow.com/questions/66838238/cython-setup-py-cant-find-installed-visual-c-build-tools
 
+MEWS downloads CMIP6 data when using the ClimateScenario class. This step can be messy though and requires many retries when downloading the data live from multiple servers. As a result, the entire dataset (~24Gb) has been uploaded to https://osf.io/ts9e8/files/osfstorage and is publicly available to manually download.
+
+Download the CMIP6_Data_Files file and then make its local path equal to the "output_folder" parameter for the ClimateScenario class in
+
+mews.weather.climate.ClimateScenario
+
 
 Contact 
 --------
