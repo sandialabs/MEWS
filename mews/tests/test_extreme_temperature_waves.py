@@ -16,7 +16,8 @@ import numpy as np
 
 import warnings
 
-from mews.events import ExtremeTemperatureWaves, ClimateScenario
+from mews.weather.climate import ClimateScenario
+from mews.events import ExtremeTemperatureWaves
 import matplotlib.pyplot as plt
 import os
 import warnings
@@ -103,10 +104,13 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
         
         """
+        path_to_paper = os.path.join(".","test.png")
         clim_scen = ClimateScenario(use_global=False,lat=45,lon=-105,
-                                    data_folder=os.path.join("..","data_requests","data"),
-                                    run_parallel=True,proxy=self.proxy)  
-        clim_func = clim_scen.calculate_coef(["SSP5-8.5","SSP1-1.9"],years_per_calc=10)                      
+                                    data_folder=os.path.join("data_for_testing"),
+                                    run_parallel=True,proxy=self.proxy,gcm_to_skip=["NorESM2-MM"],baseline_year=2014,
+                                    write_graphics_path=path_to_paper + r"test.png",
+                                    align_gcm_to_historical=True,model_guide ="Models_Used_Simplified.xlsx")  
+        clim_func = clim_scen.calculate_coef(["SSP585"],years_per_calc=10)                      
 
                         
     # def test_albuquerque_extreme_waves(self):

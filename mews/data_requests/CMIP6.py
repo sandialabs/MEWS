@@ -32,19 +32,22 @@ import logging
 ########## Initial Startup ##############
 warnings.simplefilter(action='ignore') #Removes depreciation warnings
 
+
 class CMIP_Data(object):
     """
     
     >>> obj = CMIP_Data(lat_desired,
                         lon_desired,
-                        year_baseline,
-                        year_desired,
+                        baseline_year,
+                        end_year,
                         model_guide,
-                        file_path)
+                        file_path,
+                        data_folder,
+                        )
     
     
     Results can be found in obj.delT which returns a dictionary of the 
-    temperature change values for each scenario based on year_desired.
+    temperature change values for each scenario based on end_year.
     
     More complete results can be found in obj.total_model_data. This is a 
     dictionary seperated based on scenario, that contains the following
@@ -98,11 +101,11 @@ class CMIP_Data(object):
         Longitude value used for temperature change calculations. Must be 
         between -360 (when using degrees W) and 360 (when using degrees E).
         
-    year_baseline : int
+    baseline_year : int
         Year input for the baseline temperature change. All delta_T's will 
         be calculated from this year. 1850 <= year <= 2014.
         
-    year_desired : int
+    end_year : int
         Future year input for which all temperature change values will be 
         calculated to. 2015 <= year <= 2100.
         
@@ -147,27 +150,60 @@ class CMIP_Data(object):
     proxy : str : optional : Default = None
         Must indicate the proxy being used for downloads if a proxy server is
         being used.
+        
+    gcm_to_skip : list of str : optional : Default = []
+        allows entry of GCM names that will be skipped. If a GCM server will not
+        download, then this can be used to skip inclusion of that GCM.
+        
+    polynomial_fit_order : dict, optional : Default = _default_poly_order_ (string below)
+        controls what order polynomial is fit to each scenario.
+        
+    align_gcm_to_historical : bool, optional : Default = False
+        False : allows there to be a discontinuity between historic GCM ensemble
+                and the future GCM projections. There are significant differences
+                in the scenario start points though.
+        True : shifts all GCM data for each scenario to start at the historic
+               average for the baseline year. GCM data is shifted up or down
+               to accomplish this.
+    
+
     
     Returns
     -------
     None 
     
     """
+    # constants 
+    _valid_scenarios = ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
+    _cmip6_start_year = 1850
+    _cmip6_baseline_end_year = 1900
+    _historical_scen_str = _valid_scenarios[0]
+    _default_poly_order = {_valid_scenarios[0]:6,
+                           _valid_scenarios[1]:3,
+                           _valid_scenarios[2]:2,
+                           _valid_scenarios[3]:2,
+                           _valid_scenarios[4]:2,
+                           _valid_scenarios[5]:2,}
+    
+    
     def __init__(self, lat_desired, 
                  lon_desired,
-                 year_baseline,
-                 year_desired,
+                 baseline_year,
+                 end_year,
                  model_guide,
                  file_path,
                  data_folder=None,
-                 scenario_list=["historical","SSP119","SSP126","SSP245","SSP370","SSP585"],
+                 scenario_list=_valid_scenarios,
                  world_map=False,
                  calculate_error=True,
                  display_logging=False,
                  display_plots=True,
                  run_parallel=True,
                  output_folder=None,
-                 proxy=None):
+                 proxy=None,
+                 gcm_to_skip=[],
+                 polynomial_fit_order=_default_poly_order,
+                 align_gcm_to_historical=False):
         
         if not proxy is None:
             os.environ['http_proxy'] = proxy 
@@ -183,15 +219,21 @@ class CMIP_Data(object):
         self.world_map = world_map
         self.lat_desired = lat_desired
         self.lon_desired = lon_desired
-        self.year_baseline = year_baseline
-        self.year_desired = year_desired
+        self.baseline_year = baseline_year
+        self.end_year = end_year
         self.calculate_error = calculate_error
         self.model_guide = model_guide
         self.data_folder = data_folder
         self.scenario_list = scenario_list
         self.display_plots = display_plots
         self.output_folder = output_folder
-
+        self.gcm_to_skip = gcm_to_skip
+        self._polynomial_fit_order = polynomial_fit_order
+        self._Kelvin_to_Celcius_offset = 273.15
+        self._align_gcm_to_historical = align_gcm_to_historical
+        
+        self._check_lat_lon(lat_desired, lon_desired)
+        
         #Initializing logging
         global logger
         logger = logging.getLogger(__name__)
@@ -222,6 +264,12 @@ class CMIP_Data(object):
             logger.warning("Unable to import cartopy")
             self.use_cartopy = False
         
+
+        
+        self._CMIP_Data_Collection(run_parallel)
+        self.run_parallel = run_parallel
+    
+    def _check_lat_lon(self,lat_desired,lon_desired):
         #Checking latitude and longitude inputs
         if self.lon_desired < 0: #If negative lon is inputted
             self.lon_desired += 360 
@@ -229,8 +277,34 @@ class CMIP_Data(object):
             raise ValueError("Longitude input is out of range")
         if self.lat_desired > 90 or self.lat_desired < -90:
             raise ValueError("Latitude input is out of range")
+    
+    def new_lat_lon(self,lat_desired,lon_desired):
+        """
+        TODO - NOT TESTED verify that this gets the same answer if you run an analysis
+        independently twice.
         
-        self._CMIP_Data_Collection(run_parallel)
+        Performs the exact same analysis as on initialization but 
+        for a new lat/lon 
+
+        Parameters
+        ----------
+        lat_desired : float
+            latitude for new analysis
+        lon_desired : TYPE
+            longitude for new analysis
+
+        Returns
+        -------
+        None.
+
+        """
+        self._check_lat_lon(lat_desired,lon_desired)
+        
+        self.lat_desired = lat_desired
+        self.lon_desired = lon_desired
+        
+        self._CMIP_Data_Collection(self.run_parallel)
+        
     
     def _CMIP_Data_Collection(self,run_parallel):
         """
@@ -266,11 +340,21 @@ class CMIP_Data(object):
             if run_parallel:
                 #Performs all file downloads with threading
                 threads = [] 
-                
+            
+            # Bound the number of threads that can execute at once.
+            semaphore = thr.Semaphore(20)
+            
             # This process tends to hang and you have to check it 
             # and see if it is working 
             for row in range(2,model_guide_ws.max_row+1):
+                model_name = model_guide_ws.cell(row,1).value
+                
+                # do not download if a gcm is not included
+                if model_name in self.gcm_to_skip:
+                    continue
+                
                 link = model_guide_ws.cell(row,2).value
+                
                 file_path_list = link.split("/")
                 file_name = file_path_list[-1]
                 path = os.path.join(self.dirname,folder_path,scenario,file_name)
@@ -279,7 +363,7 @@ class CMIP_Data(object):
                 if not os.path.exists(path):                
                     if run_parallel:  
                         try:
-                            t = thr.Thread(target=self._Download_File,args=[path, link])
+                            t = thr.Thread(target=self._Download_File,args=[path, link, semaphore])
                             t.start()
                             threads.append(t)
                         except:
@@ -287,7 +371,7 @@ class CMIP_Data(object):
                             #start over
                             self._CMIP_Data_Collection(False)
                     else:
-                        self._Download_File(path,link)
+                        self._Download_File(path,link,None)
                     
             if run_parallel:
                 for thread in threads:
@@ -321,7 +405,7 @@ class CMIP_Data(object):
         self._calculate_stats()
         
         #Creates dictionary of temperature change results
-        self.delT = {scenario: self.total_model_data[scenario].delT_list_reg[self.year_desired-2015] for scenario in self.scenario_list if scenario != "historical"}
+        self.delT = {scenario: self.total_model_data[scenario].delT_list_reg[self.end_year-self.baseline_year] for scenario in self.scenario_list if scenario != "historical"}
 
 
     def _World_map_plotting(self):
@@ -345,51 +429,59 @@ class CMIP_Data(object):
             logger.warning("Cannot display world map because cartopy is not properly installed")
         
         
-    def _Download_File(self,path,link):
+    def _Download_File(self,path,link,semaphore):
         """
         obj._Download_File(path,link)
         
         Downloads a file from CMIP6. If errors are encountered, other data 
         nodes will be checked for a duplicate file.
         """
-        if os.path.exists(path) == False:
-            logger.info("Downloading file from:",link)
-            logger.info("Downloading file to:",path)
-            try: 
-                urllib.request.urlretrieve(link, path)
-            except:
-                logger.warning("Download failed. Data node is down. Trying again with other nodes")
-                all_data_nodes = ["aims3.llnl.gov",
-                                  "cmip.bcc.cma.cn",
-                                  "crd-esgf-drc.ec.gc.ca",
-                                  "dist.nmlab.snu.ac.kr",
-                                  "esg.lasg.ac.cn",
-                                  "esg-cccr.tropmet.res.in",
-                                  "esg-dn1.nsc.liu.se",
-                                  "esg-dn2.nsc.liu.se",
-                                  "esgf.nci.org.au",
-                                  "esgf3.dkrz.de",
-                                  "esgf-data.ucar.edu",
-                                  "esgf-data1.llnl.gov",
-                                  "esgf-data2.diasjp.net",
-                                  "esgf-data3.diasjp.net",
-                                  "esgf-node2.cmcc.it",
-                                  "vesg.ipsl.upmc.fr",
-                                  "cmip.dess.tsinghua.edu.cn",
-                                  "dpesgf03.nccs.nasa.gov"]
-                for node in all_data_nodes:
-                    try:
-                        link = link.lstrip("http://")
-                        link_list = link.split("/")
-                        link_list[0] = node
-                        link = "/".join(link_list)
-                        link = "http://" + link
-                        urllib.request.urlretrieve(link,path)
-                        break
-                    except:
-                        pass
-                if node == all_data_nodes[-1]:
-                    raise ConnectionError(f"Could not download file: {path}")  
+        def loc_download_func(path,link):
+            if os.path.exists(path) == False:
+                logger.info("Downloading file from:",link)
+                logger.info("Downloading file to:",path)
+                try: 
+                    urllib.request.urlretrieve(link, path)
+                except:
+                    logger.warning("Download failed. Data node is down. Trying again with other nodes")
+                    all_data_nodes = ["aims3.llnl.gov",
+                                      "esgf-data.ucar.edu",
+                                      "esgf-data1.llnl.gov",
+                                      "dpesgf03.nccs.nasa.gov"]
+                    # international download locations we will avoid.
+                                      # "esgf-data2.diasjp.net",
+                                      # "esgf-data3.diasjp.net",
+                                      # "esgf-node2.cmcc.it",
+                                      # "vesg.ipsl.upmc.fr",
+                                      # "cmip.dess.tsinghua.edu.cn"
+                                      # "cmip.bcc.cma.cn",
+                                      # "crd-esgf-drc.ec.gc.ca",
+                                      # "dist.nmlab.snu.ac.kr",
+                                      # "esg.lasg.ac.cn",
+                                      # "esg-cccr.tropmet.res.in",
+                                      # "esg-dn1.nsc.liu.se",
+                                      # "esg-dn2.nsc.liu.se",
+                                      # "esgf.nci.org.au",
+                                      # "esgf3.dkrz.de",
+                    for node in all_data_nodes:
+                        try:
+                            link = link.lstrip("http://")
+                            link_list = link.split("/")
+                            link_list[0] = node
+                            link = "/".join(link_list)
+                            link = "http://" + link
+                            urllib.request.urlretrieve(link,path)
+                            break
+                        except:
+                            pass
+                    if node == all_data_nodes[-1]:
+                        raise ConnectionError(f"Could not download file: {path}")  
+        # Sempaphore bounds the number of tasks occuring at once.
+        if semaphore is None:
+            loc_download_func(path,link)
+        else:
+            with semaphore:
+                loc_download_func(path,link)
                     
                     
     def _Compiling_Data(self,model_guide_wb,folder_path,scenario):
@@ -405,26 +497,27 @@ class CMIP_Data(object):
         data_list = []
         for row in range(2,model_guide_ws.max_row+1):
             model_name = model_guide_ws.cell(row,1).value
-            link = model_guide_ws.cell(row,2).value
-            file_path_list = link.split("/")
-            file_name = file_path_list[-1] 
-            path = os.path.join(self.dirname,folder_path,scenario,file_name)
-            file_count = model_guide_ws.cell(row,3).value
-            file_num = model_guide_ws.cell(row,4).value
-            Model = self.Model_object(model_name,path)
-            if file_count == file_num:
-                if data_list != []:
-                    scenario_model_data[Model.name] = Model
-                    data_list.append(Model.data)
-                    setattr(scenario_model_data[Model.name],'data', xr.concat(data_list,dim='time'))
-                    data_list = []
+            if not model_name in self.gcm_to_skip:
+                link = model_guide_ws.cell(row,2).value
+                file_path_list = link.split("/")
+                file_name = file_path_list[-1] 
+                path = os.path.join(self.dirname,folder_path,scenario,file_name)
+                file_count = model_guide_ws.cell(row,3).value
+                file_num = model_guide_ws.cell(row,4).value
+                Model = self.Model_object(model_name,path)
+                if file_count == file_num:
+                    if data_list != []:
+                        scenario_model_data[Model.name] = Model
+                        data_list.append(Model.data)
+                        setattr(scenario_model_data[Model.name],'data', xr.concat(data_list,dim='time'))
+                        data_list = []
+                    else:
+                        scenario_model_data[Model.name] = Model
                 else:
-                    scenario_model_data[Model.name] = Model
-            else:
-                data_list.append(Model.data)
+                    data_list.append(Model.data)
         
         #Combines information into Total objects
-        Total_obj = self.Total_data(scenario)
+        Total_obj = self.Total_data(scenario,self.baseline_year,self.end_year,self._cmip6_start_year,self._historical_scen_str)
         for model in scenario_model_data:
             scenario_model_data[model].set_data()
             self._yearly_dataset_temps(scenario_model_data[model],Total_obj)
@@ -458,22 +551,28 @@ class CMIP_Data(object):
         """
         Total_data class used for storing resulting data from all models.
         """
-        def __init__(self,scenario):
-            if scenario != "historical":
-                self.start_year = 2015
-                self.end_year = 2100
-                self.year_temp_dict = {new_list: [] for new_list in range(2015,2101,1)}
+        def __init__(self,scenario,baseline_year,endyear,cmip_base_year,hist_str):
+            if scenario != hist_str:
+                self.start_year = baseline_year
+                self.end_year = endyear
+                self.year_temp_dict = {new_list: [] for new_list in range(baseline_year,endyear+1,1)}
             else:
-                self.start_year = 1850
-                self.end_year = 2014
-                self.year_temp_dict = {new_list: [] for new_list in range(1850,2015,1)}
+                self.start_year = cmip_base_year
+                self.end_year = baseline_year
+                self.year_temp_dict = {new_list: [] for new_list in range(cmip_base_year,baseline_year+1,1)}
             
             self.scenario = scenario
             self.avg_error_list = []
             num_years = self.end_year - self.start_year + 1
-            self.delT_list = np.zeros(num_years)
+            self.delT_list = list(np.zeros(num_years))
+            self.avg_list = np.zeros(num_years)
             self.CI_list = np.zeros(num_years)
             self.delT_list_reg = None
+            self.delT_polyfit = None
+            self.baseline_polyfit = None
+            self.baseline_regression = None
+            self.dataset = {}  # different lengths of data per year may be possible
+            self.R2 = None
             
         def compute_error(self):
             self.avg_error = np.mean(self.avg_error_list)
@@ -488,8 +587,16 @@ class CMIP_Data(object):
         data in the total scenario object.
         """
         data_tas = model_object.data
+        
         start_year = model_object.start_year
-        end_year = model_object.end_year
+        
+        end_year = self.end_year
+        if end_year > model_object.end_year:
+            end_year = model_object.end_year
+            #raise ValueError("The GCM model has an end year of"
+            #                 +" {0:d} but an end year greater than this of {1:d} was requested".format(
+            #                     model_object.end_year,end_year))            
+        
         local_max_diff = 0
         total_max_diff = 0
         years = np.linspace(start_year,end_year,num=end_year-start_year+1)
@@ -586,8 +693,11 @@ class CMIP_Data(object):
                 mon_temp[month-1] = temp_des
             
             yearly_avg_temp = sum(mon_temp)/12
-            if years[0] == 1850 and years[year_index] > 2014: continue #Skipping years past 2014 for some historical data sets for consistency
+            #Skipping years past 2014 for some historical data sets for consistency
+            if years[0] == self._cmip6_start_year and years[year_index] > self.baseline_year: continue
+
             total_object.year_temp_dict[years[year_index]].append(yearly_avg_temp)
+
         
         if self.calculate_error:
             norm_factor =local_max_diff/total_max_diff
@@ -596,6 +706,60 @@ class CMIP_Data(object):
             error = None
         model_object.error = error
         total_object.avg_error_list.append(error)
+        
+    
+    def _regress_scenario(self,scenario, years,sigma0, func, p0, baseline, delT_at_baseline):
+        """
+        This function creates the regressions to CMIP6 data.
+        
+        """
+        
+        # y data in terms of absolute (abs) temperature
+        y_abs_data_1d = np.concatenate([self.total_model_data[scenario].year_temp_dict[year] for year in years])
+        num_points = [len(self.total_model_data[scenario].year_temp_dict[year]) for year in years]
+
+        # calculate to delT from baseline year (i.e. 2014 for CMIP6) temperature.
+        y_zero_data_1d = y_abs_data_1d - baseline
+
+            
+        # assemble a repeated entry of the years and sigma values.
+        x_data_1d = np.concatenate([np.ones(num_point)*year for num_point, year in zip(num_points,years)])
+        sigma = np.concatenate([np.ones(num_point)*sigma0[year-years[0]] for num_point,year in zip(num_points,years)])
+
+        # the fit is performed to data that is 0 at 2014 mean of CMIP6 data.
+        # we can then add 
+
+        fit, _ = curve_fit(func, x_data_1d, y_zero_data_1d, p0, sigma=sigma)
+
+        regression = func(np.array(years),*fit)
+        regr_1d = np.concatenate([np.ones(num_point)*regression[year-years[0]] for num_point, year in zip(num_points,years)])
+        
+        # calculate R2 value for each fit.
+        residuals = y_zero_data_1d - regr_1d
+        ss_res = np.sum(residuals**2)
+        mean_y = np.mean(y_zero_data_1d)
+        ss_tot = np.sum((y_zero_data_1d - mean_y)**2)
+        r_squared = 1 - (ss_res/ss_tot)
+        
+        
+        self.total_model_data[scenario].delT_list_reg = regression
+        self.total_model_data[scenario].delT_polyfit = fit
+        self.total_model_data[scenario].R2 = r_squared
+        self.total_model_data[scenario].y_data_1d = y_zero_data_1d # arranged for scatter plots
+        self.total_model_data[scenario].x_data_1d = x_data_1d # arranged for scatter plots of the entire dataset.
+        self.total_model_data[scenario].delT_data_1d = y_zero_data_1d + delT_at_baseline
+        
+        # calculate confidence intervals for each set of data per year. 
+        for year_index in range(len(years)):
+            dataset = self.total_model_data[scenario].year_temp_dict[years[year_index]] - baseline
+            mean_dataset = np.mean(dataset)
+            delT = dataset + delT_at_baseline
+            lower_proj, upper_proj = st.t.interval(alpha=0.95, df=len(dataset)-1, loc=np.mean(dataset), scale=st.sem(dataset))
+            CI = upper_proj - mean_dataset
+            self.total_model_data[scenario].CI_list[year_index] = CI
+            self.total_model_data[scenario].avg_list[year_index] = mean_dataset
+            self.total_model_data[scenario].delT_list[year_index] = delT
+            self.total_model_data[scenario].dataset[year_index] = dataset
     
     
     def _calculate_stats(self):
@@ -607,56 +771,101 @@ class CMIP_Data(object):
         regression on all data to produce useable results. The regressed data
         is later outputted as results.
         """
-        historical_years = [year for year in range(1850,2015,1)]
-        future_years = [year for year in range(2015,2101,1)]
-        historical_averaged_temps = [np.mean(self.total_model_data["historical"].year_temp_dict[year]) for year in historical_years]
         
-        #Sets fixed point at 2015
-        N = len(future_years)
-        sigma =np.ones(N)
-        sigma[0] = 0.001
+        baseline_year = self.baseline_year
+
+        """
         
+        Transition from absolute temperatures to delta T from the pre-industrial baseline
+        from CMIP6 historic post-casts. MEWS regressions consider 0 to be the delT for the
+        CMIP 6 baseline year (2014). It then adds the delT so that everything is
+        directly in terms of 1850-1900 delT consistent with CMIP6
+        
+        """
+        historical_years = [year for year in range(self._cmip6_start_year,baseline_year+1,1)]
+        # we include 2014 in future years so that the zero target is enforced.
+        future_years = [year for year in range(baseline_year,self.end_year+1,1)] 
+        baseline_year_avg_temp = np.mean(self.total_model_data[self._historical_scen_str].year_temp_dict[baseline_year])
+        #baseline-1 average
+        baseline_year_m1_avg_temp = np.mean(self.total_model_data[self._historical_scen_str].year_temp_dict[baseline_year-1])
+        
+        hist_slope = baseline_year_avg_temp - baseline_year_m1_avg_temp
+        
+        
+        preindustrial_baseline_temp = np.mean(np.concatenate([self.total_model_data[
+            self._historical_scen_str].year_temp_dict[year] for year in 
+            np.arange(self._cmip6_start_year,self._cmip6_baseline_end_year+1)]))
+        self.preindustrial_baseline_temp = preindustrial_baseline_temp
+        
+        # this is the delT that must be added onto every regression to
+        # actually get 1850 to 1900 delT numbers.
+        baseline_year_delT = baseline_year_avg_temp - preindustrial_baseline_temp
+        self.baseline_year_delT = baseline_year_delT
+        
+        # this function cannot be changed unless the "regression" function
+        # is also changed in _regress_scenario
         def poly_function(x,*p):
-            return np.poly1d(p)(x)
+            # makes value 0 for baseline year.
+            return np.poly1d(p)(x-baseline_year)
         
-        #Calculates regressed historical data for baseline calculation
-        baseline_polynomial, _ = curve_fit(poly_function, historical_years, historical_averaged_temps, (0, 0, 0))
-        baseline = np.poly1d(baseline_polynomial)(self.year_baseline)
-        scenario_transition = np.poly1d(baseline_polynomial)(2015)
-        
-        #Calculates regressed histroical data again, but with the baseline offset
-        historical_averaged_temps_baseline = np.array(historical_averaged_temps) - baseline
-        historical_polynomial, _ = curve_fit(poly_function, historical_years, historical_averaged_temps_baseline, (0, 0, 0))
-        historical_regression = np.poly1d(historical_polynomial)(historical_years)
-        self.total_model_data["historical"].delT_list_reg = historical_regression
-        
-        for year_index in range(len(historical_years)):
-            dataset = self.total_model_data["historical"].year_temp_dict[historical_years[year_index]] - baseline
-            delT = np.mean(dataset) 
-            lower_proj, upper_proj = st.t.interval(alpha=0.95, df=len(dataset)-1, loc=np.mean(dataset), scale=st.sem(dataset))
-            CI = upper_proj - delT
-            self.total_model_data["historical"].CI_list[year_index] = CI
-            self.total_model_data["historical"].delT_list[year_index] = delT
         
         for scenario in self.scenario_list:
-            if scenario == "historical": continue
-            averaged_temps = [np.mean(self.total_model_data[scenario].year_temp_dict[year]) for year in future_years]
-            averaged_temps[0] = scenario_transition
-            averaged_temps_delta = np.array(averaged_temps) - baseline
-            polynomial, _ = curve_fit(poly_function, future_years, averaged_temps_delta, (0, 0, 0), sigma=sigma)
-            regression = np.poly1d(polynomial)(future_years)
-            self.total_model_data[scenario].delT_list_reg = regression
             
-            for year_index in range(len(future_years)):
-                dataset = self.total_model_data[scenario].year_temp_dict[future_years[year_index]] - baseline
-                delT = np.mean(dataset)
-                lower_proj, upper_proj = st.t.interval(alpha=0.95, df=len(dataset)-1, loc=np.mean(dataset), scale=st.sem(dataset))
-                CI = upper_proj - delT
-                self.total_model_data[scenario].CI_list[year_index] = CI
-                self.total_model_data[scenario].delT_list[year_index] = delT
+            # the number of initial values controls the order of the polynomial.
+            
+            initial_values = tuple(np.zeros(self._polynomial_fit_order[scenario]))
+            
+            if scenario == self._historical_scen_str:
+                years = historical_years
+                sigma0=np.ones(len(years))
+                sigma0[-1] = 0.001 # fix the last point to zero target
+            else:
+                scen_avg = np.mean(self.total_model_data[scenario].year_temp_dict[self.baseline_year+1])
+                scen_avg_p1 = np.mean(self.total_model_data[scenario].year_temp_dict[self.baseline_year+2])
+                scen_slope = scen_avg_p1 - scen_avg
+                
+                years = future_years
+                sigma0=np.ones(len(years))
+                if self._align_gcm_to_historical:
+                    sigma0[0] = 0.001 # fix the first point to zero target
+                
+                    # add 2014 data to the future scenario regressions
+                    self.total_model_data[scenario].year_temp_dict[
+                        self.baseline_year] = self.total_model_data[
+                            self._historical_scen_str].year_temp_dict[self.baseline_year]
+                            
+                    # big assumption to give a smooth result!, Re-baseline to the 2014 historical average as
+                    # the start for all scenarios - IS Shifting the data like this
+                    # justified? The model groups for different scenarios are different
+                    # but the discontinuities are large. IPCC shows a historic
+                    # smooth relationship for global results.
+
+                    avg_slope = (scen_slope + hist_slope)/2
+                    target_temp = baseline_year_avg_temp + avg_slope
+                    offset_fact = target_temp - scen_avg
+                    for key,val in self.total_model_data[scenario].year_temp_dict.items():
+                        self.total_model_data[scenario].year_temp_dict[key] = val + offset_fact
+                            
+                else:
+                    # add 2014 as a continuation of the slope for the first two years
+                    self.total_model_data[scenario].year_temp_dict[
+                        self.baseline_year] = self.total_model_data[
+                            scenario].year_temp_dict[self.baseline_year+1]-scen_slope                    
+                
+            self._regress_scenario(scenario, 
+                                   years, 
+                                   sigma0, 
+                                   poly_function, 
+                                   initial_values, 
+                                   baseline_year_avg_temp,
+                                   baseline_year_delT)
+
                 
 
-    def results1(self,scatter_display=[False,False,False,False,False,False],regression_display=[True,True,True,True,True,True],CI_display=[True,False,True,False,True,False]):
+    def results1(self,scatter_display=[False,False,False,False,False,False],
+                 regression_display=[True,True,True,True,True,True],
+                 CI_display=[True,True,True,True,True,True],
+                 plot_begin_year=1950,write_png=None):
         """
         Plots the temperature change values for the scenarios for the years 1950-2100.
 
@@ -666,6 +875,8 @@ class CMIP_Data(object):
         
         Parameters
         ----------
+        
+        scenario_list : str : list : optional : Default = 
         
         scatter_display : bool : list : optional : Default = [False,False,False,False,False,False]
             A list of 6 boolean values used for selecting which scatter data to plot.
@@ -677,56 +888,80 @@ class CMIP_Data(object):
             
         CI_display : bool : list : optional : Default = [True,False,True,False,True,False]
             A list of 6 boolean values used for selecting which Confidence intervals to plot.
-            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585.            
+            The list items correspond to: historical, SSP119, SSP126, SSP245, SSP370, SSP585.       
+            
+        plot_begin_year : int : optional : Default = 1950
+            Control what date the plot left hand side begins at.
+            
+        write_png : str : optional : default = None
+            if not None, write a .png file to the name/path location indicated 
+            by write_png
         
         Returns
         -------
         None
 
         """
+        
         if self.display_plots: 
-            historical_years = [year for year in range(1850,2015,1)]
-            future_years = [year for year in range(2015,2101,1)]
+            historical_years = [year for year in range(self._cmip6_start_year,self.baseline_year+1,1)]
+            future_years = [year for year in range(self.baseline_year,self.end_year+1,1)]
             
             plt.rcParams.update({'font.size': 22})
             fig,ax = plt.subplots()
             
+            
+            #TODO - generalize this to be part of _valid_scenarios names.
             #years, colors, and labels organized into dictionaries for succinctness
-            year_dict = {"historical":historical_years,"SSP119":future_years,"SSP126":future_years,"SSP245":future_years,"SSP370":future_years,"SSP585":future_years}
-            color_dict = {"historical":"k","SSP119":"dodgerblue","SSP126":"navy","SSP245":"gold","SSP370":"red","SSP585":"maroon"}
-            scatter_label_dict = {"historical":"Averaged Historical Data","SSP119":"Averaged SSP1-1.9 Data","SSP126":"Averaged SSP1-2.6 Data",
+            year_dict = {self._historical_scen_str:historical_years,"SSP119":future_years,"SSP126":future_years,"SSP245":future_years,"SSP370":future_years,"SSP585":future_years}
+            color_dict = {self._historical_scen_str:"k","SSP119":"dodgerblue","SSP126":"navy","SSP245":"gold","SSP370":"red","SSP585":"maroon"}
+            scatter_label_dict = {self._historical_scen_str:"Averaged Historical Data","SSP119":"Averaged SSP1-1.9 Data","SSP126":"Averaged SSP1-2.6 Data",
                                   "SSP245":"Averaged SSP2-4.5 Data","SSP370":"Averaged SSP3.70 Data","SSP585":"Averaged SSP5-8.5 Data"}
-            regression_label_dict = {"historical":"Historical Regression","SSP119":"SSP1-1.9 Regression","SSP126":"SSP1-2.6 Regression",
+            regression_label_dict = {self._historical_scen_str:"Historical Regression","SSP119":"SSP1-1.9 Regression","SSP126":"SSP1-2.6 Regression",
                                      "SSP245":"SSP2-4.5 Regression","SSP370":"SSP3.70 Regression","SSP585":"SSP5-8.5 Regression"}
-            CI_label_dict = {"historical":"Historical Data 95% CI","SSP119":"SSP1-1.9 Data 95% CI","SSP126":"SSP1-2.6 Data 95% CI",
+            CI_label_dict = {self._historical_scen_str:"Historical Data 95% CI","SSP119":"SSP1-1.9 Data 95% CI","SSP126":"SSP1-2.6 Data 95% CI",
                              "SSP245":"SSP2-4.5 Data 95% CI","SSP370":"SSP3.70 Data 95% CI","SSP585":"SSP5-8.5 Data 95% CI"}
     
             for scenario in self.scenario_list:
+                
                 index = self.scenario_list.index(scenario)
+                
                 if scatter_display[index]:
-                    ax.scatter(year_dict[scenario],self.total_model_data[scenario].delT_list,c=color_dict[scenario],label=scatter_label_dict[scenario])
+
+                    ax.scatter(self.total_model_data[scenario].x_data_1d,
+                               self.total_model_data[scenario].y_data_1d,
+                               c=color_dict[scenario],
+                               label=scatter_label_dict[scenario])
                 if regression_display[index]:
-                    ax.plot(year_dict[scenario],self.total_model_data[scenario].delT_list_reg,color_dict[scenario],linewidth=3,label=regression_label_dict[scenario])
+                    ax.plot(year_dict[scenario],
+                            self.total_model_data[scenario].delT_list_reg,
+                            color_dict[scenario],linewidth=3,
+                            label=regression_label_dict[scenario])
                 if CI_display[index]:
-                    ax.fill_between(year_dict[scenario],(self.total_model_data[scenario].delT_list-self.total_model_data[scenario].CI_list),
-                                    (self.total_model_data[scenario].delT_list+self.total_model_data[scenario].CI_list),color=color_dict[scenario],alpha=.2,label=CI_label_dict[scenario])
+                    ax.fill_between(year_dict[scenario],
+                                    (self.total_model_data[scenario].avg_list-self.total_model_data[scenario].CI_list),
+                                    (self.total_model_data[scenario].avg_list+self.total_model_data[scenario].CI_list),
+                                    color=color_dict[scenario],alpha=.2,label=CI_label_dict[scenario])
                 
             plot_box = ax.get_position()
             ax.set_position([plot_box.x0, plot_box.y0,plot_box.width*0.8,plot_box.height])
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.xlabel("Year",fontdict={'fontsize': 26})
-            plt.ylabel("°C Change",fontdict={'fontsize': 26})
-            plt.title("Surface Temperature Change at ({0:.5f}, {1:.5f}) Relative to {2:.0f}".format(self.lat_desired,self.lon_desired,self.year_baseline),y=1.02,x=0.7,fontdict={'fontsize': 30})
-            plt.xlim(1950,2100)
+            plt.ylabel("\Delta°C Change from {0:d}".format(self.baseline_year),fontdict={'fontsize': 26})
+            plt.title("Surface Temperature Change at lat=({0:.4f}, lon={1:.4f})".format(self.lat_desired,self.lon_desired,self.baseline_year),y=1.02,x=0.7,fontdict={'fontsize': 30})
+            plt.xlim(plot_begin_year,self.end_year)
             plt.grid()
             fig.set_size_inches(18.5, 10.5)
             plt.show()
+            
+            if not write_png is None:
+                plt.savefig(write_png,dpi=300)
         
     
     def results2(self,desired_scenario,resolution='low'):
         """
-        Plots the temperature change heat map of the United States from year_baseline
-        to year_desired for a selected scenario.
+        Plots the temperature change heat map of the United States from baseline_year
+        to end_year for a selected scenario.
         
         >>> obj.results2(desired_scenario,
                          resolution='low')
@@ -755,11 +990,11 @@ class CMIP_Data(object):
  
         lon_array = np.linspace(360-125,360-66,num=resolution_dict[resolution][0])
         lat_array = np.linspace(24,50,num=resolution_dict[resolution][1])
-        folder_path = "CMIP6_Data_Files" 
+        folder_path = self.output_folder
         
         result_arrays=[]
         for scenario in ['historical',desired_scenario]:
-            year = self.year_baseline if scenario == 'historical' else self.year_desired
+            year = self.baseline_year if scenario == 'historical' else self.end_year
     
             
             model_guide_wb = openpyxl.load_workbook(os.path.join(self.dirname,self.model_guide))
@@ -768,18 +1003,37 @@ class CMIP_Data(object):
             model_list = []
             for row in range(2,model_guide_ws.max_row+1):
                 name = model_guide_ws.cell(row,1).value
-                if name not in model_list:
+                if (name not in model_list) and (name not in self.gcm_to_skip) :
                     model_list.append(name)
-                    
-            pool = mp.Pool(mp.cpu_count()-1)
+            
+            if self.run_parallel:
+                pool = mp.Pool(mp.cpu_count()-1)
             temp_array_list = []
             for model in model_list:
-                temp_array_list.append(pool.apply_async(self._results2_calc,(model_guide_ws,folder_path,scenario,model,lat_array,lon_array,year)))
-            pool.close()
-            pool.join()
-    
-            for index in range(len(temp_array_list)):
-                temp_array_list[index] = temp_array_list[index].get()
+                if self.run_parallel:
+                    temp_array_list.append(pool.apply_async(self._results2_calc,
+                                                        (model_guide_ws,
+                                                         folder_path,
+                                                         scenario,
+                                                         model,
+                                                         lat_array,
+                                                         lon_array,
+                                                         year)))
+                else:
+                    temp_array_list.append(self._results2_calc(model_guide_ws,
+                                        folder_path,
+                                        scenario,
+                                        model,
+                                        lat_array,
+                                        lon_array,
+                                        year))
+            
+            if self.run_parallel:
+                pool.close()
+                pool.join()
+        
+                for index in range(len(temp_array_list)):
+                    temp_array_list[index] = temp_array_list[index].get()
         
             array = temp_array_list[0]
             if len(model_list) > 1:
@@ -808,7 +1062,7 @@ class CMIP_Data(object):
                 ax.coastlines()
                 ax.add_feature(cf.BORDERS)
                 ax.add_feature(cf.STATES)
-                plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}",x=0.55,fontdict={'fontsize': 16})
+                plt.title(f"US Temperature Change from {self.baseline_year} to {self.end_year} According to {desired_scenario}",x=0.55,fontdict={'fontsize': 16})
             else:
                 logger.warning("Cannot display US borders because cartopy is not properly installed")
                 fig = plt.figure()
@@ -821,7 +1075,7 @@ class CMIP_Data(object):
                 plt.xlim(235,294)
                 plt.ylim(24,50)
                 plt.grid()
-                plt.title(f"US Temperature Change from {self.year_baseline} to {self.year_desired} According to {desired_scenario}")
+                plt.title(f"US Temperature Change from {self.baseline_year} to {self.end_year} According to {desired_scenario}")
                 
             plt.show()
 
@@ -910,26 +1164,15 @@ class CMIP_Data(object):
                 temperature_baseline[i][j] = yearly_avg_temp
                 
         return temperature_baseline
+    
+
+        
 
         
 
 if __name__ == '__main__':
-    #Test Code: example ran in examples/CMIP_data
-    start_time = time.time()
-    obj = CMIP_Data(lat_desired = 35.0433,
-                    lon_desired = -106.6129,
-                    year_baseline = 2014,
-                    year_desired = 2050,
-                    file_path = os.path.join(".","data"),
-                    model_guide = "Models_Used_Alpha.xlsx",
-                    calculate_error=True,
-                    world_map=True,
-                    display_logging=False,
-                    display_plots=False)
-    obj.results1(scatter_display=[True,True,True,True,True,True])
-    obj.results2(desired_scenario = "SSP119",resolution = "test")
+    pass
 
-    #print("Program run time: {0:.3f} seconds".format(time.time() - start_time))
 
 
 """

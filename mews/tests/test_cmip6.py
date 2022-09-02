@@ -33,7 +33,8 @@ class TestCMIP(unittest.TestCase):
                           model_guide = "Models_Used_Simplified.xlsx",
                           scenario_list = ["SSP585"],
                           world_map = False,
-                          calculate_error = False)
+                          calculate_error = False,
+                          output_folder = os.path.join("CMIP6_Data_Files"))
     
         #Testing all calculations have been computed
         test_obj = CMIP_Data(lat_desired = 40,
@@ -45,7 +46,9 @@ class TestCMIP(unittest.TestCase):
                              model_guide = "Models_Used_Simplified.xlsx",
                              scenario_list = ["historical","SSP585"],
                              calculate_error = True,
-                             display_plots = False)
+                             display_plots = False,
+                             output_folder = os.path.join("CMIP6_Data_Files"),
+                             run_parallel=False)
         self.assertIsNotNone(test_obj.total_model_data["SSP585"].avg_error)
         self.assertNotEqual([],test_obj.total_model_data["SSP585"].delT_list)
         self.assertNotEqual([],test_obj.total_model_data["SSP585"].delT_list_reg)
