@@ -21,10 +21,16 @@ class ClimateScenario(object):
     _required_baseline_year_for_cmip6 = 2014
     _default_poly_order = {_valid_scenario_names[0]:6,
                            _valid_scenario_names[1]:3,
-                           _valid_scenario_names[2]:2,
-                           _valid_scenario_names[3]:2,
-                           _valid_scenario_names[4]:2,
-                           _valid_scenario_names[5]:2,}
+                           _valid_scenario_names[2]:3,
+                           _valid_scenario_names[3]:3,
+                           _valid_scenario_names[4]:3,
+                           _valid_scenario_names[5]:3,}
+    _old_scenario_names_key = {_valid_scenario_names[1]:"SSP1-1.9",
+                               _valid_scenario_names[2]:"SSP1-2.6",
+                               _valid_scenario_names[3]:"SSP2-4.5",
+                               _valid_scenario_names[4]:"SSP3-7.0",
+                               _valid_scenario_names[5]:"SSP5-8.5"}
+    _max_poly_order = 6
     
     def __init__(self,use_global=True, 
                       lat=None,
@@ -85,7 +91,8 @@ class ClimateScenario(object):
                    average for the baseline year. GCM data is shifted up or down
                    to accomplish this.
         polynomial_order : dict: Default = self._default_poly_order 
-            dict: must contain a scenario name list and an integer. 
+            dict: must contain a scenario name list and an integer <= {0:d}. 
+                  6 denotes use of a 5th order polynomial. 
         write_graphics_path : str : Default = None, 
             write out png files if this is not None. 
 
@@ -95,12 +102,10 @@ class ClimateScenario(object):
         -------
         None.
 
-        """
+        """.format(self._max_poly_order)
         self.use_global = use_global
         if use_global:
-            file_dir = os.path.dirname(__file__)
-            self.df_temp_anomaly = pd.read_csv(os.path.join(file_dir,"data",
-                                                            "IPCC2021_ThePhysicalBasis_TechnicalSummaryFigSPM8.csv"))
+            self._load_old_global_temps()
         else:
             
             self.lat = lat
@@ -110,7 +115,11 @@ class ClimateScenario(object):
             self.baseline_year = self._required_baseline_year_for_cmip6
         self.table = [] # last column is the R2 value
         self.scenarios = []
-        self.columns = [r'$t^3$',r'$t^2$',r'$t$',r'$1$',r'$R^2$']
+        rlist = [r'$t^{0:d}$'.format(self._max_poly_order - idx - 1) for idx in range(self._max_poly_order-1)]
+        rlist.append(r'$1$')
+        rlist.append(r'$R^2$')
+        self.columns = rlist
+
         self.model_guide = model_guide
         self.data_folder = data_folder
         self.run_parallel = run_parallel
@@ -121,8 +130,58 @@ class ClimateScenario(object):
         self.write_graphics_path = write_graphics_path
         self._polynomial_order = polynomial_order
         
-    def calculate_coef(self,scenario,lat=None,lon=None,scen_func_dict=None,years_per_calc=1):
+    def calculate_coef(self,scenario,lat=None,lon=None,scen_func_dict=None):
+        """
+        obj.calculate_coef(scenario,lat,lon,scen_func_dict,years_per_calc)
         
+        this function has two use cases:
+            1: old use case where obj.use_global=True. When this is the case, 
+               the 'lat' and 'lon' inputs have no affect. The temperature profiles
+               are the global average. This is the old use case used by MEWS
+               before access to CMIP6 was worked with
+            2: new use case where obj.use_global=False. When this is the case,
+               the 'lat' and 'lon' inputs change the location and CMIP6_DATA
+               class is accessed to calculate actual temperature projections
+               for a specific area.
+               
+
+        Parameters
+        ----------
+        scenario : TYPE
+            DESCRIPTION.
+        lat : float, optional lat=latitude
+            Change the original desired lat so that many locations can be 
+            calculated with the same object. The default is None which keeps
+            the same lat from instantiation.
+        lon : float, optional lon=longitude
+            Change the original desired lon so that many locations can be 
+            calculated with the same object. The default is None which keeps
+            the same lon from instantiation.. The default is None.
+        scen_func_dict : dict, optional
+            dictionary across scenarios that has the poly1d functions ready 
+            for evaluation. This is not used. The default is None.
+
+
+        Raises
+        ------
+        TypeError
+            scenario must be a list of strings if 'use_global' = False
+            
+        ValueError
+            scenario names must be in the list _valid_scenario_names
+            
+
+        Returns
+        -------
+        scen_func_dict : dict
+            Dictionary with key equal to scenarios evaluated containing
+            poly1d objects ready for evaluation for deltaT w/r to 2014 
+            baseline year. 
+            
+        Internal object attributes are used by the code though for the old
+        use case
+
+        """
         
         
         # use lat/lon 
@@ -138,9 +197,8 @@ class ClimateScenario(object):
                                 " of " + str(self._valid_scenario_names))
             else:
                 for scen in scenario:
-                    if not scen in self._valid_scenario_names:
-                        raise ValueError("An invalid scenario name '{0}' was entered".format(scen) +
-                                         "\n\n Valid names are:\n\n" + str(self._valid_scenario_names))
+                    self._check_valid_scenario_name(scen)
+
                 if not self._valid_scenario_names[0] in scenario:
                     scenario.insert(0,self._valid_scenario_names[0])
                         
@@ -155,7 +213,6 @@ class ClimateScenario(object):
                                         calculate_error=False,
                                         display_logging=False,
                                         display_plots=False,
-                                        output_folder=self.output_folder,
                                         run_parallel=self.run_parallel,
                                         proxy=self.proxy,
                                         gcm_to_skip=self.gcm_to_skip,
@@ -163,32 +220,55 @@ class ClimateScenario(object):
                                         polynomial_fit_order=self._polynomial_order,
                                         align_gcm_to_historical=self.align_gcm_to_historical)
             if not self.write_graphics_path is None:
-                obj.display_plots = True
+                if obj.display_plots == False:
+                    obj.display_plots = True
+                    was_false = True
+                else:
+                    was_false = False
                 obj.results1(write_png=self.write_graphics_path)
+                if was_false:
+                    obj.display_plots = False
                 
             
             # all polynomials are offset by this.
 
-            
+            if scen_func_dict is None:
+                scen_func_dict = {}
+            self.cmip = {}
+            self.p_coef = {}
+
             for scen,cmip_data_obj in obj.total_model_data.items():
                 # this gives a function that only needs the year as an input
                 # to get SSP deltaT from the 1850-1900 baseline.
-                import pdb;pdb.set_trace()
-                polycoef = cmip_data_obj.total_model_data[scen].delT_polyfit
                 
-                scen_func_dict[scen] = np.poly1d(
-                    cmip_data_obj.total_model_data[scen].delT_polyfit)
+                polycoef = cmip_data_obj.delT_polyfit
                 
+                scen_func_dict[scen] = np.poly1d(polycoef)
+
+                self.table.append(np.concatenate((np.zeros(6-len(polycoef)),polycoef,np.array([cmip_data_obj.R2]))))
+                self.scenarios.append(scen)
+                self.p_coef[scen] = polycoef
+                self.cmip[scen] = cmip_data_obj
+            
+            return scen_func_dict
                 
         else:
             # # TODO remove: THIS IS OLD BUT KEPT FOR LEGACY RESULTS FROM v0.0.1 - it will 
             # not be kept for v1.0.0
-            df = self.df_temp_anomaly[self.df_temp_anomaly["Climate Scenario"]==scenario]
+            
+            # Assure a valid scenario name.
+            self._check_valid_scenario_name(scenario)
+            old_scen_name = self._old_scenario_names_key[scenario]
+            
+            if not "df_temp_anomaly" in vars(self):
+                self._load_old_global_temps()
+            
+            df = self.df_temp_anomaly[self.df_temp_anomaly["Climate Scenario"]==old_scen_name]
             
             Xi = ((df["Year"]-2020)/50).values
             # 1.0 is the amount of heating assumed from 1850-1900 to 2020.
             Yi = (df["Temperature Anomaly degC (baseline 1850-1900)"]-1.0).values
-            
+
             p_coef, residuals, rank, singular_values, rcond = np.polyfit(Xi,Yi,3,full=True)
             self.p_coef = p_coef
             
@@ -198,9 +278,19 @@ class ClimateScenario(object):
             R2 = np.array([1 - (SSres/SStot)])
             
             self.table.append(np.concatenate((p_coef, R2)))
-            self.scenarios.append(scenario)
+            self.scenarios.append(old_scen_name)
             
             return scen_func_dict
+
+    def _load_old_global_temps(self):
+        file_dir = os.path.dirname(__file__)
+        self.df_temp_anomaly = pd.read_csv(os.path.join(file_dir,"data",
+                                                        "IPCC2021_ThePhysicalBasis_TechnicalSummaryFigSPM8.csv"))
+    
+    def _check_valid_scenario_name(self,scenario):
+        if not scenario in self._valid_scenario_names:
+            raise ValueError("An invalid scenario name '{0}' was entered".format(scenario) +
+                             "\n\n Valid names are:\n\n" + str(self._valid_scenario_names))
 
     # 0.267015 shifts to make the baseline year 2020 we assume a 1.0C affect 
     def climate_temp_func(self,year):

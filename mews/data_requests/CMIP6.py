@@ -109,18 +109,17 @@ class CMIP_Data(object):
         Future year input for which all temperature change values will be 
         calculated to. 2015 <= year <= 2100.
         
-    model_guide : str
-        Filename for excel spreadsheet which contains the names and links 
-        to all models used in the calculations.
-        
-    file_path : str
-        Defines where the file is being called from.
-        
-    data_folder : str : optional : Default = None
-        The name of the folder where the model_guide can be found and where
-        all of the CMIP data files will downloaded to relative to the file
-        the script is called from. If None, the code will search for the 
-        model_guide and download all files to the cwd.
+    
+    model_guide : str : optional : Default = None
+        Filename and path for excel spreadsheet which contains the names and links 
+        to all models used in the calculations. If None, then the default
+        model guide created for MEWS is used.
+    
+    data_folder : str - RELATIVE FOLDER PATH : optional : Default = None 
+        The name of the folder where all of the CMIP data files will be 
+        downloaded to a directory "CMIP6_Data_Files" at the same level as
+        the MEWS repository so that files are not included in the MEWS.git folder
+        structure.
         
     world_map : bool : optional : Default = True
         Displays the latitude-longitude location desired on a world map.
@@ -141,15 +140,11 @@ class CMIP_Data(object):
     run_parallel : bool : optional : Default = True
         If True, asyncronous paralellization will be used to speed up calculations
         accross the various scenarios.
-        
-    output_folder : str : optional : Default = None
-        Indicates where to find already downloaded files or else where to download
-        files. Must be an area that python can write to.
-        Default leads to download in os.path.join("..","..","..","..","CMIP6_Data_Files"))
     
     proxy : str : optional : Default = None
         Must indicate the proxy being used for downloads if a proxy server is
         being used.
+        example: https://proxy.institution.com:8080
         
     gcm_to_skip : list of str : optional : Default = []
         allows entry of GCM names that will be skipped. If a GCM server will not
@@ -199,7 +194,6 @@ class CMIP_Data(object):
                  display_logging=False,
                  display_plots=True,
                  run_parallel=True,
-                 output_folder=None,
                  proxy=None,
                  gcm_to_skip=[],
                  polynomial_fit_order=_default_poly_order,
@@ -210,11 +204,6 @@ class CMIP_Data(object):
             os.environ['HTTP_PROXY'] = proxy
             os.environ['https_proxy'] = proxy
             os.environ['HTTPS_PROXY'] = proxy
-
-        if data_folder != None: 
-            self.dirname = os.path.join(os.path.abspath(os.getcwd()),data_folder)
-        else:
-            self.dirname = os.path.abspath(os.getcwd())
             
         self.world_map = world_map
         self.lat_desired = lat_desired
@@ -224,9 +213,11 @@ class CMIP_Data(object):
         self.calculate_error = calculate_error
         self.model_guide = model_guide
         self.data_folder = data_folder
+        if not self._historical_scen_str in scenario_list:
+            scenario_list.insert(0,"historical")
         self.scenario_list = scenario_list
         self.display_plots = display_plots
-        self.output_folder = output_folder
+        self.data_folder = data_folder
         self.gcm_to_skip = gcm_to_skip
         self._polynomial_fit_order = polynomial_fit_order
         self._Kelvin_to_Celcius_offset = 273.15
@@ -316,12 +307,12 @@ class CMIP_Data(object):
         if self.world_map:
             self._World_map_plotting()
         
-        if self.output_folder is None:
-            folder_path = os.path.join("..","..","..","..","CMIP6_Data_Files")
+        if self.data_folder is None:
+            folder_path = os.path.join(os.path.dirname(__file__),"..","..","..","CMIP6_Data_Files")
         else:
-            folder_path = self.output_folder
+            folder_path = self.data_folder
         
-        model_guide_wb = openpyxl.load_workbook(os.path.join(self.dirname,self.model_guide))
+        model_guide_wb = openpyxl.load_workbook(self.model_guide)
         #Downloads necessary files for each scenario
         for scenario in self.scenario_list:
             # we want for this large amount of data to be outside the MEWS
@@ -332,10 +323,10 @@ class CMIP_Data(object):
             model_guide_ws = model_guide_wb[scenario]
             
             #Creates folders
-            if os.path.exists(os.path.join(self.dirname,folder_path)) == False:
-                os.mkdir(os.path.join(self.dirname,folder_path))
-            if os.path.exists(os.path.join(self.dirname,folder_path,scenario)) == False:
-                os.mkdir(os.path.join(self.dirname,folder_path,scenario))
+            if os.path.exists(os.path.join(folder_path)) == False:
+                os.mkdir(os.path.join(folder_path))
+            if os.path.exists(os.path.join(folder_path,scenario)) == False:
+                os.mkdir(os.path.join(folder_path,scenario))
         
             if run_parallel:
                 #Performs all file downloads with threading
@@ -357,7 +348,7 @@ class CMIP_Data(object):
                 
                 file_path_list = link.split("/")
                 file_name = file_path_list[-1]
-                path = os.path.join(self.dirname,folder_path,scenario,file_name)
+                path = os.path.join(folder_path,scenario,file_name)
                 
                 # only download (takes awhile) if the path does not exist. Otherwise, leave the files in place!
                 if not os.path.exists(path):                
@@ -389,14 +380,13 @@ class CMIP_Data(object):
             if run_parallel:
                 total_model_list.append(pool.apply_async(self._Compiling_Data,(model_guide_wb,folder_path,scenario,)))
             else:
-                self.total_model_data[total_model_list[idx]] = self._Compiling_Data(model_guide_wb,folder_path,scenario)
+                self.total_model_data[scenario] = self._Compiling_Data(model_guide_wb,folder_path,scenario)
         
-        pool.close()
-        pool.join()
-        
-        
-        for index in range(len(self.scenario_list)):
-            self.total_model_data[total_model_list[index].get().scenario] = total_model_list[index].get()
+        if run_parallel:
+            pool.close()
+            pool.join()
+            for index in range(len(self.scenario_list)):
+                self.total_model_data[total_model_list[index].get().scenario] = total_model_list[index].get()
           
         model_guide_wb.close()
         logger.info("Temperature computation complete")
@@ -501,7 +491,7 @@ class CMIP_Data(object):
                 link = model_guide_ws.cell(row,2).value
                 file_path_list = link.split("/")
                 file_name = file_path_list[-1] 
-                path = os.path.join(self.dirname,folder_path,scenario,file_name)
+                path = os.path.join(folder_path,scenario,file_name)
                 file_count = model_guide_ws.cell(row,3).value
                 file_num = model_guide_ws.cell(row,4).value
                 Model = self.Model_object(model_name,path)
@@ -569,7 +559,6 @@ class CMIP_Data(object):
             self.CI_list = np.zeros(num_years)
             self.delT_list_reg = None
             self.delT_polyfit = None
-            self.baseline_polyfit = None
             self.baseline_regression = None
             self.dataset = {}  # different lengths of data per year may be possible
             self.R2 = None
@@ -865,7 +854,7 @@ class CMIP_Data(object):
     def results1(self,scatter_display=[False,False,False,False,False,False],
                  regression_display=[True,True,True,True,True,True],
                  CI_display=[True,True,True,True,True,True],
-                 plot_begin_year=1950,write_png=None):
+                 plot_begin_year=1950,write_png=None,show_plot=False):
         """
         Plots the temperature change values for the scenarios for the years 1950-2100.
 
@@ -896,6 +885,10 @@ class CMIP_Data(object):
         write_png : str : optional : default = None
             if not None, write a .png file to the name/path location indicated 
             by write_png
+            
+        show_plot : bool : optional : default = False
+            if True, shows the plot being made rather than only creating the 
+            plot object
         
         Returns
         -------
@@ -952,10 +945,14 @@ class CMIP_Data(object):
             plt.xlim(plot_begin_year,self.end_year)
             plt.grid()
             fig.set_size_inches(18.5, 10.5)
-            plt.show()
             
+
             if not write_png is None:
-                plt.savefig(write_png,dpi=300)
+                fig.savefig(write_png,dpi=300,ax=ax)
+            if show_plot:  
+                plt.show()  
+                
+            return fig,ax
         
     
     def results2(self,desired_scenario,resolution='low'):
@@ -990,14 +987,14 @@ class CMIP_Data(object):
  
         lon_array = np.linspace(360-125,360-66,num=resolution_dict[resolution][0])
         lat_array = np.linspace(24,50,num=resolution_dict[resolution][1])
-        folder_path = self.output_folder
+        folder_path = self.data_folder
         
         result_arrays=[]
         for scenario in ['historical',desired_scenario]:
             year = self.baseline_year if scenario == 'historical' else self.end_year
     
             
-            model_guide_wb = openpyxl.load_workbook(os.path.join(self.dirname,self.model_guide))
+            model_guide_wb = openpyxl.load_workbook(os.path.join(self.model_guide))
             model_guide_ws = model_guide_wb[scenario]
         
             model_list = []
@@ -1101,7 +1098,7 @@ class CMIP_Data(object):
             link = model_guide_ws.cell(row,2).value
             file_path_list = link.split("/")
             file_name = file_path_list[-1] 
-            path = os.path.join(self.dirname,folder_path,scenario,file_name)
+            path = os.path.join(folder_path,scenario,file_name)
             if model_name == model:
                 Model = self.Model_object(model_name,path)
                 file_count = model_guide_ws.cell(row,3).value

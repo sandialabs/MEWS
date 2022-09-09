@@ -305,7 +305,9 @@ class Extremes():
                        current_year=None,
                        climate_temp_func=None,
                        averaging_steps=1,
-                       no_climate_trend=False)
+                       no_climate_trend=False,
+                       use_global=True,
+                       baseline_year=2014)
     
     look for results in obj.results - files are output as specified in the inputs.
     
@@ -447,6 +449,18 @@ class Extremes():
      no_climate_trend : Bool : Optional : Default = False
           Exclude the climate trend gradual increase in temperature
           while including the heat wave effects.
+          
+    use_global : bool : optional : Default = True
+         Controls whether to use the old use case where MEWS calculates
+         from global surface temperature averages or to use the new case where
+         MEWS uses CMIP6 data from a specific lat/lon.
+         All new use shoudl keep this False but it is defaulted to True
+         so that old scripts don't have to change.'
+         
+    baseline_year: numeric : optional : Default = 2014
+        Only used with use_global=True
+        
+        This is the CMIP6 baseline_year. It should always stay equal to 2014.
     
     Returns
     -------
@@ -493,8 +507,15 @@ class Extremes():
                  current_year=None,
                  climate_temp_func=None,
                  averaging_steps=1,
-                 no_climate_trend=False):
+                 no_climate_trend=False,
+                 use_global=True,
+                 baseline_year=2014):
         
+        self.use_global = use_global
+        self.baseline_year = baseline_year
+        # input checking
+        if not isinstance(weather_files,list):
+            raise TypeError("The 'weather_files' input must be a list of strings!")
         
         self.wfile_names = []
         # perform some input checking
@@ -750,7 +771,11 @@ class Extremes():
         if not climate_temp_func is None and not no_climate_trend:
             # TODO - add the ability to continuously change the trend or to
             #        just make it constant like it is now.
-            objA.add_alteration(year,1,1,1,num_step,climate_temp_func(year),np.ones(num_step),
+            if self.use_global:
+                ctf = climate_temp_func(year)
+            else:
+                ctf = climate_temp_func(year - self.baseline_year)
+            objA.add_alteration(year,1,1,1,num_step,ctf,np.ones(num_step),
                                 alteration_name="global temperature trend")
                 
                 

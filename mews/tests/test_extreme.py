@@ -270,7 +270,15 @@ class Test_Extreme(unittest.TestCase):
 
             else:
                 doe_in = None
-                
+            
+            with self.assertRaises(TypeError):
+                # assure new type error covered.
+                obj = Extremes(2021, max_avg_dist, max_avg_delta, min_avg_dist, 
+                               min_avg_delta, trans_mat, trans_mat_delta, "THIS SHOULD BE A LIST", num_real, 
+                               num_repeat=num_repeat,write_results=self.write_results,
+                               run_parallel=False,test_shape_func=True,doe2_input=doe_in,
+                               column=column)
+            
             obj = Extremes(2021, max_avg_dist, max_avg_delta, min_avg_dist, 
                            min_avg_delta, trans_mat, trans_mat_delta, wfiles, num_real, 
                            num_repeat=num_repeat,write_results=self.write_results,

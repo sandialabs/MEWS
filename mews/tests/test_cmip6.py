@@ -15,7 +15,11 @@ class TestCMIP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.cwd = os.getcwd()
-        os.chdir(os.path.dirname(__file__))
+        fpath = os.path.dirname(__file__)
+        cls.model_guide = os.path.join(fpath,"data_for_testing","Models_Used_Simplified.xlsx")
+        cls.data_folder = os.path.join(fpath,"data_for_testing","CMIP6_Data_Files")
+        os.chdir(fpath)
+        
         
     @classmethod
     def tearDownClass(cls):
@@ -26,29 +30,27 @@ class TestCMIP(unittest.TestCase):
         with self.assertRaises(ValueError):
                 CMIP_Data(lat_desired = 40,
                           lon_desired = 1000,
-                          year_baseline = 2014,
-                          year_desired = 2100,
+                          baseline_year = 2014,
+                          end_year = 2100,
                           file_path = os.path.join(__file__),
-                          data_folder = "data_for_testing",
-                          model_guide = "Models_Used_Simplified.xlsx",
+                          data_folder = self.data_folder,
+                          model_guide = self.model_guide,
                           scenario_list = ["SSP585"],
                           world_map = False,
-                          calculate_error = False,
-                          output_folder = os.path.join("CMIP6_Data_Files"))
+                          calculate_error = False)
     
         #Testing all calculations have been computed
         test_obj = CMIP_Data(lat_desired = 40,
                              lon_desired = -100,
-                             year_baseline = 2014,
-                             year_desired = 2100,
+                             baseline_year = 2014,
+                             end_year = 2100,
                              file_path = os.path.join(__file__),
-                             data_folder = "data_for_testing",
-                             model_guide = "Models_Used_Simplified.xlsx",
+                             data_folder = self.data_folder,
+                             model_guide = self.model_guide,
                              scenario_list = ["historical","SSP585"],
                              calculate_error = True,
                              display_plots = False,
-                             output_folder = os.path.join("CMIP6_Data_Files"),
-                             run_parallel=False)
+                             run_parallel=True)
         self.assertIsNotNone(test_obj.total_model_data["SSP585"].avg_error)
         self.assertNotEqual([],test_obj.total_model_data["SSP585"].delT_list)
         self.assertNotEqual([],test_obj.total_model_data["SSP585"].delT_list_reg)

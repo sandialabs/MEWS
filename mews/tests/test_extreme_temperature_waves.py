@@ -32,6 +32,11 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         cls.write_results = False
         cls.rng = default_rng()
         
+        try:
+            os.removedirs("mews_results")
+        except:
+            warnings.warn("The testing could not remove the temporary directory ./mews/tests/mews_results")
+        
         proxy_location = os.path.join("..","..","..","proxy.txt")
         
         if os.path.exists(proxy_location):
@@ -61,6 +66,10 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         plt.close('all')
         font = {'size':16}
         rc('font', **font)   
+        
+        fpath = os.path.dirname(__file__)
+        cls.model_guide = os.path.join(fpath,"data_for_testing","Models_Used_Simplified.xlsx")
+        cls.data_folder = os.path.join(fpath,"data_for_testing","CMIP6_Data_Files")
     
     @classmethod
     def tearDownClass(cls):
@@ -98,19 +107,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         if cls.from_main_dir:
             os.chdir(os.path.join("..",".."))
 
-    def test_climate_scenario_with_specific_lat_lon(self):
-        """
-        This tests extreme temperature with a specific latitude and longitude
-        
-        
-        """
-        path_to_paper = os.path.join(".","test.png")
-        clim_scen = ClimateScenario(use_global=False,lat=45,lon=-105,
-                                    data_folder=os.path.join("data_for_testing"),
-                                    run_parallel=True,proxy=self.proxy,gcm_to_skip=["NorESM2-MM"],baseline_year=2014,
-                                    write_graphics_path=path_to_paper + r"test.png",
-                                    align_gcm_to_historical=True,model_guide ="Models_Used_Simplified.xlsx")  
-        clim_func = clim_scen.calculate_coef(["SSP585"],years_per_calc=10)                      
+            
 
                         
     # def test_albuquerque_extreme_waves(self):
@@ -151,11 +148,13 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
     #     random_seed = 54564863
         
-    #     scenario = 'SSP5-8.5'
+    #     # subtle difference with scenario names in ClimateScenario!
+    #     scenario = 'SSP585'
         
     #     obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
-    #                                      use_local=True,random_seed=random_seed,
-    #                                      include_plots=self.plot_results,run_parallel=True)
+    #                                       use_local=True,random_seed=random_seed,
+    #                                       include_plots=self.plot_results,
+    #                                       run_parallel=True,use_global=True)
     #     results_dict = {}
         
 
@@ -174,7 +173,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     #         clim_scen.calculate_coef(scenario)
     #         climate_temp_func = clim_scen.climate_temp_func
             
-    #         results = obj.create_scenario(scenario, start_year, num_year, climate_temp_func, num_realization=10)
+    #         results = obj.create_scenario(scenario, start_year, num_year, 
+    #                                       climate_temp_func, num_realization=10)
 
     #         for tup,objA in results[start_year].items():
                 
@@ -232,6 +232,73 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
     #     # cold snap frequency should be close to 1.0
     #     self.assertTrue((freq_increase_cs <= 1.0 + 0.1) and (freq_increase_cs >= 1.0 - 0.1))
+        
+    #     with self.assertRaises(ValueError):
+    #         # make sure that the unit_conversion error is raised 
+    #         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/1000,0),
+    #                                       use_local=True,random_seed=random_seed,
+    #                                       include_plots=self.plot_results,
+    #                                       run_parallel=True,use_global=True)
+            
+    def test_extreme_temperature_waves_local_lat_lon(self):
+        # target albuquerque, NM
+        clim_scen = ClimateScenario(use_global=False,lat=35.0844,lon=106.6504,end_year=2100,
+                                    model_guide=self.model_guide,data_folder=self.data_folder,
+                                    run_parallel=True,gcm_to_skip=["NorESM2-MM"])
+        
+        scen_dict = clim_scen.calculate_coef(["SSP585"])
+        
+        station = os.path.join("data_for_testing","USW00023050.csv")
+        weather_files = [os.path.join("data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
+        
+        num_year = 1
+        
+        # should see increases on average of 1.08C and increase in frequency of 
+        # 2.4 between the years.
+        num_realizations = 25
+        
+        random_seed = 5450984863
+        
+        # subtle difference with scenario names in ClimateScenario!
+        scenario = 'SSP585'
+        
+        obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
+                                          use_local=True,random_seed=random_seed,
+                                          include_plots=self.plot_results,
+                                          run_parallel=True,use_global=False)
+        # LEFT OFF - you need to figure out why the 5% is producing higher mean
+        # temperature than the 50%.
+        
+        # ALSO - You need to figure out why 95% isn't converging. Start with 
+        # finding out if the multiplication factors are higher for 50% than 
+        # 5%. If they are, then Figure out if the shifts occuring are 
+        # accurate or not.
+        breakpoint()
+        results5 = obj.create_scenario(scenario, 2080, num_year, 
+                                          scen_dict["SSP585"], 
+                                          num_realization=num_realizations,
+                                          obj_clim=clim_scen,
+                                          increase_factor_ci="5%")
+        breakpoint()
+        results95 = obj.create_scenario(scenario, 2080, num_year, 
+                                          scen_dict["SSP585"], 
+                                          num_realization=num_realizations,
+                                          obj_clim=clim_scen,
+                                          increase_factor_ci="50%")
+        
+        def get_mean(res,nr):
+            sum_val = 0
+            for year,alter_dict in res.items():
+                for tup, alter_obj in alter_dict.items():
+                    sum_val = sum_val + alter_obj.epwobj.dataframe['Dry Bulb Temperature'].mean()
+            return sum_val/nr   
+        
+        mean5 = get_mean(results5,num_realizations)
+        mean95 = get_mean(results95,num_realizations)
+        breakpoint()
+        self.assertGreater(mean95, mean5)
+        
+            
         
 
         

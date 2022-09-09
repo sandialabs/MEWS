@@ -6,23 +6,20 @@ Created on Thu Oct 14 09:59:38 2021
 """
 from mews.stats import Extremes
 from mews.weather.psychrometrics import relative_humidity
+from mews.weather.climate import ClimateScenario
 
-
+from datetime import datetime
 from scipy.optimize import fsolve
 from scipy.optimize import bisect
 from scipy.special import erf
 
 import io
-from calendar import monthrange
 import pandas as pd
 import numpy as np
 import os
-import shutil
 import urllib
 from urllib.parse import urlparse
 
-from datetime import datetime, timedelta
-from contextlib import closing
 import statsmodels.api as sm
 from warnings import warn
 
@@ -81,7 +78,10 @@ class ExtremeTemperatureWaves(Extremes):
                                 unit_conversion,
                                 num_year,
                                 use_local,
-                                include_plots)
+                                include_plots,
+                                doe2_inputs,
+                                results_folder,
+                                proxy)
     
     This initializer reads and processes the heat waves and cold snap statistics
     for a specific NOAA station and corresponding weather data. After instantiation,
@@ -144,6 +144,17 @@ class ExtremeTemperatureWaves(Extremes):
         Path to the location where MEWS will write all of the output files
         for the requested analysis. Files will be the original weather file
         name with "_<realization>_<year>" appended to it.
+        
+    proxy : str : Optional : Default = None
+        proxy server and port to access url's behind a proxy server
+        example: https://proxy.institution.com:8080
+        
+    use_global : bool : optional : Default = False
+        True means use the old use case where temperature anomaly
+        is based on global average mean surfacne temperature curves rather
+        specific curves in CMIP6.
+        
+
     
     Returns
     -------
@@ -166,7 +177,16 @@ class ExtremeTemperatureWaves(Extremes):
                  doe2_input=None,
                  results_folder="mews_results",
                  random_seed=None,
-                 run_parallel=True):
+                 run_parallel=True,
+                 proxy=None,
+                 use_global=False):
+        # This does the baseline heat wave analysis on historical data
+        # "create_scenario" moves this into the future for a specific scenario
+        # and confidence interval factor.
+
+        
+        self.proxy = proxy
+        self.use_global = use_global
         
         # consistency checks
         self._check_NOAA_url_validity()
@@ -198,13 +218,19 @@ class ExtremeTemperatureWaves(Extremes):
         self.extreme_results = {}
         
         
+        
     def create_scenario(self,scenario_name,start_year,num_year,climate_temp_func,
-                        num_realization=1):
+                        num_realization=1,obj_clim=None,increase_factor_ci="50%"):
         
         """
         >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func)
         
         Places results into self.extreme_results and self.ext_obj
+        
+        This function extends the heat wave analysis for ExtremeTemperatureWaves
+        into the future for a specific shared socioeconomic pathway (SSP) scenario
+        and a specific confidence interval (ci) track (5%, 50%, or 95%) for
+        the heat wave intensity and frequency parameters taken from Figure SPM6
         
         Parameters
         ----------
@@ -219,24 +245,42 @@ class ExtremeTemperatureWaves(Extremes):
             Number of subsequent years to include in the analysis
         
         climate_temp_func : func 
-            A function that provides a continuous change in temperature that
-            is scaled to a yearly time scale. time = 2020 is the begin of the 
-            first year that is valid for the function.
-            
-            No valid return for values beyond 4 C due to lack of data from
-            IPCC for higher values.
+            self.use_global = True
+                A function that provides a continuous change in temperature that
+                is scaled to a yearly time scale. time = 2020 is the begin of the 
+                first year that is valid for the function.
+                
+                No valid return for values beyond 4 C due to lack of data from
+                IPCC for higher values.
+            self.use_global = False
+                A function that provides a continuous change in temperature that
+                baselined from 2014. Input must be years - 2014.
             
         num_realization : int : Optional : Default = 1
             Number of times to repeat the entire analysis of each weather file 
             so that stochastic analysis can be carried out.
-        
+            
+        obj_clim : mews.weather.climate.ClimateScenario : optional : Default =None
+            Only used when self.use_global = False
+            This is a ClimateScenario object from which several 
+            input values are needed.
+            
+        increase_factor_ci : str : optional : Default = "50%"
+            Choose one of "[5%, 50%, 95%]" indicating what values out of table SPM6
+            to use 5% is for the lower bound 95% Confidence inverval (CI)
+                   50% is for the mean
+                   95% is the upper bound of the 95% CI
+            all other strings will raise a ValueError
+            
         Returns
         -------    
         None
         
         """
+        if not increase_factor_ci in DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
+            raise ValueError("The input 'increase_factor_ci' must be a string with one of the following three values: \n\n{0}".format(
+                str(DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
         
-
         
         ext_obj_dict = {}
         results_dict = {}
@@ -250,7 +294,8 @@ class ExtremeTemperatureWaves(Extremes):
              transition_matrix_delta,
              del_E_dist,
              del_delTmax_dist
-             ) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year)
+             ) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
+                                                     obj_clim,scenario_name,increase_factor_ci)
             
 
             # now initiate use of the Extremes class to unfold the process
@@ -281,8 +326,11 @@ class ExtremeTemperatureWaves(Extremes):
                      del_min_E_dist=None,
                      current_year=int(year),
                      climate_temp_func=climate_temp_func,
-                     averaging_steps=24)
+                     averaging_steps=24,
+                     use_global=self.use_global,
+                     baseline_year=obj_clim.baseline_year)
             results_dict[year] = self.results
+        
         
 
         self.extreme_results[scenario_name] = results_dict
@@ -293,7 +341,13 @@ class ExtremeTemperatureWaves(Extremes):
         
 
 
-    def _create_transition_matrix_dict(self,stats,climate_temp_func,year):
+    def _create_transition_matrix_dict(self,stats,climate_temp_func,year,obj_clim,scenario,increase_factor_ci):
+        
+        """
+        Here is where the delta T, delta E and delta Markov matrix values are calculated
+        using class DeltaTransition_IPCC_FigureSPM6
+        
+        """
         
         transition_matrix = {}
         transition_matrix_delta = {}
@@ -319,7 +373,11 @@ class ExtremeTemperatureWaves(Extremes):
             obj = DeltaTransition_IPCC_FigureSPM6(hot_param,
                                                cold_param,
                                                climate_temp_func,
-                                               year)
+                                               year,self.use_global,
+                                               obj_clim,scenario,
+                                               self,
+                                               increase_factor_ci)
+
             transition_matrix_delta[month] = obj.transition_matrix_delta
             del_E_dist[month] = obj.del_E_dist
             del_delTmax_dist[month] = obj.del_delTmax_dist
@@ -378,8 +436,20 @@ class ExtremeTemperatureWaves(Extremes):
             Contains the daily summaries with statistical summary
             daily data from the climate normals overlaid so that heat and cold 
             wave comparisons can be made.
+            
+        self.mid_date : datetime - provides the middle date of the range
+            of time convered by the daily summaries being analyzed.
+            
+        
         
         """
+        if not self.proxy is None:
+            os.environ['http_proxy'] = self.proxy 
+            os.environ['HTTP_PROXY'] = self.proxy
+            os.environ['https_proxy'] = self.proxy
+            os.environ['HTTPS_PROXY'] = self.proxy
+        
+        
         df_temp = []
         for url,isdaily in zip([self.daily_url,self.norms_url],[True,False]):
     
@@ -440,7 +510,25 @@ class ExtremeTemperatureWaves(Extremes):
                 
                 df_new = df[['TMIN','TMAX']]
                 self.meta = meta_data
-            
+                
+                def time_in_year_decimal(timestamp):
+                    year = timestamp.year
+                    day = timestamp.dayofyear
+                    numday = pd.Timestamp(year,12,31).dayofyear
+                    return year + day/numday
+                    
+                
+                
+                # Calculate the middle date in a decimal form for years
+                # for interpolation in DeltaTransition_IPCC_FigureSPM6
+                mid_timestamp = pd.to_datetime(df.index[0].to_datetime64() + 
+                                    (df.index[-1].to_datetime64()-
+                                     df.index[0].to_datetime64())/2.0)
+                
+                self.hw_beg_date = time_in_year_decimal(df.index[0])
+                self.hw_mid_date = time_in_year_decimal(mid_timestamp)
+                self.hw_end_date = time_in_year_decimal(df.index[-1])
+             
             else:
                 df.index = pd.to_datetime(df["DATE"].apply(lambda x: str(year)+"-"+x))
                 keep = ["HLY-TEMP-10PCTL","HLY-TEMP-NORMAL","HLY-TEMP-90PCTL",
@@ -684,10 +772,13 @@ class ExtremeTemperatureWaves(Extremes):
             # calculate duration stats
             month_duration = np.array([len(arr) for arr in waves_cur])
             
-            try:
+            if len(month_duration) == 0:
+                raise ValueError("No heat waves were identified in {0}".format(month)
+                                 +" perhaps there is a unit mismatch in"
+                                 +" the daily summaries and climate norms?")
+            else:
                 max_duration = month_duration.max()
-            except:
-                import pdb;pdb.set_trace()
+
                 
             num_day = np.arange(2,month_duration.max()+1)
             duration_history = np.array([(month_duration == x).sum() for x in num_day])
@@ -1026,22 +1117,65 @@ class DeltaTransition_IPCC_FigureSPM6():
     >>> obj = DeltaTransition_IPCC_FigureSPM6(hot_param,
                                               cold_param,
                                               climate_temp_func,
-                                              year)
+                                              year,
+                                              use_global,
+                                              baseline_year,
+                                              mid_date,
+                                              historic_temp_func,
+                                              obj_clim_cmip_scen)
     
-    This class assumes that we can divide by the 1.0 C multipliers for the present
-    day and then multiply. We interpolate linearly or extrapolate linearly from
-    the sparse data available.
+    This function has two use cases depending on whether MEWS is being used
+    with the old global CMIP6 data or for actual CMIP6 lat/lon projections.
     
-    This is called within the context of a specific month.
+    if use_global = True:
+        This class assumes that we can divide by the 1.0 C multipliers for the present
+        day and then multiply. We interpolate linearly or extrapolate linearly from
+        the sparse data available.
+        
+        This is called within the context of a specific month.
+    else:
+        The begin and end years of the heat wave data are used to find the
+        middle time of the NOAA daily summaries. This date is then interpolated 
+        between the 1850-1900 (i.e. 1875). If we have 1930-1980 the middle date 
+        is 1955. We use the CMIP historical polynomial fit to determine the baseline
+        temperature change from 1850-1900 for the actual data. We then interpolate
+        a baseline factor instead of simply using the 1.0C factor.
     
     """
     
+    _valid_increase_factor_tracks = {"5%":['5% CI Increase in Intensity','5% CI Increase in Frequency'],
+                                     "50%":['50% CI Increase in Intensity','50% CI Increase in Frequency'],
+                                     "95%":['95% CI Increase in Intensity','95% CI Increase in Frequency']}
+    _valid_scenario_names = ClimateScenario._valid_scenario_names
     
-    
-    def __init__(self,hot_param,cold_param,climate_temp_func,year):
-                
+    def __init__(self,hot_param,cold_param,climate_temp_func,year,
+                 use_global=False,
+                 obj_clim=None,
+                 scenario=None,
+                 ext_temp_waves_obj=None,
+                 increase_factor_ci="50%"):
+        
+        # increase_factor_ci_val is checked when coming into Extreme
+        if use_global == False:
+            # unpack.
+            hist_str = self._valid_scenario_names[0]
+            baseline_year = obj_clim.baseline_year
+
+            # CMIP data goes back to 1850.
+            historic_temp_func = np.poly1d(obj_clim.cmip[hist_str].delT_polyfit)
+            # average delT during IPCC baseline of 1850-1900
+            avg_delT_1850_1900 = np.array([historic_temp_func(yr-baseline_year) for yr in np.arange(1850,1900.01,0.01)]).mean()
+            # average delT during heat wave data used
+            avg_delT_hw_period = np.array([historic_temp_func(yr-baseline_year)
+                                           for yr in np.arange(ext_temp_waves_obj.hw_beg_date,
+                                                               ext_temp_waves_obj.hw_end_date+.01,0.01)]).mean()
+            hw_delT = avg_delT_hw_period-avg_delT_1850_1900
+            baseline_delT = -avg_delT_1850_1900
+        else:
+            hw_delT = None 
+            
+        self.use_global = use_global
         # bring in the ipcc data and process it.
-        print(__file__)
         ipcc_data =  pd.read_csv(os.path.join(os.path.dirname(__file__),"data","IPCC_FigureSPM_6.csv"))
         
         # neglect leap years
@@ -1060,17 +1194,24 @@ class DeltaTransition_IPCC_FigureSPM6():
         # probability of sustaining a cold snap
         Pcssm = cold_param["hourly prob stay in heat wave"]
         
-        # This is change in global temperature from 2020!
-        delta_TG = climate_temp_func(year)
-        
-        
-        # now interpolate from the IPCC tables 
-        (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG)
-        f_ipcc_50_10 = ipcc_val_10["Average Increase in Frequency"] 
-        f_ipcc_50_50 = ipcc_val_50["Average Increase in Frequency"]
+        if use_global:
+            # This is change in global temperature from 2020!
+            delta_TG = climate_temp_func(year)
+            
+            # now interpolate from the IPCC tables 
+            
+            (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG)
+            
+        else:
+            delta_TG = climate_temp_func(year-baseline_year)
+            (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
+
+        f_ipcc_ci_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]] 
+        f_ipcc_ci_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
+
         
         # equation 22 (number may change)
-        P_prime_hwm = Phwm * (f_ipcc_50_50 * N10 + f_ipcc_50_10 * N50)/(N10 + N50)
+        P_prime_hwm = Phwm * (f_ipcc_ci_50 * N10 + f_ipcc_ci_10 * N50)/(N10 + N50)
         
         
         
@@ -1134,9 +1275,9 @@ class DeltaTransition_IPCC_FigureSPM6():
         
         # IPCC values must be normalized per duration to assure the correct amount
         # is added.
-        new_delT_10 = delTmax10_hwm + ipcc_val_10["Avg Increase in Intensity"]/(
+        new_delT_10 = delTmax10_hwm + ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]]/(
             norm_temp * (alphaT * (D10/norm_duration) + betaT))
-        new_delT_50 = delTmax50_hwm + ipcc_val_50["Avg Increase in Intensity"]/(
+        new_delT_50 = delTmax50_hwm + ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]/(
             norm_temp * (alphaT * (D50/norm_duration) + betaT))
         def F10_50_S(npar):
             
@@ -1168,6 +1309,7 @@ class DeltaTransition_IPCC_FigureSPM6():
         npar, infodict_s, ier_s, mesg_s = fsolve(F10_50_S, (mu_guess,0.0),full_output=True)
         
         if ier_s != 1:
+            breakpoint()
             raise ValueError("The solution for change in mean and standard deviation did not converge!")
         
         del_mu_delT_max_hwm = npar[0]
@@ -1253,58 +1395,106 @@ class DeltaTransition_IPCC_FigureSPM6():
                  'del_a':del_a_delT_max_hwm,
                  'del_b':del_b_delT_max_hwm}
         
-    def _interpolate_ipcc_data(self,ipcc_data,delta_TG):
+    def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
         
         # this function is dependent on the format of the table in IPCC_FigureSPM_6.csv
         
-        present_tempanomal = ipcc_data['Global Warming Levels (⁰C)'].values[0]
+        
+        
+        if self.use_global:
+            present_tempanomal = ipcc_data['Global Warming Levels (⁰C)'].values[0]
+        else:
+            present_tempanomal = baseline_delT
+
+
         
         future_tempanomal = present_tempanomal + delta_TG
         
-        if future_tempanomal > 4.0:
-            raise ValueError("The current IPCC data only includes changes in temperature of 4C for global warming!")
+        if self.use_global:
+            if future_tempanomal > 4.0:
+                raise ValueError("The current IPCC data only includes changes in temperature of 4C for global warming!")
+        else:
+            if future_tempanomal > 4.0:
+                warn("The mews analysis allows extrapolation beyond the IPCC info that gives factors to 4.0C. The growth in the "+
+                     "IPCC data is nearly linear. Your temperature anomaly is at {0:5.2f}C".format(future_tempanomal))
+            if future_tempanomal > 6.0:
+                raise ValueError("The current MEWS analysis only allows extrapolation to 6C and the IPCC info only goes to 4C")
         
-        ind = 0
-        
-        for ind in range(4):
-            if future_tempanomal <= ipcc_data['Global Warming Levels (⁰C)'].values[ind]:
-                break
             
         ipcc_num = ipcc_data.drop(["Event","Units"],axis=1) 
-        if ind > 0:
-            interp_fact = (future_tempanomal - 
-               ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])/(
-               ipcc_data['Global Warming Levels (⁰C)'].values[ind] - 
-               ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])
-             
-               
+        
+        def interp_func(ipcc_num,use_global,tempanomal):
+            
+            #global warming delta T
+            gwDT = ipcc_num['Global Warming Levels (⁰C)'].values
+            
+            ind = 0
+            
+            for ind in range(4):
+                if tempanomal <= ipcc_data['Global Warming Levels (⁰C)'].values[ind]:
+                    break
+            
+            if tempanomal > 4.0:
+                # must extrapolate
+                ipcc_val_10_u = (ipcc_num.loc[3,:]-ipcc_num.iloc[2,:])/(gwDT[3] - gwDT[2])*(tempanomal-gwDT[3])+ipcc_num.loc[3,:]
+                ipcc_val_50_u = (ipcc_num.iloc[-1,:]-ipcc_num.iloc[-2,:])/(gwDT[-1] - gwDT[-2])*(tempanomal-gwDT[-1])+ipcc_num.iloc[-1,:]
+            
+            elif ind > 0:
+                interp_fact = (tempanomal - 
+                   ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])/(
+                   ipcc_data['Global Warming Levels (⁰C)'].values[ind] - 
+                   ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])
                  
-            ipcc_val_10_u = (ipcc_num.loc[ind,:] - ipcc_num.loc[ind-1,:]) * interp_fact + ipcc_num.loc[ind-1,:]
-            ipcc_val_50_u = (ipcc_num.loc[ind+4,:] - ipcc_num.loc[ind+3,:]) * interp_fact + ipcc_num.loc[ind+3,:]
-        else:
-            ipcc_val_10_u = ipcc_num.loc[0,:]
-            ipcc_val_50_u = ipcc_num.loc[4,:]
+                   
+                     
+                ipcc_val_10_u = (ipcc_num.loc[ind,:] - ipcc_num.loc[ind-1,:]) * interp_fact + ipcc_num.loc[ind-1,:]
+                ipcc_val_50_u = (ipcc_num.loc[ind+4,:] - ipcc_num.loc[ind+3,:]) * interp_fact + ipcc_num.loc[ind+3,:]
+            else:
+                if use_global:
+                    ipcc_val_10_u = ipcc_num.loc[0,:]
+                    ipcc_val_50_u = ipcc_num.loc[4,:]
+                else:
+                    ipcc_val_10_u = (tempanomal / gwDT[0])*ipcc_num.loc[0,:]
+                    ipcc_val_50_u = (tempanomal / gwDT[4])*ipcc_num.iloc[4,:]
+            
+            return ipcc_val_10_u, ipcc_val_50_u
+        
+        ipcc_val_10_u, ipcc_val_50_u = interp_func(ipcc_num,self.use_global, future_tempanomal)
+        
+        if self.use_global == False:
+            # hwd = heat wave data
+            ipcc_val_10_hwd, ipcc_val_50_hwd = interp_func(ipcc_num,self.use_global, hw_delT)
         
         # TODO - if less recent data is available, this (Below) assumption
         # is non-conversative and will underestimate shifts in climate.
         
+        # 9/9/2022 - with use_global=False, this no longer applies. The heat wave
+        # data time interval is now considered so that the factor taken away is
+        # an exact interpolation between 0 and the first value in the table.
+        
         # Assumption: Because, these values are being based off of data that is more recent,
         # the amplification/offset has to be based on current 1.0C warming levels.
-        
-        
-        
         
         ipcc_val_10 = ipcc_val_10_u
         ipcc_val_50 = ipcc_val_50_u
         
         for lab,val in ipcc_val_10_u.iteritems():
             if "Intensity" in lab:
-                ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_num.loc[0,lab]
-                ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_num.loc[4,lab]
+                if self.use_global:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_num.loc[0,lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_num.loc[4,lab]
+                else:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_val_10_hwd[lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_val_50_hwd[lab]
+                    
             elif "Frequency" in lab:
-                ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_num.loc[0,lab]
-                ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_num.loc[4,lab]
-
+                if self.use_global:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_num.loc[0,lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_num.loc[4,lab]
+                else:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_val_10_hwd[lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_val_50_hwd[lab]                
+                    
         return ipcc_val_10, ipcc_val_50    
     
     # this is the same as the function for ExtremeTemperatureWaves but with
