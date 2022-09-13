@@ -8,6 +8,7 @@ from mews.stats import Extremes
 from mews.weather.psychrometrics import relative_humidity
 from mews.weather.climate import ClimateScenario
 
+from copy import deepcopy
 from datetime import datetime
 from scipy.optimize import fsolve
 from scipy.optimize import bisect
@@ -208,6 +209,7 @@ class ExtremeTemperatureWaves(Extremes):
             self._plot_stats_by_month(stats["cold snap"],"Cold Snaps")
         
         self._results_folder = results_folder
+        np.random.seed(random_seed)
         self._random_seed = random_seed
         self._run_parallel = run_parallel
         self._doe2_input = doe2_input
@@ -216,6 +218,7 @@ class ExtremeTemperatureWaves(Extremes):
         
 
         self.extreme_results = {}
+        self.extreme_delstats = {}
         
         
         
@@ -293,11 +296,15 @@ class ExtremeTemperatureWaves(Extremes):
             (transition_matrix, 
              transition_matrix_delta,
              del_E_dist,
-             del_delTmax_dist
-             ) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
+             del_delTmax_dist,
+             ipcc_fact) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
                                                      obj_clim,scenario_name,increase_factor_ci)
             
-
+            if self.use_global == False:
+                base_year = obj_clim.baseline_year
+            else:
+                base_year = None
+                                                     
             # now initiate use of the Extremes class to unfold the process
             ext_obj_dict[year] = super().__init__(start_year,
                      {'func':trunc_norm_dist, 'param':self.stats['heat wave']},
@@ -328,19 +335,80 @@ class ExtremeTemperatureWaves(Extremes):
                      climate_temp_func=climate_temp_func,
                      averaging_steps=24,
                      use_global=self.use_global,
-                     baseline_year=obj_clim.baseline_year)
+                     baseline_year=base_year)
             results_dict[year] = self.results
         
-        
-
+        self.extreme_delstats[scenario_name] = {"E":del_E_dist,"delT":del_delTmax_dist}
         self.extreme_results[scenario_name] = results_dict
         
         self.ext_obj[scenario_name] = ext_obj_dict
-        
+        self.ipcc_fact = ipcc_fact
+
         return results_dict
+    
+    def real_value_stats(self,wave_type,scenario_name,stat_name,duration):
         
-
-
+        stats = self.stats[wave_type]
+        
+        real_val_stats = {}
+        for month,subdict in stats.items():
+            
+            if stat_name == "delT":
+                minval = subdict['min extreme temp per duration']
+                maxval = subdict['max extreme temp per duration']
+                param = subdict['extreme_temp_normal_param']
+                mu = param['mu']
+                sig = param['sig']
+                norm0 = subdict['normalizing extreme temp']
+                slope = subdict['normalized extreme temp duration fit slope']
+                interc = subdict['normalized extreme temp duration fit intercept']
+                
+            elif stat_name == "E":
+                minval = subdict['min energy per duration']
+                maxval = subdict['max energy per duration']
+                param = subdict['eenergy_normal_param']
+                mu = param['mu']
+                sig = param['sig']
+                norm0 = subdict['normalizing energy']    
+                slope = subdict['energy linear slope']
+                interc = 0.0
+            else:
+                raise ValueError("Only 'delT' or 'E' are accepted inputs for 'stat_name'")
+            norm_d = subdict['normalizing duration']
+            
+            # The original average Tmax
+            values = {'mu':mu,'mu+sig':mu+sig,"a":-1,"b":1}
+            
+            delstat = self.extreme_delstats[scenario_name][stat_name][month]
+            
+            del_values = {'mu':delstat["del_sig"],
+                          'mu+sig':delstat["del_mu"]+delstat["del_sig"]
+                          ,"a":delstat["del_a"],"b":delstat["del_b"]}
+            result = {}
+            
+            for key,val in values.items():
+                per_dur = inverse_transform_fit(val,maxval,minval) 
+                res_0 = per_dur * norm0 * (slope * duration/norm_d + interc)
+                if len(self.extreme_delstats) > 0:
+                    
+                
+                    per_dur_del = inverse_transform_fit(val + del_values[key],
+                                                minval,
+                                                maxval)
+                    res_del = per_dur_del * norm0 * (slope * duration/norm_d + interc)
+                else:
+                    res_del = np.nan
+                
+                
+                    
+                
+                result[key] = {"0":res_0,"del":res_del}
+        
+            return result
+            
+            
+        
+    
     def _create_transition_matrix_dict(self,stats,climate_temp_func,year,obj_clim,scenario,increase_factor_ci):
         
         """
@@ -353,6 +421,7 @@ class ExtremeTemperatureWaves(Extremes):
         transition_matrix_delta = {}
         del_E_dist = {}
         del_delTmax_dist = {}
+        ipcc_fact = {}
 
         # Form the parameters needed by Extremes but on a monthly basis.
         for hot_tup,cold_tup in zip(stats['heat wave'].items(), stats['cold snap'].items()):
@@ -381,12 +450,14 @@ class ExtremeTemperatureWaves(Extremes):
             transition_matrix_delta[month] = obj.transition_matrix_delta
             del_E_dist[month] = obj.del_E_dist
             del_delTmax_dist[month] = obj.del_delTmax_dist
+            ipcc_fact[month] = obj.ipcc_fact
              
             
         return (transition_matrix,
                 transition_matrix_delta,
                 del_E_dist,
-                del_delTmax_dist)
+                del_delTmax_dist,
+                ipcc_fact)
         
 
     def _read_and_curate_NOAA_data(self,station,year,unit_conversion,use_local=False):
@@ -1173,6 +1244,7 @@ class DeltaTransition_IPCC_FigureSPM6():
             baseline_delT = -avg_delT_1850_1900
         else:
             hw_delT = None 
+            baseline_delT = None
             
         self.use_global = use_global
         # bring in the ipcc data and process it.
@@ -1200,7 +1272,7 @@ class DeltaTransition_IPCC_FigureSPM6():
             
             # now interpolate from the IPCC tables 
             
-            (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG)
+            (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
             
         else:
             delta_TG = climate_temp_func(year-baseline_year)
@@ -1303,14 +1375,24 @@ class DeltaTransition_IPCC_FigureSPM6():
                 S_m1,
                 S_1) + S50]
     
+        
         mu_guess = transform_fit(new_delT_10,mintemp,maxtemp) - transform_fit(
             delTmax10_hwm,mintemp,maxtemp)
+        
+        # if the new_delT_10 and new_delT_50 are nearly identifical, then the
+        # solution becomes unstable because only the mean is shifting and
+        # the standard deviation does not matter.
         
         npar, infodict_s, ier_s, mesg_s = fsolve(F10_50_S, (mu_guess,0.0),full_output=True)
         
         if ier_s != 1:
-            breakpoint()
-            raise ValueError("The solution for change in mean and standard deviation did not converge!")
+            err_tol = 0.0001
+            # if the new_delT_10 and new_delT_50 are nearly identifical, then the
+            # solution becomes unstable because only the mean is shifting and
+            # the standard deviation does not matter.
+            # Otherwise, there is a problem with non-convergence.
+            if np.abs(new_delT_50 - new_delT_10) > err_tol:
+                raise ValueError("The solution for change in mean and standard deviation did not converge!")
         
         del_mu_delT_max_hwm = npar[0]
         del_sig_delT_max_hwm = npar[1]
@@ -1394,6 +1476,11 @@ class DeltaTransition_IPCC_FigureSPM6():
                  'del_sig':del_sig_delT_max_hwm,
                  'del_a':del_a_delT_max_hwm,
                  'del_b':del_b_delT_max_hwm}
+        #bring the multiplication factors to the surface.
+        dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
+        dfraw.columns = ["10 year event","50 year event"]
+        self.ipcc_fact = dfraw
+        
         
     def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
         
@@ -1454,8 +1541,16 @@ class DeltaTransition_IPCC_FigureSPM6():
                     ipcc_val_10_u = ipcc_num.loc[0,:]
                     ipcc_val_50_u = ipcc_num.loc[4,:]
                 else:
-                    ipcc_val_10_u = (tempanomal / gwDT[0])*ipcc_num.loc[0,:]
-                    ipcc_val_50_u = (tempanomal / gwDT[4])*ipcc_num.iloc[4,:]
+                    def inte_freq_extrap_zero(tempanomal,gwDT,ipcc_num,zero_freq,zero_inte,ind):
+                        intensity = (tempanomal / gwDT)*(ipcc_num.iloc[ind,1:4]-zero_inte) + zero_inte
+                        frequency = (tempanomal / gwDT)*(ipcc_num.iloc[ind,4:]-zero_freq) + zero_freq
+                        return pd.concat([ipcc_num.iloc[ind,0:1],intensity,frequency])
+                    
+                    freq_zero = 1.0
+                    inte_zero = 0.0
+                    
+                    ipcc_val_10_u = inte_freq_extrap_zero(tempanomal,gwDT[0],ipcc_num,freq_zero,inte_zero,0)
+                    ipcc_val_50_u = inte_freq_extrap_zero(tempanomal,gwDT[4],ipcc_num,freq_zero,inte_zero,4)
             
             return ipcc_val_10_u, ipcc_val_50_u
         
@@ -1468,15 +1563,33 @@ class DeltaTransition_IPCC_FigureSPM6():
         # TODO - if less recent data is available, this (Below) assumption
         # is non-conversative and will underestimate shifts in climate.
         
-        # 9/9/2022 - with use_global=False, this no longer applies. The heat wave
+        # 9/9/2022 - with use_global=False, this assumption below no longer applies. The heat wave
         # data time interval is now considered so that the factor taken away is
         # an exact interpolation between 0 and the first value in the table.
         
+        # XXXXXNO LONGER APPLIES EXCEPT FOR use_global=True
         # Assumption: Because, these values are being based off of data that is more recent,
-        # the amplification/offset has to be based on current 1.0C warming levels.
+        # XXXXXthe amplification/offset has to be based on current 1.0C warming levels.
+        num_std_in_95ci = 1.96
+        def divide_CI(val,val_hw):
+            # divide one confidence interval by another assuming 
+            # two independent random variables.
+            
+            num = np.random.normal(val["50% CI Increase in Frequency"],
+                                   ((val['95% CI Increase in Frequency']-val["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
+                                   10000)
+            num_hw = np.random.normal(val_hw["50% CI Increase in Frequency"],
+                                               ((val_hw['95% CI Increase in Frequency']-val_hw["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
+                                               10000)
+            num_new = num/num_hw
+            
+            mean = num_new.mean()
+            std = num_new.std()
+            return mean,std
         
-        ipcc_val_10 = ipcc_val_10_u
-        ipcc_val_50 = ipcc_val_50_u
+        
+        ipcc_val_10 = deepcopy(ipcc_val_10_u)
+        ipcc_val_50 = deepcopy(ipcc_val_50_u)
         
         for lab,val in ipcc_val_10_u.iteritems():
             if "Intensity" in lab:
@@ -1486,15 +1599,30 @@ class DeltaTransition_IPCC_FigureSPM6():
                 else:
                     ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_val_10_hwd[lab]
                     ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_val_50_hwd[lab]
-                    
+            #
+            #  DIVIDSION OF CONFIDENCE INTERVALS IS MORE COMPLEX!
             elif "Frequency" in lab:
                 if self.use_global:
                     ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_num.loc[0,lab]
                     ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_num.loc[4,lab]
-                else:
-                    ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_val_10_hwd[lab]
-                    ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_val_50_hwd[lab]                
-                    
+            #     else:
+            #         ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_val_10_hwd[lab]
+            #         ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_val_50_hwd[lab]                
+            
+            # We assume independent random variables!
+        if self.use_global == False:
+            mean_ci_10,std_ci_10 = divide_CI(ipcc_val_10,ipcc_val_10_hwd)
+            mean_ci_50,std_ci_50 = divide_CI(ipcc_val_50,ipcc_val_50_hwd)
+        
+            ipcc_val_10["50% CI Increase in Frequency"] = mean_ci_10
+            ipcc_val_50["50% CI Increase in Frequency"] = mean_ci_50
+            
+            ipcc_val_10["5% CI Increase in Frequency"] = mean_ci_10 - std_ci_10 * num_std_in_95ci
+            ipcc_val_50["5% CI Increase in Frequency"] = mean_ci_50 - std_ci_50 * num_std_in_95ci
+            
+            ipcc_val_10["95% CI Increase in Frequency"] = mean_ci_10 + std_ci_10 * num_std_in_95ci
+            ipcc_val_50["95% CI Increase in Frequency"] = mean_ci_50 + std_ci_50 * num_std_in_95ci
+            
         return ipcc_val_10, ipcc_val_50    
     
     # this is the same as the function for ExtremeTemperatureWaves but with

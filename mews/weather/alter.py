@@ -798,4 +798,38 @@ class Alter(object):
                    hour_in_file, txt2bin_exepath)
         else:
             self.epwobj.write(out_file_name)
+            
+    def status(self):
+        """
+        Indicates if an alteration with total net effect > 0 is occuring 
+        in a series aligned to the weather signal. 
+        
+        1 = sum of alteration event > 0 happening
+        0 = no alteration happening
+        -1 = sum of alteration event < 0 happening
+
+        Returns
+        -------
+        df0 : pd.DataFrame : a data frame of length and index equivalent to the
+              self.epwobj.dataframe weather data that indicates when 
+              alterations are happening and when they are not happening.
+              
+              The exception is any alteration that happens for the entire weather 
+              history. These are not included.
+
+        """
+        
+        df0 = pd.DataFrame(np.zeros(len(self.epwobj.dataframe.index)),
+                              index=self.epwobj.dataframe.index,columns=["Status"])
+        
+        for name,alt in self.alterations.items():
+            if len(alt.index) != len(self.epwobj.dataframe.index):
+                if alt.sum().values >= 0:
+                    df0.loc[alt.index,:] = 1
+                else:
+                    df0.loc[alt.index,:] = -1
+                
+        return df0
+
+            
         

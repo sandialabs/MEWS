@@ -617,6 +617,8 @@ class Extremes():
             self.results = results_get
         else:
             self.results = results
+            
+            
     
     def _monthly_input_checking(self,dict_list):
         incorrect_type = 0
@@ -738,8 +740,7 @@ class Extremes():
                     peak_dist = None
                     peak_delta = None
                     avg_delta = (year - start_year) * max_avg_delta
-                    
-                
+
             for tup in state:
                 new_vals = self._add_extreme(org_series.iloc[tup[0]:tup[1]+1], 
                                   avg_dist, avg_delta,
