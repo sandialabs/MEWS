@@ -82,7 +82,9 @@ class ExtremeTemperatureWaves(Extremes):
                                 include_plots,
                                 doe2_inputs,
                                 results_folder,
-                                proxy)
+                                proxy,
+                                use_global,
+                                delT_ipcc_min_frac)
     
     This initializer reads and processes the heat waves and cold snap statistics
     for a specific NOAA station and corresponding weather data. After instantiation,
@@ -155,6 +157,14 @@ class ExtremeTemperatureWaves(Extremes):
         is based on global average mean surfacne temperature curves rather
         specific curves in CMIP6.
         
+    delT_ipcc_min_frac : float : optional : Default = 1 Range 0 - 1 or ValueError raised
+        The fraction of the interpolated change in maximum temperature increase
+        for a heat wave applicable on the lowest probability of heat waves month.
+        The highest probability of heat waves month gets the full delT from the
+        IPCC data.  toDefault is set to a value of 1 for worst case where every
+        month gets the full shift. Must range between 0 and 1.
+        
+        
 
     
     Returns
@@ -180,11 +190,13 @@ class ExtremeTemperatureWaves(Extremes):
                  random_seed=None,
                  run_parallel=True,
                  proxy=None,
-                 use_global=False):
+                 use_global=False,
+                 delT_ipcc_min_frac=1.0):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
-
+        if delT_ipcc_min_frac > 1.0 or delT_ipcc_min_frac < 0.0:
+            raise ValueError("The input 'delT_ipcc_min_frac' must be between 0.0 and 1.0!")
         
         self.proxy = proxy
         self.use_global = use_global
@@ -214,6 +226,7 @@ class ExtremeTemperatureWaves(Extremes):
         self._run_parallel = run_parallel
         self._doe2_input = doe2_input
         self._weather_files = weather_files
+        self._delT_ipcc_min_frac = delT_ipcc_min_frac
         self.ext_obj = {}
         
 
@@ -422,6 +435,12 @@ class ExtremeTemperatureWaves(Extremes):
         del_E_dist = {}
         del_delTmax_dist = {}
         ipcc_fact = {}
+        
+        # gather the probability of a heat wave for each month.
+        prob_hw = {}
+        for month,stat in stats['heat wave'].items():
+            prob_hw[month] = stat['hourly prob of heat wave']
+            
 
         # Form the parameters needed by Extremes but on a monthly basis.
         for hot_tup,cold_tup in zip(stats['heat wave'].items(), stats['cold snap'].items()):
@@ -445,7 +464,10 @@ class ExtremeTemperatureWaves(Extremes):
                                                year,self.use_global,
                                                obj_clim,scenario,
                                                self,
-                                               increase_factor_ci)
+                                               increase_factor_ci,
+                                               prob_hw,
+                                               self._delT_ipcc_min_frac,
+                                               month)
 
             transition_matrix_delta[month] = obj.transition_matrix_delta
             del_E_dist[month] = obj.del_E_dist
@@ -1190,10 +1212,13 @@ class DeltaTransition_IPCC_FigureSPM6():
                                               climate_temp_func,
                                               year,
                                               use_global,
-                                              baseline_year,
-                                              mid_date,
-                                              historic_temp_func,
-                                              obj_clim_cmip_scen)
+                                              obj_clim=None,
+                                              scenario=None,
+                                              ext_temp_waves_obj=None,
+                                              increase_factor_ci="50%",
+                                              prob_hw=None
+                                              delT_ipcc_min_frac=1.0,
+                                              month=None)
     
     This function has two use cases depending on whether MEWS is being used
     with the old global CMIP6 data or for actual CMIP6 lat/lon projections.
@@ -1224,7 +1249,22 @@ class DeltaTransition_IPCC_FigureSPM6():
                  obj_clim=None,
                  scenario=None,
                  ext_temp_waves_obj=None,
-                 increase_factor_ci="50%"):
+                 increase_factor_ci="50%",
+                 prob_hw=None,
+                 delT_ipcc_min_frac=1.0):
+        
+        #input validation
+        if use_global==False:
+            if obj_clim is None:
+                raise ValueError("'obj_clim' input must not be None if 'use_global'=False")
+            if scenario is None:
+                raise ValueError("'scenario' input must not be None if 'use_global'=False")
+            if ext_temp_waves_obj is None:
+                raise ValueError("'ext_temp_waves_obj' input must not be None if 'use_global'=False")
+            if prob_hw is None:
+                raise ValueError("'prob_hw' input must not be None if 'use_global'=False")
+            if month is None:
+                raise ValueError("'month' input must not be None if 'use_global'=False")
         
         # increase_factor_ci_val is checked when coming into Extreme
         if use_global == False:
@@ -1242,6 +1282,15 @@ class DeltaTransition_IPCC_FigureSPM6():
                                                                ext_temp_waves_obj.hw_end_date+.01,0.01)]).mean()
             hw_delT = avg_delT_hw_period-avg_delT_1850_1900
             baseline_delT = -avg_delT_1850_1900
+            
+            #calculate heat wave probability shape function used to decrease
+            #ipcc increases for months with lower probability of heat waves.
+            prob_hw_arr = np.array([val for val in prob_hw.values()])
+            self._hw_maxprob = prob_hw_arr.max()
+            self._hw_minprob = prob_hw_arr.min()
+            self._delT_ipcc_min_frac = delT_ipcc_min_frac
+            self.delT_ipcc_frac = self._hw_probability_shape_func(prob_hw_arr)
+            delT_ipcc_frac_month = self.delT_ipcc_frac[int(month-1)]
         else:
             hw_delT = None 
             baseline_delT = None
@@ -1265,7 +1314,7 @@ class DeltaTransition_IPCC_FigureSPM6():
         Pcsm = cold_param["hourly prob of heat wave"]
         # probability of sustaining a cold snap
         Pcssm = cold_param["hourly prob stay in heat wave"]
-        
+
         if use_global:
             # This is change in global temperature from 2020!
             delta_TG = climate_temp_func(year)
@@ -1347,9 +1396,12 @@ class DeltaTransition_IPCC_FigureSPM6():
         
         # IPCC values must be normalized per duration to assure the correct amount
         # is added.
-        new_delT_10 = delTmax10_hwm + ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]]/(
+        abs_delT_10 = delT_ipcc_frac_month * ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+        abs_delT_50 = delT_ipcc_frac_month * ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+        
+        new_delT_10 = delTmax10_hwm + abs_delT_10/(
             norm_temp * (alphaT * (D10/norm_duration) + betaT))
-        new_delT_50 = delTmax50_hwm + ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]/(
+        new_delT_50 = delTmax50_hwm + abs_delT_50/(
             norm_temp * (alphaT * (D50/norm_duration) + betaT))
         def F10_50_S(npar):
             
@@ -1401,12 +1453,13 @@ class DeltaTransition_IPCC_FigureSPM6():
         del_a_delT_max_hwm = -1 + del_mu_delT_max_hwm - (1 + mu_norm)/(sig_norm) * del_sig_delT_max_hwm
         del_b_delT_max_hwm = 1 + del_mu_delT_max_hwm + (1 - mu_norm)/(sig_norm) * del_sig_delT_max_hwm
         
-        # adjusted durations - assume durations increase proportionally with 
+        # adjusted durations - assume durations increase proportionally with temperature duration
+        # regression alpha_T, beta_T
         # temperature.
-        S_D_10 = new_delT_10 / delTmax10_hwm
+        S_D_10 = 1+abs_delT_10/(alphaT * norm_temp)
         if S_D_10 < 1.0:
             raise ValueError("A decrease in 10 year durations is not expected for the current analysis!")
-        S_D_50 = new_delT_50 / delTmax50_hwm
+        S_D_50 = 1+abs_delT_50 / (alphaT * norm_temp)
         if S_D_50 < 1.0:
             raise ValueError("A decrease in 50 year durations is not expected for the current analysis!")
         
@@ -1418,15 +1471,27 @@ class DeltaTransition_IPCC_FigureSPM6():
         if P_prime_hwsm+epsilon < Phwsm:
             raise ValueError("The probability of sustaining a heat wave has decreased. "+
                              "This should not happen in the current analysis!")
-        
-        # equation 30 optimal scaling of D_HW_Pm
-        S_D_m = np.log(Phwsm)/np.log(P_prime_hwsm)
-        if S_D_m + epsilon < 1.0:
-            raise ValueError("The scaling factor on heat wave sustainment"+
-                             " must be greater than 1.0")
-        
+            
         # equation 31 scaling of energy
-        S_E_m = S_D_m * (new_delT_10/delTmax10_hwm + new_delT_50/delTmax50_hwm)/2
+        if self.use_global:
+            # equation 30 optimal scaling of D_HW_Pm
+            S_D_m = np.log(Phwsm)/np.log(P_prime_hwsm)
+            if S_D_m + epsilon < 1.0:
+                raise ValueError("The scaling factor on heat wave sustainment"+
+                                 " must be greater than 1.0")
+            
+            S_E_m = S_D_m * (new_delT_10/delTmax10_hwm + new_delT_50/delTmax50_hwm)/2
+        else:
+            # new definition ties scaling of energy to the original alpha/beta linear regression
+            org_energy = (betaT + alphaT/2)
+            norm_delT_10 = abs_delT_10/norm_temp
+            norm_delT_50 = abs_delT_50/norm_temp
+            
+            S_E_10_m =  org_energy + norm_delT_10/alphaT * (alphaT+betaT) + 0.5/alphaT * norm_delT_10**2 
+            S_E_50_m =  org_energy + norm_delT_50/alphaT * (alphaT+betaT) + 0.5/alphaT * norm_delT_50**2
+            S_E_m = (N10 * S_E_50_m + N50 * S_E_10_m)/(N10 + N50)
+            
+            
 
         del_mu_E_hw_m = transform_fit(
             S_E_m * inverse_transform_fit(
@@ -1625,8 +1690,13 @@ class DeltaTransition_IPCC_FigureSPM6():
             
         return ipcc_val_10, ipcc_val_50    
     
-    # this is the same as the function for ExtremeTemperatureWaves but with
-    # min and max as inputs
+    
+    def _hw_probability_shape_func(self,hw_prob):
+        #Returns a mapping from probability to fraction of delT ipcc added 
+        # to a given probability hw_maxprob maps to 1.0 and hw_minprob maps to
+        # delT_ipcc_min_frac which is a user input between 0 and 1
+        return (1.0-self._delT_ipcc_min_frac)/(self._hw_maxprob - self._hw_minprob) * (hw_prob-self._hw_minprob) + self._delT_ipcc_min_frac
+    
     
 
 

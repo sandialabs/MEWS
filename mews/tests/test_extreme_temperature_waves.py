@@ -264,7 +264,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
                                           use_local=True,random_seed=random_seed,
                                           include_plots=self.plot_results,
-                                          run_parallel=True,use_global=False)
+                                          run_parallel=True,use_global=False,delT_ipcc_min_frac=0.25)
         # LEFT OFF - you need to figure out why the 5% is producing higher mean
         # temperature than the 50%.
         
