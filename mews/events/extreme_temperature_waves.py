@@ -232,6 +232,9 @@ class ExtremeTemperatureWaves(Extremes):
 
         self.extreme_results = {}
         self.extreme_delstats = {}
+        self.ipcc_results = {"ipcc_fact":{}}
+        
+        
         
         
         
@@ -309,8 +312,7 @@ class ExtremeTemperatureWaves(Extremes):
             (transition_matrix, 
              transition_matrix_delta,
              del_E_dist,
-             del_delTmax_dist,
-             ipcc_fact) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
+             del_delTmax_dist) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
                                                      obj_clim,scenario_name,increase_factor_ci)
             
             if self.use_global == False:
@@ -355,7 +357,7 @@ class ExtremeTemperatureWaves(Extremes):
         self.extreme_results[scenario_name] = results_dict
         
         self.ext_obj[scenario_name] = ext_obj_dict
-        self.ipcc_fact = ipcc_fact
+        
 
         return results_dict
     
@@ -472,14 +474,15 @@ class ExtremeTemperatureWaves(Extremes):
             transition_matrix_delta[month] = obj.transition_matrix_delta
             del_E_dist[month] = obj.del_E_dist
             del_delTmax_dist[month] = obj.del_delTmax_dist
-            ipcc_fact[month] = obj.ipcc_fact
+            self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
+            
+        
              
             
         return (transition_matrix,
                 transition_matrix_delta,
                 del_E_dist,
-                del_delTmax_dist,
-                ipcc_fact)
+                del_delTmax_dist)
         
 
     def _read_and_curate_NOAA_data(self,station,year,unit_conversion,use_local=False):
@@ -1251,7 +1254,8 @@ class DeltaTransition_IPCC_FigureSPM6():
                  ext_temp_waves_obj=None,
                  increase_factor_ci="50%",
                  prob_hw=None,
-                 delT_ipcc_min_frac=1.0):
+                 delT_ipcc_min_frac=1.0,
+                 month=None):
         
         #input validation
         if use_global==False:
@@ -1396,8 +1400,13 @@ class DeltaTransition_IPCC_FigureSPM6():
         
         # IPCC values must be normalized per duration to assure the correct amount
         # is added.
-        abs_delT_10 = delT_ipcc_frac_month * ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]]
-        abs_delT_50 = delT_ipcc_frac_month * ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+        if use_global == False:
+            abs_delT_10 = delT_ipcc_frac_month * ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+            abs_delT_50 = delT_ipcc_frac_month * ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+        else:
+            abs_delT_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+            abs_delT_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+            
         
         new_delT_10 = delTmax10_hwm + abs_delT_10/(
             norm_temp * (alphaT * (D10/norm_duration) + betaT))
@@ -1456,10 +1465,17 @@ class DeltaTransition_IPCC_FigureSPM6():
         # adjusted durations - assume durations increase proportionally with temperature duration
         # regression alpha_T, beta_T
         # temperature.
-        S_D_10 = 1+abs_delT_10/(alphaT * norm_temp)
+        
+        if self.use_global:
+            S_D_10 = new_delT_10 / delTmax10_hwm
+        else:
+            S_D_10 = 1+abs_delT_10/(alphaT * norm_temp)
         if S_D_10 < 1.0:
             raise ValueError("A decrease in 10 year durations is not expected for the current analysis!")
-        S_D_50 = 1+abs_delT_50 / (alphaT * norm_temp)
+        if self.use_global:
+            S_D_50 = new_delT_50 / delTmax50_hwm
+        else:
+            S_D_50 = 1+abs_delT_50 / (alphaT * norm_temp)
         if S_D_50 < 1.0:
             raise ValueError("A decrease in 50 year durations is not expected for the current analysis!")
         
@@ -1550,7 +1566,7 @@ class DeltaTransition_IPCC_FigureSPM6():
     def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
         
         # this function is dependent on the format of the table in IPCC_FigureSPM_6.csv
-        
+        breakpoint()
         
         
         if self.use_global:
@@ -1624,6 +1640,8 @@ class DeltaTransition_IPCC_FigureSPM6():
         if self.use_global == False:
             # hwd = heat wave data
             ipcc_val_10_hwd, ipcc_val_50_hwd = interp_func(ipcc_num,self.use_global, hw_delT)
+            
+            
         
         # TODO - if less recent data is available, this (Below) assumption
         # is non-conversative and will underestimate shifts in climate.
@@ -1642,10 +1660,10 @@ class DeltaTransition_IPCC_FigureSPM6():
             
             num = np.random.normal(val["50% CI Increase in Frequency"],
                                    ((val['95% CI Increase in Frequency']-val["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
-                                   10000)
+                                   100000)
             num_hw = np.random.normal(val_hw["50% CI Increase in Frequency"],
                                                ((val_hw['95% CI Increase in Frequency']-val_hw["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
-                                               10000)
+                                               100000)
             num_new = num/num_hw
             
             mean = num_new.mean()
