@@ -164,6 +164,10 @@ class ExtremeTemperatureWaves(Extremes):
         IPCC data.  toDefault is set to a value of 1 for worst case where every
         month gets the full shift. Must range between 0 and 1.
         
+    norms_unit_conversion : tuple : optional : Default = (5/9, -(5/9) * 32)
+        conversion multiplier and offset needed to convert the climate normals 
+        NOAA data to degrees Celcius. 
+        
         
 
     
@@ -191,7 +195,8 @@ class ExtremeTemperatureWaves(Extremes):
                  run_parallel=True,
                  proxy=None,
                  use_global=False,
-                 delT_ipcc_min_frac=1.0):
+                 delT_ipcc_min_frac=1.0,
+                 norms_unit_conversion=(5/9,-(5/9)*32)):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
@@ -211,7 +216,7 @@ class ExtremeTemperatureWaves(Extremes):
             plt.close("all")
 
         # The year is arbitrary and should simply not be a leap year
-        self._read_and_curate_NOAA_data(station,2001,unit_conversion,use_local)
+        self._read_and_curate_NOAA_data(station,2001,unit_conversion,norms_unit_conversion,use_local)
         
         stats = self._wave_stats(self.NOAA_data,include_plots)
         self.stats = stats
@@ -350,7 +355,8 @@ class ExtremeTemperatureWaves(Extremes):
                      climate_temp_func=climate_temp_func,
                      averaging_steps=24,
                      use_global=self.use_global,
-                     baseline_year=base_year)
+                     baseline_year=base_year,
+                     norms_hourly=self.df_norms_hourly)
             results_dict[year] = self.results
         
         self.extreme_delstats[scenario_name] = {"E":del_E_dist,"delT":del_delTmax_dist}
@@ -362,6 +368,10 @@ class ExtremeTemperatureWaves(Extremes):
         return results_dict
     
     def real_value_stats(self,wave_type,scenario_name,stat_name,duration):
+        
+        if not isinstance(duration,np.ndarray):
+            raise TypeError("The duration input must be a numpy array of values!")
+        
         
         stats = self.stats[wave_type]
         
@@ -408,8 +418,8 @@ class ExtremeTemperatureWaves(Extremes):
                     
                 
                     per_dur_del = inverse_transform_fit(val + del_values[key],
-                                                minval,
-                                                maxval)
+                                                maxval,
+                                                minval)
                     res_del = per_dur_del * norm0 * (slope * duration/norm_d + interc)
                 else:
                     res_del = np.nan
@@ -485,7 +495,7 @@ class ExtremeTemperatureWaves(Extremes):
                 del_delTmax_dist)
         
 
-    def _read_and_curate_NOAA_data(self,station,year,unit_conversion,use_local=False):
+    def _read_and_curate_NOAA_data(self,station,year,unit_conversion,norms_unit_conversion,use_local=False):
     
         """
         read_NOAA_data(station,year=None,use_local=False)
@@ -519,7 +529,13 @@ class ExtremeTemperatureWaves(Extremes):
             
         unit_conversion : tuple
             a tuple allowing index 0 to be a scale factor on the units in the
-            daily summary data and index 1 to be an offset factor. 
+            daily summary data and index 1 to be an offset factor. Must convert
+            to degrees Celcius
+            
+        norms_unit_conversion : tuple
+            a tuple allowing index 0 to be a scale factor on the units in the
+            climate norms data and index 1 to be an offset factor. Must convert
+            to degrees Celcius            
         
         use_local 
             If MEWS is not reading web-urls use this to indicate to look
@@ -635,6 +651,12 @@ class ExtremeTemperatureWaves(Extremes):
                 df["HLY-RELH-NORMAL"] = df[["HLY-TEMP-NORMAL","HLY-DEWP-NORMAL"]].apply(lambda x: relative_humidity(x[1],x[0]),axis=1)
                 df["HLY-RELH-90PCTL"] = df[["HLY-TEMP-90PCTL","HLY-DEWP-90PCTL"]].apply(lambda x: relative_humidity(x[1],x[0]),axis=1)
                 
+                # This is needed and goes to the Extremes class so that heat wave stats continue
+                # to be added against the norm rather than the actual weather data.
+                # you must convert to degrees celcius
+                df_C = df[["HLY-TEMP-10PCTL","HLY-TEMP-NORMAL","HLY-TEMP-90PCTL"]].apply(lambda x: norms_unit_conversion[0] * x + norms_unit_conversion[1])
+                self.df_norms_hourly = df_C
+                
                 df_max = df.resample('1D').max()
                 df_min = df.resample('1D').min()
                 df_avg = df.resample('1D').mean()
@@ -646,15 +668,15 @@ class ExtremeTemperatureWaves(Extremes):
                 df_new.columns = ["TMAX_B","TAVG_B","TMIN_B","TMAXMIN_B","TMINMAX_B",
                                   "HMAX_B","HAVG_B","HMIN_B","HMAXMIN_B","HMINMAX_B",
                                   "PMAX_B","PAVG_B","PMIN_B","PMAXMIN_B","PMINMAX_B"]
-                # convert from degrees Fahrenheit
+                # convert from degrees Fahrenheit TODO - are all norms provided in Fahrenheit???
                 df_new[["TMAX_B","TAVG_B","TMIN_B","TMAXMIN_B","TMINMAX_B"]] = df_new[[
                     "TMAX_B","TAVG_B","TMIN_B","TMAXMIN_B","TMINMAX_B"]].apply(
-                        lambda x: (5/9) * (x-32.0))
+                        lambda x: norms_unit_conversion[0] * x + norms_unit_conversion[1])
                         
             df_temp.append(df_new)
         df_daily = df_temp[0]
         df_norms = df_temp[1]
-        
+
         self.NOAA_data = self._extend_boundary_df_to_daily_range(df_norms,df_daily)
     
     def _check_NOAA_url_validity(self):
@@ -675,6 +697,7 @@ class ExtremeTemperatureWaves(Extremes):
             raise urllib.error.HTTPError(self.daily_url,None,err_msg)
         elif not is_valid(self.norms_url):
             raise urllib.error.HTTPError(self.norms_url,None,err_msg)
+    
             
     def _extend_boundary_df_to_daily_range(self,df_norms,df_daily):
         """
@@ -1006,7 +1029,7 @@ class ExtremeTemperatureWaves(Extremes):
             model = sm.OLS(log_prob_duration,num_hour_passed)
             
             results = model.fit()
-            
+
             P0 = np.exp(results.params[0])
             
             # verify that the result is significant by p-value < 0.05 i.e. 
@@ -1015,7 +1038,7 @@ class ExtremeTemperatureWaves(Extremes):
             if results.pvalues[0] > 0.05:
                 self._plot_linear_fit(log_prob_duration,num_hour_passed,results.params,results.pvalues,
                                 "Month=" + str(month)+" Markov probability")
-                warnings.warn(results.summary())
+                warn(results.summary())
                 raise ValueError("The weather data has produced a low p-value fit"+
                                  " for Markov process fits! More data is needed "+
                                  "to produce a statistically significant result!")
@@ -1394,7 +1417,7 @@ class DeltaTransition_IPCC_FigureSPM6():
         # this funciton is used by fsolve below
         
         # must normalize by duration
-
+        # TODO - differentiate between the different months!!!!
         D10 = np.log((1/(Phwm * N10)))/np.log(Phwsm)  # in hours - expected value
         D50 = np.log((1/(Phwm * N50)))/np.log(Phwsm)  # in hours - expected value
         
@@ -1408,59 +1431,65 @@ class DeltaTransition_IPCC_FigureSPM6():
             abs_delT_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]
             
         
-        new_delT_10 = delTmax10_hwm + abs_delT_10/(
-            norm_temp * (alphaT * (D10/norm_duration) + betaT))
-        new_delT_50 = delTmax50_hwm + abs_delT_50/(
-            norm_temp * (alphaT * (D50/norm_duration) + betaT))
-        def F10_50_S(npar):
+        if use_global == False:
+            del_mu_delT_max_hwm = 0 #npar[0]
+            del_sig_delT_max_hwm = 0 #npar[1]
+        else:
             
-            mu_s,sig_s = npar
-            S_m1 = -1 + mu_s - (1 + mu_norm)/(sig_norm) * sig_s
-            S_1 = 1 + mu_s + (1 - mu_norm)/(sig_norm) * sig_s
-            return [
-            cdf_truncnorm(
-                transform_fit(new_delT_10,
-                                mintemp,
-                                maxtemp),
-                mu_norm + mu_s,
-                sig_norm + sig_s,
-                S_m1,
-                S_1) + S10
-            ,
-            cdf_truncnorm(
-                transform_fit(new_delT_50,
+            new_delT_10 = delTmax10_hwm + abs_delT_10/(
+                norm_temp * (alphaT * (D10/norm_duration) + betaT))
+            new_delT_50 = delTmax50_hwm + abs_delT_50/(
+                norm_temp * (alphaT * (D50/norm_duration) + betaT))
+            def F10_50_S(npar):
+                
+                mu_s,sig_s = npar
+                S_m1 = -1 + mu_s - (1 + mu_norm)/(sig_norm) * sig_s
+                S_1 = 1 + mu_s + (1 - mu_norm)/(sig_norm) * sig_s
+                return [
+                cdf_truncnorm(
+                    transform_fit(new_delT_10,
                                     mintemp,
                                     maxtemp),
-                mu_norm + mu_s,
-                sig_norm + sig_s,
-                S_m1,
-                S_1) + S50]
-    
+                    mu_norm + mu_s,
+                    sig_norm + sig_s,
+                    S_m1,
+                    S_1) + S10
+                ,
+                cdf_truncnorm(
+                    transform_fit(new_delT_50,
+                                        mintemp,
+                                        maxtemp),
+                    mu_norm + mu_s,
+                    sig_norm + sig_s,
+                    S_m1,
+                    S_1) + S50]
         
-        mu_guess = transform_fit(new_delT_10,mintemp,maxtemp) - transform_fit(
-            delTmax10_hwm,mintemp,maxtemp)
-        
-        # if the new_delT_10 and new_delT_50 are nearly identifical, then the
-        # solution becomes unstable because only the mean is shifting and
-        # the standard deviation does not matter.
-        
-        npar, infodict_s, ier_s, mesg_s = fsolve(F10_50_S, (mu_guess,0.0),full_output=True)
-        
-        if ier_s != 1:
-            err_tol = 0.0001
+            
+            mu_guess = transform_fit(new_delT_10,mintemp,maxtemp) - transform_fit(
+                delTmax10_hwm,mintemp,maxtemp)
+            
             # if the new_delT_10 and new_delT_50 are nearly identifical, then the
             # solution becomes unstable because only the mean is shifting and
             # the standard deviation does not matter.
-            # Otherwise, there is a problem with non-convergence.
-            if np.abs(new_delT_50 - new_delT_10) > err_tol:
-                raise ValueError("The solution for change in mean and standard deviation did not converge!")
+            
+            npar, infodict_s, ier_s, mesg_s = fsolve(F10_50_S, (mu_guess,0.0),full_output=True)
+            
+            if ier_s != 1:
+                err_tol = 0.0001
+                # if the new_delT_10 and new_delT_50 are nearly identifical, then the
+                # solution becomes unstable because only the mean is shifting and
+                # the standard deviation does not matter.
+                # Otherwise, there is a problem with non-convergence.
+                if np.abs(new_delT_50 - new_delT_10) > err_tol:
+                    raise ValueError("The solution for change in mean and standard deviation did not converge!")
+            
+            del_mu_delT_max_hwm = npar[0]
+            del_sig_delT_max_hwm = npar[1]
         
-        del_mu_delT_max_hwm = npar[0]
-        del_sig_delT_max_hwm = npar[1]
-        
+
         # delta from -1...1 boundaries of the original transformed delT_max distribution.
-        del_a_delT_max_hwm = -1 + del_mu_delT_max_hwm - (1 + mu_norm)/(sig_norm) * del_sig_delT_max_hwm
-        del_b_delT_max_hwm = 1 + del_mu_delT_max_hwm + (1 - mu_norm)/(sig_norm) * del_sig_delT_max_hwm
+        del_a_delT_max_hwm = del_mu_delT_max_hwm - (1 + mu_norm)/(sig_norm) * del_sig_delT_max_hwm
+        del_b_delT_max_hwm = del_mu_delT_max_hwm + (1 - mu_norm)/(sig_norm) * del_sig_delT_max_hwm
         
         # adjusted durations - assume durations increase proportionally with temperature duration
         # regression alpha_T, beta_T
@@ -1469,20 +1498,26 @@ class DeltaTransition_IPCC_FigureSPM6():
         if self.use_global:
             S_D_10 = new_delT_10 / delTmax10_hwm
         else:
-            S_D_10 = 1+abs_delT_10/(alphaT * norm_temp)
+            S_D_10 = 1+(abs_delT_10 * norm_duration)/(alphaT * norm_temp * D10)
         if S_D_10 < 1.0:
             raise ValueError("A decrease in 10 year durations is not expected for the current analysis!")
         if self.use_global:
             S_D_50 = new_delT_50 / delTmax50_hwm
         else:
-            S_D_50 = 1+abs_delT_50 / (alphaT * norm_temp)
+            S_D_50 = 1+(abs_delT_50 * norm_duration) / (alphaT * norm_temp * D50)
         if S_D_50 < 1.0:
             raise ValueError("A decrease in 50 year durations is not expected for the current analysis!")
         
         D10_prime = D10 * S_D_10
         D50_prime = D50 * S_D_50
         
-        P_prime_hwsm = (N10 * Phwsm ** (1/S_D_50) + N50 * Phwsm ** (1/S_D_10))/(N10 + N50)
+        if self.use_global:
+            # old method being retained for replication of the Albuquerque Study.
+            P_prime_hwsm = (N10 * Phwsm ** (1/S_D_50) + N50 * Phwsm ** (1/S_D_10))/(N10 + N50)
+        else:
+            # this new equation is correct!
+            P_prime_hwsm = (N10 * np.exp(np.log(Phwsm)/S_D_50) + N50 * np.exp(np.log(Phwsm)/S_D_10))/(N10 + N50)
+            
         epsilon = 1.0e-6
         if P_prime_hwsm+epsilon < Phwsm:
             raise ValueError("The probability of sustaining a heat wave has decreased. "+
@@ -1532,6 +1567,12 @@ class DeltaTransition_IPCC_FigureSPM6():
                                           hot_param['min energy per duration']),
               hot_param['min energy per duration'],
               hot_param['max energy per duration'])-normalized_energy['sig']
+        
+        if self.use_global == False:
+            # Heat and temperature are now shifted naturally through increasing
+            # the likelihood of longer duration heat waves!
+            del_mu_E_hw_m = 0.0
+            del_sig_E_hw_m = 0.0
         
         # delta from the -1..1 boundaries of the transformed Energy distribution (still in transformed space but no 
         # longer on the -1...1 interval.)

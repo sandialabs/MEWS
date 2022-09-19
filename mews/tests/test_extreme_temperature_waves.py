@@ -110,135 +110,135 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             os.chdir(os.path.join("..",".."))
             
                         
-    # def test_albuquerque_extreme_waves(self):
+    def test_albuquerque_extreme_waves(self):
         
-    #     station = os.path.join(self.test_weather_path,"USW00023050.csv")
-    #     weather_files = [os.path.join(self.test_weather_path,"USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
+        station = os.path.join(self.test_weather_path,"USW00023050.csv")
+        weather_files = [os.path.join(self.test_weather_path,"USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
         
-    #     climate_temp_func = lambda years: 0.03 * (years-2020) + 0.1
+        climate_temp_func = lambda years: 0.03 * (years-2020) + 0.1
 
 
-    #     obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0), 
-    #                                   use_local=True, run_parallel=False,use_global=True)
-    #     obj.create_scenario("test", 2020, 4, climate_temp_func)
+        obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0), 
+                                      use_local=True, run_parallel=False,use_global=True)
+        obj.create_scenario("test", 2020, 4, climate_temp_func)
 
                         
-    # def test_ipcc_increases_in_temperature_and_frequency(self):
+    def test_ipcc_increases_in_temperature_and_frequency(self):
     
-    #     """
-    #     This test verifies that the statistics coming out of the new
-    #     ExtremeTemperatureWaves class roughly converge to the results indicated
-    #     in Figure SPM.6 that the entire analysis method has been based off of.
+        """
+        This test verifies that the statistics coming out of the new
+        ExtremeTemperatureWaves class roughly converge to the results indicated
+        in Figure SPM.6 that the entire analysis method has been based off of.
         
-    #     The complexity of the transformations and regressions required to fit
-    #     NOAA data and then change then shift that data's distributions makes
-    #     it necessary to verify that no major error have been introduced.
+        The complexity of the transformations and regressions required to fit
+        NOAA data and then change then shift that data's distributions makes
+        it necessary to verify that no major error have been introduced.
         
-    #     """
+        """
     
-    #     clim_scen = ClimateScenario()
-    #     station = os.path.join("data_for_testing","USW00023050.csv")
-    #     weather_files = [os.path.join("data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
+        clim_scen = ClimateScenario()
+        station = os.path.join("data_for_testing","USW00023050.csv")
+        weather_files = [os.path.join("data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
         
-    #     num_year = 1
-    #     start_years = [2020,2050]
+        num_year = 1
+        start_years = [2020,2050]
         
-    #     # should see increases on average of 1.08C and increase in frequency of 
-    #     # 2.4 between the years.
+        # should see increases on average of 1.08C and increase in frequency of 
+        # 2.4 between the years.
         
         
-    #     random_seed = 54564863
+        random_seed = 54564863
         
-    #     # subtle difference with scenario names in ClimateScenario!
-    #     scenario = 'SSP585'
+        # subtle difference with scenario names in ClimateScenario!
+        scenario = 'SSP585'
         
-    #     obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
-    #                                       use_local=True,random_seed=random_seed,
-    #                                       include_plots=self.plot_results,
-    #                                       run_parallel=True,use_global=True)
-    #     results_dict = {}
+        obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
+                                          use_local=True,random_seed=random_seed,
+                                          include_plots=self.plot_results,
+                                          run_parallel=True,use_global=True)
+        results_dict = {}
         
 
-    #     results_start_year_dict = {}
+        results_start_year_dict = {}
         
-    #     scen_results = {}
+        scen_results = {}
         
-    #     for start_year in start_years:
+        for start_year in start_years:
             
 
-    #         freq_hw = []
-    #         freq_cs = []
-    #         avg_delT_hw = []
-    #         avg_delT_cs = []
+            freq_hw = []
+            freq_cs = []
+            avg_delT_hw = []
+            avg_delT_cs = []
             
-    #         clim_scen.calculate_coef(scenario)
-    #         climate_temp_func = clim_scen.climate_temp_func
-    #         results = obj.create_scenario(scenario, start_year, num_year, 
-    #                                       climate_temp_func, num_realization=10)
+            clim_scen.calculate_coef(scenario)
+            climate_temp_func = clim_scen.climate_temp_func
+            results = obj.create_scenario(scenario, start_year, num_year, 
+                                          climate_temp_func, num_realization=10)
 
-    #         for tup,objA in results[start_year].items():
+            for tup,objA in results[start_year].items():
                 
-    #             delT_hw = []
-    #             delT_cs = []
-    #             num_hw = 0
-    #             num_cs = 0
+                delT_hw = []
+                delT_cs = []
+                num_hw = 0
+                num_cs = 0
 
-    #             for alt_name, alteration in objA.alterations.items():
-    #                 if alt_name != 'global temperature trend':
-    #                     minval = alteration.min().values[0]
-    #                     maxval = alteration.max().values[0]
+                for alt_name, alteration in objA.alterations.items():
+                    if alt_name != 'global temperature trend':
+                        minval = alteration.min().values[0]
+                        maxval = alteration.max().values[0]
     
-    #                     if np.abs(minval) > np.abs(maxval):
-    #                         is_hw = False
-    #                         num_cs += 1
-    #                     else:
-    #                         is_hw = True
-    #                         num_hw += 1
+                        if np.abs(minval) > np.abs(maxval):
+                            is_hw = False
+                            num_cs += 1
+                        else:
+                            is_hw = True
+                            num_hw += 1
                         
-    #                     if is_hw:
-    #                         delT_hw.append(maxval)
-    #                     else:
-    #                         delT_cs.append(minval)
+                        if is_hw:
+                            delT_hw.append(maxval)
+                        else:
+                            delT_cs.append(minval)
                             
-    #             avg_delT_hw.append(np.array(delT_hw).mean())
-    #             avg_delT_cs.append(np.array(delT_cs).mean())
-    #             freq_hw.append(num_hw)
-    #             freq_cs.append(num_cs)
+                avg_delT_hw.append(np.array(delT_hw).mean())
+                avg_delT_cs.append(np.array(delT_cs).mean())
+                freq_hw.append(num_hw)
+                freq_cs.append(num_cs)
             
-    #         scen_results[start_year] = (avg_delT_hw,avg_delT_cs,freq_hw,freq_cs)
+            scen_results[start_year] = (avg_delT_hw,avg_delT_cs,freq_hw,freq_cs)
             
-    #     # now let's see if the statistics are coming out over many realizations:
-    #     avg_delT_increase_hw = (np.array(scen_results[2050][0]) - np.array(scen_results[2020][0])).mean()
-    #     avg_delT_decrease_cs = (np.array(scen_results[2050][1]) - np.array(scen_results[2020][1])).mean()
+        # now let's see if the statistics are coming out over many realizations:
+        avg_delT_increase_hw = (np.array(scen_results[2050][0]) - np.array(scen_results[2020][0])).mean()
+        avg_delT_decrease_cs = (np.array(scen_results[2050][1]) - np.array(scen_results[2020][1])).mean()
         
-    #     freq_increase_hw = (np.array(scen_results[2050][2]) / np.array(scen_results[2020][2])).mean()
-    #     freq_increase_cs = (np.array(scen_results[2050][3]) / np.array(scen_results[2020][3])).mean()
+        freq_increase_hw = (np.array(scen_results[2050][2]) / np.array(scen_results[2020][2])).mean()
+        freq_increase_cs = (np.array(scen_results[2050][3]) / np.array(scen_results[2020][3])).mean()
         
-    #     expected_delT = climate_temp_func(2050) - climate_temp_func(2020)
+        expected_delT = climate_temp_func(2050) - climate_temp_func(2020)
         
-    #     # the temperature change has converged on the expected change in temperature
-    #     self.assertTrue((avg_delT_increase_hw >= expected_delT - 0.2) and
-    #                     (avg_delT_increase_hw <= expected_delT + 0.2))
+        # the temperature change has converged on the expected change in temperature
+        self.assertTrue((avg_delT_increase_hw >= expected_delT - 0.2) and
+                        (avg_delT_increase_hw <= expected_delT + 0.2))
         
-    #     # cold snaps should not be changing!
-    #     self.assertTrue(avg_delT_decrease_cs < 0.2 and avg_delT_decrease_cs > -0.2)
+        # cold snaps should not be changing!
+        self.assertTrue(avg_delT_decrease_cs < 0.2 and avg_delT_decrease_cs > -0.2)
         
-    #     # frequency should be increasing by a factor close to 2.4 (this is a hybrid between the 
-    #     # frequency incrase of 2 (i.e. 5.6/2.8 since our baseline is 2020
-    #     # (See Figure SPM.6 of the IPCC technical summary)
-    #     # for 10 year events and 2.89 for 50 year events - see the 
-    #     # documentation.)
-    #     self.assertTrue((freq_increase_hw <= 2.45 + 0.45) and (freq_increase_hw >= 2.45 - 0.45))
+        # frequency should be increasing by a factor close to 2.4 (this is a hybrid between the 
+        # frequency incrase of 2 (i.e. 5.6/2.8 since our baseline is 2020
+        # (See Figure SPM.6 of the IPCC technical summary)
+        # for 10 year events and 2.89 for 50 year events - see the 
+        # documentation.)
+        self.assertTrue((freq_increase_hw <= 2.45 + 0.45) and (freq_increase_hw >= 2.45 - 0.45))
         
-    #     # cold snap frequency should be close to 1.0
-    #     self.assertTrue((freq_increase_cs <= 1.0 + 0.1) and (freq_increase_cs >= 1.0 - 0.1))
+        # cold snap frequency should be close to 1.0
+        self.assertTrue((freq_increase_cs <= 1.0 + 0.1) and (freq_increase_cs >= 1.0 - 0.1))
         
-    #     with self.assertRaises(ValueError):
-    #         # make sure that the unit_conversion error is raised 
-    #         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/1000,0),
-    #                                       use_local=True,random_seed=random_seed,
-    #                                       include_plots=self.plot_results,
-    #                                       run_parallel=True,use_global=True)
+        with self.assertRaises(ValueError):
+            # make sure that the unit_conversion error is raised 
+            obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/1000,0),
+                                          use_local=True,random_seed=random_seed,
+                                          include_plots=self.plot_results,
+                                          run_parallel=True,use_global=True)
             
     def test_extreme_temperature_waves_local_lat_lon(self):
         # target albuquerque, NM
@@ -257,7 +257,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         # 2.4 between the years. The system is converging but we cannot afford 
         # to make this converge on a unit test. The unit test just verifies that
         # a major error in the heat wave statistics has not been inserted.
-        num_realizations = 10
+        num_realizations = 10  # DO NOT CHANGE 
+                               # this test is focussing on validation for a 10 year event 
         
         future_year = 2080
         
@@ -268,19 +269,21 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         N10 = hours_in_10_years
         N50 = hours_in_50_years
         
-        perc_err_allowed = 15.0
+        perc_err_allowed = 25.0
+        perc_err_allowed_delT = 67.0
         
-        random_seed = 6450993  # must be < 2**32-1 for numpy
+        random_seed = 1455992  # must be < 2**32-1 for numpy
         
         # subtle difference with scenario names in ClimateScenario!
         scenario = 'SSP585'
         
         ipcc = {}
+        real_stats = {}
         
         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
                                           use_local=True,random_seed=random_seed,
                                           include_plots=self.plot_results,
-                                          run_parallel=True,use_global=False,delT_ipcc_min_frac=1.0)
+                                          run_parallel=False,use_global=False,delT_ipcc_min_frac=1.0)
         # LEFT OFF - you need to figure out why the 5% is producing higher mean
         # temperature than the 50%.
         
@@ -288,19 +291,26 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         # finding out if the multiplication factors are higher for 50% than 
         # 5%. If they are, then Figure out if the shifts occuring are 
         # accurate or not.
+
         results0_05 = obj.create_scenario(scenario, 2014, num_year, 
                                           scen_dict["SSP585"], 
                                           num_realization=num_realizations,
                                           obj_clim=clim_scen,
                                           increase_factor_ci="5%")
         ipcc['0_5%']= deepcopy(obj.ipcc_results['ipcc_fact'])        
+
+        # Get temperature delT's in degrees centigrade
+        real_stats['0_5%'] = obj.real_value_stats('heat wave',"SSP585","delT",np.array([192]))
         
         results0_50 = obj.create_scenario(scenario, 2014, num_year, 
                                           scen_dict["SSP585"], 
                                           num_realization=num_realizations,
                                           obj_clim=clim_scen,
                                           increase_factor_ci="50%")
-        ipcc['0_50%']= deepcopy(obj.ipcc_results['ipcc_fact'])        
+        ipcc['0_50%']= deepcopy(obj.ipcc_results['ipcc_fact'])  
+        
+        # Get temperature delT's in degrees centigrade
+        real_stats['0_50%'] = obj.real_value_stats('heat wave',"SSP585","delT",np.array([192]))
         
         results0_95 = obj.create_scenario(scenario, 2014, num_year, 
                                           scen_dict["SSP585"], 
@@ -309,7 +319,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                           increase_factor_ci="95%")
         ipcc['0_95%']= deepcopy(obj.ipcc_results['ipcc_fact'])        
         
-        real_stats = obj.real_value_stats('heat wave',"SSP585","delT",192)
+        # Get temperature delT's in degrees centigrade
+        real_stats['0_95%'] = obj.real_value_stats('heat wave',"SSP585","delT",np.array([192]))
 
         results5 = obj.create_scenario(scenario, future_year, num_year, 
                                           scen_dict["SSP585"], 
@@ -318,6 +329,10 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                           increase_factor_ci="5%")
         
         ipcc['5%'] = deepcopy(obj.ipcc_results['ipcc_fact'])
+        
+        # Get temperature delT's in degrees centigrade
+        real_stats['5%'] = obj.real_value_stats('heat wave',"SSP585","delT",np.array([192]))
+        
         results50 = obj.create_scenario(scenario, future_year, num_year, 
                                           scen_dict["SSP585"], 
                                           num_realization=num_realizations,
@@ -325,11 +340,19 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                           increase_factor_ci="50%")
         
         ipcc['50%'] = deepcopy(obj.ipcc_results['ipcc_fact'])
+        
+        # Get temperature delT's in degrees centigrade
+        real_stats['50%'] = obj.real_value_stats('heat wave',"SSP585","delT",np.array([192]))
+
         results95 = obj.create_scenario(scenario, future_year, num_year, 
                                           scen_dict["SSP585"], 
                                           num_realization=num_realizations,
                                           obj_clim=clim_scen,
                                           increase_factor_ci="95%")
+        
+        # Get temperature delT's in degrees centigrade
+        real_stats['95%'] = obj.real_value_stats('heat wave',"SSP585","delT",np.array([192]))
+        
         ipcc['95%'] = deepcopy(obj.ipcc_results['ipcc_fact'])
         
         def get_mean(res,nr):
@@ -355,13 +378,16 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     "0_5%":results0_05,
                     "0_50%":results0_50,
                     "0_95%":results0_95}
-        
+    
+    
+
         num_hw_dict = {}
         for key, resubdict in res_dict.items():
             num_hw = 0
             Tmax_sum = 0
             num_hr_in_hw = 0
             num_hr_in_cs = 0
+            Tmax_list = []
             
             for key2, res in resubdict.items():
                 for key3, objA in res.items():
@@ -379,13 +405,16 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     for key4, alt in objA.alterations.items():
                         maxval = alt.max().values[0]
                         if maxval > 0:
-                            Tmax_sum += maxval
+                            if key4 != "global temperature trend":
+                                Tmax_from_normals = maxval + objA._unit_test_data[key4][1]
+                                Tmax_sum += Tmax_from_normals
+                                Tmax_list.append(Tmax_from_normals)
             avg_hr_in_hw = num_hr_in_hw / num_realizations      
             avg_num_hw = num_hw / num_realizations
             avg_Tmax = Tmax_sum / num_hw
             avg_num_hr_in_cs = num_hr_in_cs / num_realizations
             
-            num_hw_dict[key] = [avg_num_hw,avg_Tmax,avg_hr_in_hw,avg_num_hr_in_cs]
+            num_hw_dict[key] = [avg_num_hw,avg_Tmax,avg_hr_in_hw,avg_num_hr_in_cs,np.array(Tmax_list)]
         
         for key,tup in res_dict.items():
             if key[0] != '0':      
@@ -410,14 +439,33 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                 
                 act_result = res_/res_0
                 sim_result = mult/adj
+                
                 #print("Error between table lookup and \n\n {0:5.2f}".format(100 * np.abs(sim_result / act_result-1)))
                 self.assertGreaterEqual(perc_err_allowed, 100 * np.abs(sim_result / act_result-1))
+                
+                # now focus on temperature
+                delTmax0 = num_hw_dict['0_'+key][4].max()
+                delTmax = num_hw_dict[key][4].max()
+                
+                # difference in the 10 year event!
+                ipcc_delT_estimated = delTmax - delTmax0
+                
+                # original IPCC check 
+                ipcc_delT_exact = (ipcc[key][1].loc[key+" CI Increase in Intensity","10 year event"]-
+                                   ipcc['0_'+key][1].loc[key+" CI Increase in Intensity","10 year event"])
+
+                self.assertGreaterEqual(perc_err_allowed_delT, 100 * np.abs((ipcc_delT_estimated-ipcc_delT_exact) / ipcc_delT_exact))
         
         
         # These results are not what you expected. The temperature increase 
         # is much too big per heat wave.
         fig,ax = Graphics.plot_realization(results95,"Dry Bulb Temperature",1)
         pass
+    
+    def _max_duration_hw(results):
+        pass
+    
+        return 0
             
             
         

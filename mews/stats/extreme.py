@@ -31,6 +31,7 @@ import pandas as pd
 import numpy as np
 import os
 import warnings
+from datetime import datetime
 
 class DiscreteMarkov():
     """
@@ -509,10 +510,12 @@ class Extremes():
                  averaging_steps=1,
                  no_climate_trend=False,
                  use_global=True,
-                 baseline_year=2014):
+                 baseline_year=2014,
+                 norms_hourly=None):
         
         self.use_global = use_global
         self.baseline_year = baseline_year
+        self.delTmax_verification_data = [] # used in unit testing
         # input checking
         if not isinstance(weather_files,list):
             raise TypeError("The 'weather_files' input must be a list of strings!")
@@ -588,7 +591,8 @@ class Extremes():
                                 results_append_to_name, id0, write_results,year,
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
-                                new_input_format,climate_temp_func,averaging_steps,rng,no_climate_trend)
+                                new_input_format,climate_temp_func,averaging_steps,rng,
+                                no_climate_trend,norms_hourly)
                         results[key_name] = pool.apply_async(self._process_wfile,
                                                          args=args)
                     else:
@@ -601,7 +605,8 @@ class Extremes():
                                 results_append_to_name, id0, write_results, year,
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
-                                new_input_format,climate_temp_func,averaging_steps,self.rng,no_climate_trend)
+                                new_input_format,climate_temp_func,averaging_steps,
+                                self.rng,no_climate_trend,norms_hourly)
         
         if run_parallel:
             results_get = {}
@@ -645,6 +650,40 @@ class Extremes():
         
         return dict_found
             
+    def _alter_if_leap_year(self,df_one_year,year):
+        hour_in_day = 24
+        hour_in_year = 8760
+        hour_in_leapyear = hour_in_year + hour_in_day
+        
+        feb_28 = pd.Timestamp(year,2,28)
+        feb_28_day = feb_28.day_of_year
+        if len(df_one_year) == hour_in_year and feb_28.is_leap_year:
+            # repeat Feb. 28th and call it Feb 29th
+            df_list = []
+
+            df_feb28 = df_one_year.iloc[0:feb_28_day*hour_in_day,:]
+            df_feb28.index = pd.date_range(pd.Timestamp(year,1,1),periods=feb_28_day*hour_in_day,freq='H')
+            df_list.append(df_feb28)
+            
+            # repeat february 28th as a proxy for February 29th
+            df_feb29 = df_one_year.iloc[feb_28_day*hour_in_day:(feb_28_day+1)*hour_in_day,:]
+            df_feb29.index = pd.date_range(pd.Timestamp(year,2,29),periods=hour_in_day,freq='H')
+            df_list.append(df_feb29)
+            
+            # tag on the rest of the year.
+            df_after_feb29 = df_one_year.iloc[feb_28_day*hour_in_day:(len(df_one_year)+1)*hour_in_day]
+            df_after_feb29.index = pd.date_range(pd.Timestamp(year,3,1),periods=hour_in_leapyear-len(df_feb28)-len(df_feb29),freq='H')
+            df_list.append(df_after_feb29)
+            return pd.concat(df_list,axis=0)
+        elif len(df_one_year) != hour_in_year and len(df_one_year) != hour_in_leapyear:
+            raise ValueError("The 'df_one_year' input must be an hourly yearly signal!")
+        else:
+            # no changes needed!
+            return df_one_year
+            
+        
+        
+    
     
     # this function was created to make parallelization possible.
     def _process_wfile(self,start_year,idx,num_wfile,idy,wfile,column,tzname,
@@ -655,7 +694,12 @@ class Extremes():
                        write_results, year, frac_long_wave,min_steps,
                        test_shape_func,doe2_in, max_E_dist,del_max_E_dist,
                        min_E_dist,del_min_E_dist, new_input_format,
-                       climate_temp_func,averaging_steps,rng, no_climate_trend):
+                       climate_temp_func,averaging_steps,rng, no_climate_trend,
+                       norms_hourly):
+        if self.use_global == False:
+            # add Feb29 if a leap year
+            norms_hourly = self._alter_if_leap_year(norms_hourly,year)
+        
         
         if doe2_in is None:
             objA = Alter(wfile, year)
@@ -742,7 +786,12 @@ class Extremes():
                     avg_delta = (year - start_year) * max_avg_delta
 
             for tup in state:
-                new_vals = self._add_extreme(org_series.iloc[tup[0]:tup[1]+1], 
+                if self.use_global == False:
+                    local_norms_hourly = norms_hourly.iloc[tup[0]:tup[1]+1,:]
+                else:
+                    local_norms_hourly = None
+                
+                new_vals,heat_added_0,delT_max_0 = self._add_extreme(org_series.iloc[tup[0]:tup[1]+1], 
                                   avg_dist, avg_delta,
                                   frac_long_wave=frac_long_wave,
                                   min_steps=min_steps,
@@ -751,7 +800,8 @@ class Extremes():
                                   peak_dist=peak_dist,
                                   peak_delta=peak_delta,
                                   org_dates=org_dates[tup[0]:tup[1]+1],
-                                  rng=rng)
+                                  rng=rng,
+                                  norms_hourly=local_norms_hourly)
 
                 new_date_start = org_dates[new_vals.index[0]]
                 duration = len(new_vals)
@@ -761,7 +811,7 @@ class Extremes():
                 else:
                     peak_delta_val = new_vals.max()
                     
-                objA.add_alteration(year, 
+                alt_name = objA.add_alteration(year, 
                                     new_date_start.day, 
                                     new_date_start.month, 
                                     new_date_start.hour, 
@@ -769,6 +819,11 @@ class Extremes():
                                     shape_func=new_vals.values,
                                     column=column,
                                     averaging_steps=averaging_steps)
+                
+                # this is used to figure out what the actual delT is for each
+                # heat wave as sampled before renormalizing to the climate normals.
+                objA._unit_test_data[alt_name] = (heat_added_0,delT_max_0)
+                
         if not climate_temp_func is None and not no_climate_trend:
             # TODO - add the ability to continuously change the trend or to
             #        just make it constant like it is now.
@@ -873,7 +928,7 @@ class Extremes():
     
     def _add_extreme(self,org_vals,integral_dist,integral_delta,frac_long_wave,min_steps,
                      shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None,
-                     org_dates=None,rng=None):
+                     org_dates=None,rng=None,norms_hourly=None):
         """
         >>> obj._add_extreme(org_vals,
                              integral_dist,
@@ -883,7 +938,8 @@ class Extremes():
                              shape_func_type=None,
                              test_shape_func=False,
                              peak_dist=None,
-                             peak_delta=None)
+                             peak_delta=None,
+                             norms_hourly=None)
 
         Parameters
         ----------
@@ -934,6 +990,10 @@ class Extremes():
             
         rng : optional : Default = None
             Random number generator. If None, then use self.rng
+            
+        norms_hourly : optional : Default = None
+            These are the climate norms from NOAA that are the reference for
+            how much heat is being added via a heat wave. 
 
         Returns
         -------
@@ -982,6 +1042,11 @@ class Extremes():
             h_t = heat_added * h_t / h_t.sum()
             
             new_vals = pd.Series(h_t,index=org_vals.index,name=org_vals.name,dtype=org_vals.dtype)
+            
+            # these are not needed by this use case but are required in the output of the
+            # more recent use case.
+            heat_added_0 = None
+            delT_max_0 = None
             
         elif shape_func_type == "heat_wave_shape_func":
             # THIS IS HIGHLY REPETITIVE - perhaps some code refactoring would be appropriate
@@ -1053,10 +1118,32 @@ class Extremes():
                                                    1+S_T,
                                                    minval_T,
                                                    maxval_T)
-            
-            heat_added = E_per_duration * norm_energy * alpha_E * (duration/norm_duration)
-            Tmax = T_per_duration * norm_temperature * (alpha_T * (duration/norm_duration) + beta_T)
+            # columns = "HLY-TEMP-10PCTL","HLY-TEMP-NORMAL","HLY-TEMP-90PCTL"
+            # not adjustment here because 
+            if self.use_global == False:
+                if norm_temperature < 0.0:
+                    # heat between current weather and climate norms. This is heat that already
+                    # counts for heat waves that are baselined off the climate norms
+                    heat_added_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).sum()
+                    delT_max_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).min()
+                    
+                else:
+                    heat_added_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).sum()
+                    delT_max_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).max()
+            else:
+                heat_added_0 = 0.0
+                delT_max_0 = 0.0
+                
+                
+            # these are both normalized off of the original climate normals that were used as the heat wave
+            # standard. 
+            heat_added = E_per_duration * norm_energy * alpha_E * (duration/norm_duration) - heat_added_0
+            delTmax = T_per_duration * norm_temperature * (alpha_T * (duration/norm_duration) + beta_T) - delT_max_0
             D = duration
+            
+            # IF heat_added_0 is big enough it can actually serve to make things more mild. Either way, existing heat
+            # waves and cold snaps do not have to be taken out because the original weather data is being referenced through
+            # heat_added_0 and delT_max_0 to the climate norms 
             
             # calculate D_odd
             Dint = np.floor(duration/min_steps)
@@ -1068,11 +1155,11 @@ class Extremes():
                 Dint = 1
             D_odd = D_odd * min_steps
             
-            # determine E and Tmax coefficients
-            Acoef = (Tmax - np.pi/(2*D_odd) * heat_added)/(2 - np.pi * D / (2 * D_odd)
+            # determine E and delTmax coefficients
+            Acoef = (delTmax - np.pi/(2*D_odd) * heat_added)/(2 - np.pi * D / (2 * D_odd)
                                                   + (min_steps/(2*D_odd)) * 
                                                   np.sin(2*np.pi * D/min_steps))
-            Bcoef = (Tmax - Acoef)/2
+            Bcoef = (delTmax - Acoef)/2
             
             if test_shape_func:
                 
@@ -1089,26 +1176,26 @@ class Extremes():
                                                +" the heat_added. This should"
                                                +" never happen. There is a bug.")
             
-            # adjust to meet Tmax but not E if the solution is non-physical.
+            # adjust to meet delTmax but not E if the solution is non-physical.
             dual_solution = False
-            if heat_added >= 0 and Acoef > Tmax:
-                Acoef = Tmax
+            if heat_added >= 0 and Acoef > delTmax:
+                Acoef = delTmax
                 Bcoef = 0.0
             elif heat_added >= 0 and Acoef < 0.0:
-                Bcoef = Tmax / 2
+                Bcoef = delTmax / 2
                 Acoef = 0.0
-            elif heat_added <= 0 and Acoef < Tmax:
-                Acoef = Tmax
+            elif heat_added <= 0 and Acoef < delTmax:
+                Acoef = delTmax
                 Bcoef = 0.0
             elif heat_added <=0 and Acoef > 0:
                 Acoef = 0.0
-                Bcoef = Tmax / 2
+                Bcoef = delTmax / 2
             else:
                 dual_solution = True
-                Bcoef = (Tmax - Acoef)/2
+                Bcoef = (delTmax - Acoef)/2
             
             if iter0 >= max_iter:
-                raise ValueError("The E and Tmax sampling could not find a physically real solution!")
+                raise ValueError("The E and delTmax sampling could not find a physically real solution!")
                 
             # for unit testing, assure the shape function used integrates 
             # correctly
@@ -1126,7 +1213,7 @@ class Extremes():
         
 
         
-        return new_vals
+        return new_vals, heat_added_0, delT_max_0
         
         
         

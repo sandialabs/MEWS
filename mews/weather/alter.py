@@ -115,6 +115,8 @@ class Alter(object):
         self.read(weather_file_path,replace_year,check_types,True,isdoe2,use_exe,
                   doe2_bin2txt_path,doe2_start_datetime,doe2_tz,
                   doe2_hour_in_file,doe2_dst)
+        self._unit_test_data = {} # added to help test heat wave addition validity
+                                  # not used outside unit testing "test_extreme_temperature_waves"
         
         
     def _leap_year_replacements(self,df,year,isdoe2):
@@ -394,6 +396,8 @@ class Alter(object):
         #df_org = deepcopy(df.loc[bind:eind-1,column])
         df.loc[bind:eind-1,column] = df.loc[bind:eind-1,column] + addsegmod.loc[bind:eind-1,column]
         self.alterations[alteration_name] = addseg
+        
+        return alteration_name
         
     def read(self,weather_file_path,replace_year=None,check_types=True,
              clear_alterations=False,isdoe2=False,use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
