@@ -1566,9 +1566,6 @@ class DeltaTransition_IPCC_FigureSPM6():
     def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
         
         # this function is dependent on the format of the table in IPCC_FigureSPM_6.csv
-        breakpoint()
-        
-        
         if self.use_global:
             present_tempanomal = ipcc_data['Global Warming Levels (⁰C)'].values[0]
         else:
