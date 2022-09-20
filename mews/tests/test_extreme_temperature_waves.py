@@ -280,7 +280,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         scenario = 'SSP585'
         
         perc_err_allowed = 25.0
-        perc_err_allowed_delT = 67.0
+        perc_err_allowed_delT = 100.0
         
         
         
