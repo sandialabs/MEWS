@@ -957,7 +957,7 @@ class CMIP_Data(object):
             
 
             if not write_png is None:
-                fig.savefig(write_png,dpi=300,ax=ax)
+                fig.savefig(write_png,dpi=300)
             if show_plot:  
                 plt.show()  
                 

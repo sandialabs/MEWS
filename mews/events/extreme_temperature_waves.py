@@ -1601,8 +1601,10 @@ class DeltaTransition_IPCC_FigureSPM6():
                 # if the new_delT_10 and new_delT_50 are nearly identifical, then the
                 # solution becomes unstable because only the mean is shifting and
                 # the standard deviation does not matter.
+                # Also if deltaTG is nearly zero the solution doesn't matter as well.
+                # it will be unussually small.
                 # Otherwise, there is a problem with non-convergence.
-                if np.abs(new_delT_50 - new_delT_10) > err_tol:
+                if(np.abs(new_delT_50 - new_delT_10) > err_tol) and delta_TG > err_tol:
                     raise ValueError("The solution for change in mean and standard deviation did not converge!")
             
             del_mu_delT_max_hwm = npar[0]
