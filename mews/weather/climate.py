@@ -7,6 +7,7 @@ Created on Mon May  3 20:43:41 2021
 
 from warnings import warn
 from mews.data_requests.CMIP6 import CMIP_Data
+from mews.utilities.utilities import filter_cpu_count
 
 import pandas as pd
 import numpy as np
@@ -42,10 +43,11 @@ class ClimateScenario(object):
                       run_parallel=True,
                       output_folder=None,
                       proxy=None,
-                      gcm_to_skip=[],
+                      gcm_to_skip=["NorESM2-MM"],
                       align_gcm_to_historical=False,
                       polynomial_order=_default_poly_order,
-                      write_graphics_path=None):
+                      write_graphics_path=None,
+                      num_cpu=None):
         """
         Parameters
         ----------
@@ -95,8 +97,11 @@ class ClimateScenario(object):
                   6 denotes use of a 5th order polynomial. 
         write_graphics_path : str : Default = None, 
             write out png files if this is not None. 
-
-        
+        num_cpu : int : optional : Default = None - indicates to use the
+            maximum number of cpu's - 1 on the current computer.
+            The number of cpu to use in parallel. If this number is greater
+            than the number available, it defaults to the maximum number of cpu
+            minus 1.
 
         Returns
         -------
@@ -129,6 +134,7 @@ class ClimateScenario(object):
         self.align_gcm_to_historical = align_gcm_to_historical
         self.write_graphics_path = write_graphics_path
         self._polynomial_order = polynomial_order
+        self._num_cpu = filter_cpu_count(num_cpu)
         
     def calculate_coef(self,scenario,lat=None,lon=None,scen_func_dict=None):
         """
@@ -218,7 +224,8 @@ class ClimateScenario(object):
                                         gcm_to_skip=self.gcm_to_skip,
                                         scenario_list=scenario,
                                         polynomial_fit_order=self._polynomial_order,
-                                        align_gcm_to_historical=self.align_gcm_to_historical)
+                                        align_gcm_to_historical=self.align_gcm_to_historical,
+                                        num_cpu = self._num_cpu)
             if not self.write_graphics_path is None:
                 if obj.display_plots == False:
                     obj.display_plots = True

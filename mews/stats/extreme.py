@@ -32,6 +32,7 @@ import numpy as np
 import os
 import warnings
 from datetime import datetime
+from mews.utilities.utilities import filter_cpu_count
 
 class DiscreteMarkov():
     """
@@ -372,8 +373,8 @@ class Extremes():
         statistics. Number of output weather files is num_realizations * len(weather_files).
         
     num_repeat : int : optional : Default = 1
-        Number of repeat years that will be processed into a longer duration
-        than the original weather file.
+        DEPRICATED - LEAVE = 1 Number of repeat years that will be processed
+        into a longer duration than the original weather file.
         
     use_cython : bool : optional : Default = True
         Flag to enable cython. If False, then much slower native python
@@ -444,8 +445,6 @@ class Extremes():
         
     current_year : int : optional 
         New input style feature. Used to add a global warming offset to the entire dataset.
-    
-
      
      no_climate_trend : Bool : Optional : Default = False
           Exclude the climate trend gradual increase in temperature
@@ -462,6 +461,10 @@ class Extremes():
         Only used with use_global=True
         
         This is the CMIP6 baseline_year. It should always stay equal to 2014.
+        
+    num_cpu : int : optional : Default = None
+        None : use the number of cpu's available minus one
+        int : use num_cpu if it is <= number of cpu's available minus one
     
     Returns
     -------
@@ -511,11 +514,14 @@ class Extremes():
                  no_climate_trend=False,
                  use_global=True,
                  baseline_year=2014,
-                 norms_hourly=None):
+                 norms_hourly=None,
+                 num_cpu=None):
         
+        self._num_cpu = filter_cpu_count(num_cpu)
         self.use_global = use_global
         self.baseline_year = baseline_year
         self.delTmax_verification_data = [] # used in unit testing
+        self._objDM = None
         # input checking
         if not isinstance(weather_files,list):
             raise TypeError("The 'weather_files' input must be a list of strings!")
@@ -547,7 +553,7 @@ class Extremes():
             
             try:
                 import multiprocessing as mp
-                pool = mp.Pool(mp.cpu_count()-1)
+                pool = mp.Pool(self._num_cpu)
             except:
                 warnings.warn("Something went wrong with importing "
                             +"multiprocessing and creating a pool "
@@ -567,6 +573,7 @@ class Extremes():
         self.recursive_depth = 0
         
         results = {}
+        objDM = {}
         for id0 in range(num_realizations):
             for idx in range(num_repeat):
                 for idy,wfile in enumerate(weather_files):
@@ -596,7 +603,7 @@ class Extremes():
                         results[key_name] = pool.apply_async(self._process_wfile,
                                                          args=args)
                     else:
-                        results[key_name] = self._process_wfile(start_year,idx,
+                        (results[key_name],objDM[key_name]) = self._process_wfile(start_year,idx,
                                 num_wfile,idy,wfile,column,
                                 tzname,transition_matrix,transition_matrix_delta,
                                 state_name,use_cython,state_int,
@@ -612,7 +619,7 @@ class Extremes():
             results_get = {}
             for tup,poolObj in results.items():
                 try:
-                    results_get[tup] = poolObj.get()
+                    (results_get[tup],objDM[tup]) = poolObj.get()
                 except AttributeError:
                     raise AttributeError("The multiprocessing module will not"
                                          +" handle lambda functions or any"
@@ -620,8 +627,11 @@ class Extremes():
                
             pool.close()
             self.results = results_get
+            self._objDM = objDM
         else:
             self.results = results
+            self._objDM = objDM
+            
             
             
     
@@ -696,6 +706,10 @@ class Extremes():
                        min_E_dist,del_min_E_dist, new_input_format,
                        climate_temp_func,averaging_steps,rng, no_climate_trend,
                        norms_hourly):
+        # THIS IS USUALLY IN A PARALLEL mode so debugging can be hard unless
+        # you set run_parallel to False.
+        objDM_dict = {}
+        
         if self.use_global == False:
             # add Feb29 if a leap year
             norms_hourly = self._alter_if_leap_year(norms_hourly,year)
@@ -729,6 +743,7 @@ class Extremes():
                                     state0,
                                     count_in_min_steps_intervals=False)))
                 
+                objDM_dict[month] = objDM 
                 state0 = state_name[states_arr[-1]]
             
             #import matplotlib.pyplot as plt
@@ -738,6 +753,10 @@ class Extremes():
                                + transition_matrix_delta 
                                * (year - start_year),
                                state_name,use_cython)
+            
+            objDM_dict["no months"] = objDM
+            
+
         # distinguish the shape function type
         if new_input_format:
             shape_function_type = "heat_wave_shape_func"
@@ -751,6 +770,7 @@ class Extremes():
         for state, s_ind in zip(state_intervals,state_int):
 
             if s_ind==1:
+                is_hw = False
                 # shift cold snaps to start at noon whereas heat waves 
                 # start at mid-night
                 shifted_state = []
@@ -773,6 +793,8 @@ class Extremes():
                     peak_delta = None
                     avg_delta = (year - start_year) * min_avg_delta
             else:
+                is_hw = True
+                # heat waves for s_ind==2
                 wave_shift = 0.0
                 if new_input_format:
                     avg_dist = max_E_dist
@@ -801,7 +823,8 @@ class Extremes():
                                   peak_delta=peak_delta,
                                   org_dates=org_dates[tup[0]:tup[1]+1],
                                   rng=rng,
-                                  norms_hourly=local_norms_hourly)
+                                  norms_hourly=local_norms_hourly,
+                                  is_hw=is_hw)
 
                 new_date_start = org_dates[new_vals.index[0]]
                 duration = len(new_vals)
@@ -860,7 +883,7 @@ class Extremes():
                               overwrite=True, create_dir=True,
                               txt2bin_exepath=doe2_in['txt2bin_exepath'])
             self.wfile_names.append(new_wfile_name)
-        return objA
+        return objA,objDM_dict
     
     def _DOE2Alter(self,wfile,year,doe2_in):
         if not isinstance(doe2_in,dict):
@@ -928,7 +951,7 @@ class Extremes():
     
     def _add_extreme(self,org_vals,integral_dist,integral_delta,frac_long_wave,min_steps,
                      shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None,
-                     org_dates=None,rng=None,norms_hourly=None):
+                     org_dates=None,rng=None,norms_hourly=None,is_hw=True):
         """
         >>> obj._add_extreme(org_vals,
                              integral_dist,
@@ -939,7 +962,8 @@ class Extremes():
                              test_shape_func=False,
                              peak_dist=None,
                              peak_delta=None,
-                             norms_hourly=None)
+                             norms_hourly=None,
+                             is_hw=True)
 
         Parameters
         ----------
@@ -993,7 +1017,12 @@ class Extremes():
             
         norms_hourly : optional : Default = None
             These are the climate norms from NOAA that are the reference for
-            how much heat is being added via a heat wave. 
+            how much heat is being added via a heat wave. This is required 
+            on new new use case use_global=False
+            
+        is_hw : optional : Boolean : Default = True
+            If false, a cold snap is being added 
+            If true , a heat wave is being added.
 
         Returns
         -------
@@ -1078,7 +1107,8 @@ class Extremes():
             Sm1_T = 0.0
             S_E = 0.0
             S_T = 0.0
-            
+            abs_maxval_delT = param['normalizing extreme temp']
+
             # introduce a delta if it exists.
             if not integral_delta is None:
                 param_delta = integral_delta[s_month]
@@ -1091,7 +1121,11 @@ class Extremes():
                 mu_T += peak_param_delta['del_mu']
                 sig_T += peak_param_delta['del_sig']
                 Sm1_T += peak_param_delta['del_a']
-                S_T += peak_param_delta['del_b']                
+                S_T += peak_param_delta['del_b']   
+                # Temperature increase limit.
+                abs_maxval_delT += peak_param_delta['delT_increase_abs_max']
+
+                        
                 
                 
             # integral_dist - includes the inverse transform back to 
@@ -1139,6 +1173,14 @@ class Extremes():
             # standard. 
             heat_added = E_per_duration * norm_energy * alpha_E * (duration/norm_duration) - heat_added_0
             delTmax = T_per_duration * norm_temperature * (alpha_T * (duration/norm_duration) + beta_T) - delT_max_0
+            
+            # We reduce the peak temperature increase to limit it to IPCC feasible temperature changes regardless of
+            # how long of a duration heat wave the Markov process creates.
+            # The energy is maintained but some may be shed if the solution cannot produce the energy requested.
+            if (is_hw and (delTmax > abs_maxval_delT)) or (not is_hw and (delTmax < abs_maxval_delT)):
+                delTmax = abs_maxval_delT
+            
+            
             D = duration
             
             # IF heat_added_0 is big enough it can actually serve to make things more mild. Either way, existing heat
@@ -1177,6 +1219,7 @@ class Extremes():
                                                +" never happen. There is a bug.")
             
             # adjust to meet delTmax but not E if the solution is non-physical.
+            # Acoef and Bcoef > 0 for a physically real solution.
             dual_solution = False
             if heat_added >= 0 and Acoef > delTmax:
                 Acoef = delTmax

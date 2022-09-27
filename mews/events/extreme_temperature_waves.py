@@ -7,6 +7,7 @@ Created on Thu Oct 14 09:59:38 2021
 from mews.stats import Extremes
 from mews.weather.psychrometrics import relative_humidity
 from mews.weather.climate import ClimateScenario
+from mews.utilities.utilities import filter_cpu_count
 
 from copy import deepcopy
 from datetime import datetime
@@ -109,13 +110,6 @@ class ExtremeTemperatureWaves(Extremes):
         For example if daily summarries are Fahrenheit, then (5/9, -(5/9)*32)
         needs to be input. If Celcius then (1,0). Tenths of Celcius (1/10, 0)
         
-    num_year : int
-        Number of years to simulate extreme wave events and global climate
-        change into the future.
-        
-    start_year : int
-        Year to start the weather files in.
-        
     use_local : Bool : Optional: Default = False
         Flag to indicate that that "station" input is actually a path to
         local <station>.csv and <station>_norms.csv files for the NOAA data
@@ -148,6 +142,19 @@ class ExtremeTemperatureWaves(Extremes):
         for the requested analysis. Files will be the original weather file
         name with "_<realization>_<year>" appended to it.
         
+    random_seed : int : optional : Default : None
+        None : allow mews to generate heat waves whose random seed are not
+               controlled. Sequential runs will not produce the same
+               result.
+        int < 2^32-1 : Random seed will enable sequential runs to produce
+              the same result.
+              
+    run_parallel : Bool : optional : Default = True
+        True : use parallel processing 
+        False : do not use parallel processing - this is useful for 
+                debugging or if MEWS is being used in another parallel process
+        see num_cpu
+        
     proxy : str : Optional : Default = None
         proxy server and port to access url's behind a proxy server
         example: https://proxy.institution.com:8080
@@ -161,16 +168,23 @@ class ExtremeTemperatureWaves(Extremes):
         The fraction of the interpolated change in maximum temperature increase
         for a heat wave applicable on the lowest probability of heat waves month.
         The highest probability of heat waves month gets the full delT from the
-        IPCC data.  toDefault is set to a value of 1 for worst case where every
+        IPCC data. Default is set to a value of 1 for worst case where every
         month gets the full shift. Must range between 0 and 1.
         
     norms_unit_conversion : tuple : optional : Default = (5/9, -(5/9) * 32)
         conversion multiplier and offset needed to convert the climate normals 
-        NOAA data to degrees Celcius. 
+        NOAA data to degrees Celcius.
         
+    num_cpu : int or None : optional : Default = None
+        None : use the maximum number of cpu available minus 1
+        int : use num_cpu cpu's. MEWS will select the max available -1 if this 
+              is too large.
+              
+    write_results : Bool : optional : Default = True
+        if True, write the energyplus or DOE2 files for each realization.
+        if False, do not write (saves time when testing or when the 
+                                MEWS results are going to be used directly in python)
         
-
-    
     Returns
     -------
     None
@@ -196,10 +210,14 @@ class ExtremeTemperatureWaves(Extremes):
                  proxy=None,
                  use_global=False,
                  delT_ipcc_min_frac=1.0,
-                 norms_unit_conversion=(5/9,-(5/9)*32)):
+                 norms_unit_conversion=(5/9,-(5/9)*32),
+                 num_cpu=None,
+                 write_results=True):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
+        self._num_cpu = filter_cpu_count(num_cpu)
+        
         if delT_ipcc_min_frac > 1.0 or delT_ipcc_min_frac < 0.0:
             raise ValueError("The input 'delT_ipcc_min_frac' must be between 0.0 and 1.0!")
         
@@ -238,7 +256,8 @@ class ExtremeTemperatureWaves(Extremes):
         self.extreme_results = {}
         self.extreme_delstats = {}
         self.ipcc_results = {"ipcc_fact":{}}
-        
+        self._create_scenario_has_been_run = False
+        self._write_results = write_results
         
         
         
@@ -247,7 +266,8 @@ class ExtremeTemperatureWaves(Extremes):
                         num_realization=1,obj_clim=None,increase_factor_ci="50%"):
         
         """
-        >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func)
+        >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func,
+                                num_realization,obj_clim,increase_factor_ci)
         
         Places results into self.extreme_results and self.ext_obj
         
@@ -301,6 +321,9 @@ class ExtremeTemperatureWaves(Extremes):
         None
         
         """
+        self.extreme_results[scenario_name] = {}
+        self.extreme_delstats[scenario_name] = {}
+        
         if not increase_factor_ci in DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
             raise ValueError("The input 'increase_factor_ci' must be a string with one of the following three values: \n\n{0}".format(
                 str(DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
@@ -311,9 +334,10 @@ class ExtremeTemperatureWaves(Extremes):
         
         for year in np.arange(start_year, start_year + num_year,1):
             
-            
+            self.extreme_delstats[scenario_name][increase_factor_ci] = {}
             
             year_no = year
+            
             (transition_matrix, 
              transition_matrix_delta,
              del_E_dist,
@@ -339,7 +363,7 @@ class ExtremeTemperatureWaves(Extremes):
                      use_cython=True,
                      column='Dry Bulb Temperature',
                      tzname=None,
-                     write_results=True,
+                     write_results=self._write_results,
                      results_folder=self._results_folder,
                      results_append_to_name=scenario_name,
                      run_parallel=self._run_parallel,
@@ -356,18 +380,114 @@ class ExtremeTemperatureWaves(Extremes):
                      averaging_steps=24,
                      use_global=self.use_global,
                      baseline_year=base_year,
-                     norms_hourly=self.df_norms_hourly)
+                     norms_hourly=self.df_norms_hourly,
+                     num_cpu=self._num_cpu)
             results_dict[year] = self.results
         
-        self.extreme_delstats[scenario_name] = {"E":del_E_dist,"delT":del_delTmax_dist}
-        self.extreme_results[scenario_name] = results_dict
+            self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
+            
+        self.extreme_results[scenario_name][increase_factor_ci] = results_dict
         
         self.ext_obj[scenario_name] = ext_obj_dict
-        
+        self._create_scenario_has_been_run = True
 
         return results_dict
     
-    def real_value_stats(self,wave_type,scenario_name,stat_name,duration):
+    def get_results(self, scenario, year, confidence_interval):
+        
+        """
+        obj.get_results(scenario,year,confidence_interval)
+        
+        This function retrieves results from an ExtremeTemperatureWaves object
+        that has had the 'create_scenario' method run at least once. It provides
+        a strongly checked method for getting results without having to. use the
+        3-deep dictionary structure used by ExtremeTemperatureWaves
+        
+        Inputs
+        ------
+        
+        scenario : str : a valid IPCC SSP scenario that has already been run.
+                     valid scenario names include {0}
+        
+        year : int : a year between 1900 and 2100 that has already been run
+                     using 'create_scenario'
+        
+        confidence_interval : str : A confidence interval string designation.
+                    valid CI names include {1}
+        
+        Returns
+        -------
+        
+        dict - a dictionary containing the mews.weather.alter.Alter objects
+               associated with the selected (scenario,year,confidence_interval)
+               these objects contain all of the alterations that allow exploration
+               of specific heat waves.
+               
+        Raises
+        ------
+        
+        TypeError - One of the inputs is an invalid type
+        
+        ValueError - One of the inputs is an invalid value
+        
+        """.format(str(DeltaTransition_IPCC_FigureSPM6._valid_scenario_names),
+        DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks)
+                                                                     
+        if not isinstance(scenario,str):
+            raise TypeError("The 'scenario' input must be a string.")
+            
+        if not isinstance(confidence_interval,str):
+            raise TypeError("The 'confidence_interval' input must be a string.")
+        
+        if not scenario in DeltaTransition_IPCC_FigureSPM6._valid_scenario_names:
+            raise ValueError("The scenario {0} is not a valid scenario name. The only values permitted are: ".format(scenario) +
+                             + str(DeltaTransition_IPCC_FigureSPM6._valid_scenario_names))
+            
+        if not isinstance(year,(int)):
+            raise TypeError("The 'year' input must be an integer!")
+            
+        if (year < 1900 or year > 2100):
+            raise ValueError("The 'year' input is invalid. MEWS only can analyze 1900 to 2100!")
+        
+        if not confidence_interval in DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
+            raise ValueError("The input 'confidence_interval' must be a string with one of the following three values: \n\n{0}".format(
+                str(DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
+        
+        
+        message = "You must run the 'create_scenario' to generate results"
+        
+        if self._create_scenario_has_been_run:
+            if scenario in self.extreme_results:
+                scen_results = self.extreme_results[scenario]
+                
+                if confidence_interval in scen_results:
+                    ci_results = scen_results[confidence_interval]
+                    
+                    if year in scen_results:
+                        return scen_results[year]
+                    else:
+                        raise ValueError("The year {0:d} has not yet been analyzed. ".format(year) 
+                                         + message+" for {0:d}".format(year))
+                
+                else:
+                    raise ValueError("The confidence interval position {0} has not yet been run. ".format(confidence_interval) +
+                                     + message + " for confidence interval position {0}.".format(confidence_interval))
+                
+
+                    
+            else:
+                raise ValueError("The scenario {0} has not yet been analyzed. ".format(scenario)
+                                 + message + " for scenario {0}!".format(scenario))
+        else:
+            raise ValueError(message+"!")
+                
+                    
+            
+        
+    
+    def _real_value_stats(self,wave_type,scenario_name,year,ci_interval,stat_name,duration):
+        
+        
         
         if not isinstance(duration,np.ndarray):
             raise TypeError("The duration input must be a numpy array of values!")
@@ -404,7 +524,7 @@ class ExtremeTemperatureWaves(Extremes):
             # The original average Tmax
             values = {'mu':mu,'mu+sig':mu+sig,"a":-1,"b":1}
             
-            delstat = self.extreme_delstats[scenario_name][stat_name][month]
+            delstat = self.extreme_delstats[scenario_name][ci_interval][year][stat_name][month]
             
             del_values = {'mu':delstat["del_sig"],
                           'mu+sig':delstat["del_mu"]+delstat["del_sig"]
@@ -1005,6 +1125,7 @@ class ExtremeTemperatureWaves(Extremes):
             #
             hour_in_cur_month = time_hours * frac
             # for Markov chain model of heat wave initiation. 
+
             prob_of_wave_in_any_hour = len(month_duration)/hour_in_cur_month
             
             # for Markov chain model of probability a heat wave will continue into 
@@ -1432,6 +1553,7 @@ class DeltaTransition_IPCC_FigureSPM6():
             
         
         if use_global == False:
+            # The new model only shifts probabilities!
             del_mu_delT_max_hwm = 0 #npar[0]
             del_sig_delT_max_hwm = 0 #npar[1]
         else:
@@ -1514,9 +1636,20 @@ class DeltaTransition_IPCC_FigureSPM6():
         if self.use_global:
             # old method being retained for replication of the Albuquerque Study.
             P_prime_hwsm = (N10 * Phwsm ** (1/S_D_50) + N50 * Phwsm ** (1/S_D_10))/(N10 + N50)
+            delT_abs_max = abs_delT_50 
         else:
             # this new equation is correct!
-            P_prime_hwsm = (N10 * np.exp(np.log(Phwsm)/S_D_50) + N50 * np.exp(np.log(Phwsm)/S_D_10))/(N10 + N50)
+            alpha_delT = (abs_delT_50 - abs_delT_10)/(D50-D10)
+            beta_delT = abs_delT_50 - alpha_delT * D50
+            delT_applied = alpha_delT * norm_duration + beta_delT
+            Dmax = norm_duration
+            S_Dmax = 1+(delT_applied * Dmax) / (alphaT * norm_temp * Dmax)
+            
+            Dprime_max = norm_duration * S_Dmax
+            P_prime_hwsm = np.exp(Dmax/Dprime_max * np.log(Phwsm))
+            delT_abs_max = np.max([delT_applied, abs_delT_50])
+            # old model
+            #(N10 * np.exp(np.log(Phwsm)/S_D_50) + N50 * np.exp(np.log(Phwsm)/S_D_10))/(N10 + N50)
             
         epsilon = 1.0e-6
         if P_prime_hwsm+epsilon < Phwsm:
@@ -1597,7 +1730,8 @@ class DeltaTransition_IPCC_FigureSPM6():
         self.del_delTmax_dist = {'del_mu':del_mu_delT_max_hwm,
                  'del_sig':del_sig_delT_max_hwm,
                  'del_a':del_a_delT_max_hwm,
-                 'del_b':del_b_delT_max_hwm}
+                 'del_b':del_b_delT_max_hwm,
+                 'delT_increase_abs_max':delT_abs_max}
         #bring the multiplication factors to the surface.
         dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
         dfraw.columns = ["10 year event","50 year event"]

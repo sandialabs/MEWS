@@ -29,6 +29,8 @@ import multiprocessing as mp
 import threading as thr
 import logging
 
+from mews.utilities.utilities import filter_cpu_count
+
 ########## Initial Startup ##############
 warnings.simplefilter(action='ignore') #Removes depreciation warnings
 
@@ -161,7 +163,11 @@ class CMIP_Data(object):
                average for the baseline year. GCM data is shifted up or down
                to accomplish this.
     
-
+    num_cpu : int or None : optional : Default = None
+        None - use the maximum number of cpu's available minus one
+        int - use the requested number of cpu's as long as it is less than
+              the number of cpu's available minus one.
+              Only applies when run_parallel = True
     
     Returns
     -------
@@ -197,7 +203,10 @@ class CMIP_Data(object):
                  proxy=None,
                  gcm_to_skip=[],
                  polynomial_fit_order=_default_poly_order,
-                 align_gcm_to_historical=False):
+                 align_gcm_to_historical=False,
+                 num_cpu=None):
+        
+        self._num_cpu = filter_cpu_count(num_cpu)
         
         if not proxy is None:
             os.environ['http_proxy'] = proxy 
@@ -333,7 +342,7 @@ class CMIP_Data(object):
                 threads = [] 
             
             # Bound the number of threads that can execute at once.
-            semaphore = thr.Semaphore(20)
+            semaphore = thr.Semaphore(self._num_cpu)
             
             # This process tends to hang and you have to check it 
             # and see if it is working 
@@ -372,7 +381,7 @@ class CMIP_Data(object):
                     
         #Runs bulk of calculations with multiprocessing
         if run_parallel: 
-            pool = mp.Pool(mp.cpu_count()-1)
+            pool = mp.Pool(self._num_cpu)
             total_model_list = []
         
         self.total_model_data = {}
@@ -1004,7 +1013,7 @@ class CMIP_Data(object):
                     model_list.append(name)
             
             if self.run_parallel:
-                pool = mp.Pool(mp.cpu_count()-1)
+                pool = mp.Pool(self._num_cpu)
             temp_array_list = []
             for model in model_list:
                 if self.run_parallel:
