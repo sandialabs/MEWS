@@ -11,7 +11,7 @@ from mews.utilities.utilities import filter_cpu_count
 
 from copy import deepcopy
 from datetime import datetime
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, curve_fit
 from scipy.optimize import bisect
 from scipy.special import erf
 
@@ -26,6 +26,9 @@ import statsmodels.api as sm
 from warnings import warn
 
 import matplotlib.pyplot as plt
+
+def cdf_exponential(x,lamb):
+    return 1-np.exp(-lamb * x)
 
 # TODO make this a class such that erf(a) and erf(b) are not recalculated.
 def cdf_truncnorm(x,mu,sig,a,b):
@@ -69,6 +72,43 @@ def transform_fit(value,minval,maxval):
 # TODO - merge these functions with those in ExtremeTemperatureWaves
 def inverse_transform_fit(norm_signal, signal_max, signal_min):
     return (norm_signal + 1)*(signal_max - signal_min)/2.0 + signal_min 
+
+def fit_exponential_distribution(month_duration_hr,include_plots):
+    """
+    
+
+    Parameters
+    ----------
+    month_duration_hr : np.array
+        for a given month, a list of 
+    include_plots : bool
+        True = plot histogram of results and exponential fit
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    
+    hour_in_day = 24
+    # this always comes out to a positive integer under the constraints present 
+    num_bin = int((month_duration_hr.max() - month_duration_hr.min())/hour_in_day)+1
+    month_dur_histogram = np.histogram(month_duration_hr,num_bin,range=(month_duration_hr.min()-hour_in_day/2,
+                                                                        month_duration_hr.max()+hour_in_day/2))
+    bin_avg = (month_dur_histogram[1][1:]+month_dur_histogram[1][0:-1])/2
+    hist_norm = (month_dur_histogram[0]/month_dur_histogram[0].sum()).cumsum()
+    
+    lamb, lcov = curve_fit(cdf_exponential,bin_avg,hist_norm,0)
+    
+    pvalue = 1.96 * np.max(lcov[0][0])/lamb[0]
+    
+    if include_plots:
+        plt.plot(bin_avg,hist_norm,np.arange(0,month_duration_hr.max()),cdf_exponential(np.arange(0,month_duration_hr.max()),lamb[0]))
+        
+    P0 = 1 - lamb[0]
+    
+    return P0,lamb,lcov,pvalue
 
 
 
@@ -185,6 +225,14 @@ class ExtremeTemperatureWaves(Extremes):
         if False, do not write (saves time when testing or when the 
                                 MEWS results are going to be used directly in python)
         
+    test_markov : Bool : optional : Default = False
+        Keep False for all practical use of MEWS. This is a unit testing feature
+        that will make run times longer.
+        if True the process will run the markov process until another heat wave
+        event occurs so that convergence studies can accurately assess time gaps
+        between heat waves for a given month and reconstruct if the process
+        is working as intended.
+        
     Returns
     -------
     None
@@ -212,11 +260,13 @@ class ExtremeTemperatureWaves(Extremes):
                  delT_ipcc_min_frac=1.0,
                  norms_unit_conversion=(5/9,-(5/9)*32),
                  num_cpu=None,
-                 write_results=True):
+                 write_results=True,
+                 test_markov=False):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
         self._num_cpu = filter_cpu_count(num_cpu)
+        self._test_markov = test_markov
         
         if delT_ipcc_min_frac > 1.0 or delT_ipcc_min_frac < 0.0:
             raise ValueError("The input 'delT_ipcc_min_frac' must be between 0.0 and 1.0!")
@@ -251,11 +301,12 @@ class ExtremeTemperatureWaves(Extremes):
         self._weather_files = weather_files
         self._delT_ipcc_min_frac = delT_ipcc_min_frac
         self.ext_obj = {}
+        self._verification_data = {}
         
 
         self.extreme_results = {}
         self.extreme_delstats = {}
-        self.ipcc_results = {"ipcc_fact":{}}
+        self.ipcc_results = {"ipcc_fact":{},'durations':{}}
         self._create_scenario_has_been_run = False
         self._write_results = write_results
         
@@ -381,10 +432,14 @@ class ExtremeTemperatureWaves(Extremes):
                      use_global=self.use_global,
                      baseline_year=base_year,
                      norms_hourly=self.df_norms_hourly,
-                     num_cpu=self._num_cpu)
+                     num_cpu=self._num_cpu,
+                     test_markov=self._test_markov)
             results_dict[year] = self.results
         
             self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
+            # this is happening 
+            self._verification_data[year] = self._delTmax_verification_data
+            
             
         self.extreme_results[scenario_name][increase_factor_ci] = results_dict
         
@@ -605,10 +660,8 @@ class ExtremeTemperatureWaves(Extremes):
             del_E_dist[month] = obj.del_E_dist
             del_delTmax_dist[month] = obj.del_delTmax_dist
             self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
-            
-        
-             
-            
+            self.ipcc_results['durations'][month] = obj._durations
+
         return (transition_matrix,
                 transition_matrix_delta,
                 del_E_dist,
@@ -988,7 +1041,9 @@ class ExtremeTemperatureWaves(Extremes):
         return (norm_signal + 1)*(signal_max - signal_min)/2.0 + signal_min 
         #(np.exp(norm_signal/interval) - 1.0)/(np.exp(1.0) - 1) * (signal_max - signal_min) + signal_min
     
-    def _calculate_wave_stats(self,waves,frac_tot_days,time_hours,is_hw,include_plots=True):
+    def _calculate_wave_stats(self,waves,waves_other,frac_tot_days,time_hours,is_hw,include_plots=True):
+        
+        # waves_other is for hw if in cs and for cs if in hw.
         
         if include_plots:
             fig1, ax1 = plt.subplots(4,3,figsize=(10,10))
@@ -1005,11 +1060,15 @@ class ExtremeTemperatureWaves(Extremes):
                 col = 0
             # duration
             waves_cur = tup_waves_cur[0]
+            waves_oth = waves_other[month][0]
             df_wm = tup_waves_cur[1]
             frac = frac_tot_days[month]
             
             # calculate duration stats
             month_duration = np.array([len(arr) for arr in waves_cur])
+            month_duration_oth = np.array([len(arr) for arr in waves_oth])
+            total_hours_in_extreme = (month_duration.sum() + month_duration_oth.sum())*hour_in_day
+
             
             if len(month_duration) == 0:
                 raise ValueError("No heat waves were identified in {0}".format(month)
@@ -1038,7 +1097,7 @@ class ExtremeTemperatureWaves(Extremes):
             # convert from C*day to C*hr and day to hr
             wave_energy_C_hr = wave_energy * hour_in_day
             month_duration_hr = month_duration * hour_in_day
-            
+        
             # choose the extremum that is appropriate for the two types of waves (hot/cold)
             if is_hw:
                 norm_extreme_temp = extreme_temp.max()
@@ -1125,14 +1184,14 @@ class ExtremeTemperatureWaves(Extremes):
             #
             hour_in_cur_month = time_hours * frac
             # for Markov chain model of heat wave initiation. 
-
-            prob_of_wave_in_any_hour = len(month_duration)/hour_in_cur_month
+            prob_of_wave_in_any_hour = len(month_duration)/(hour_in_cur_month-total_hours_in_extreme)
             
             # for Markov chain model of probability a heat wave will continue into 
             # the next hour a linear regression is needed here
             
             num_hour_per_event_duration = (duration_history * num_day)*hour_in_day
             
+            #if self.use_global:
             # We are fitting P(n) = P0^n, where P0 is the variable desired to determine and is the
             # Markov probability of transition out of the heat wave state based on the duration data.
             # this is a linear fit if we take the logarithm.
@@ -1156,13 +1215,23 @@ class ExtremeTemperatureWaves(Extremes):
             # verify that the result is significant by p-value < 0.05 i.e. 
             # the probability that the null hypothesis is true (i.e. your results 
             # is a random chance occurance is <5%)
-            if results.pvalues[0] > 0.05:
-                self._plot_linear_fit(log_prob_duration,num_hour_passed,results.params,results.pvalues,
-                                "Month=" + str(month)+" Markov probability")
+            pvalue = results.pvalues[0]
+                    
+            #else:
+                # 10/4/2022 - we need the discreet geometric distribution since we
+                # are working with discreet Markov processes
+                # this always comes out to a positive integer under the constraints present 
+                #P0,lamb,lcov,pvalue = fit_exponential_distribution(month_duration_hr,include_plots)
+                
+            if pvalue > 0.05:
+                if self.use_global:
+                    self._plot_linear_fit(log_prob_duration,num_hour_passed,results.params,results.pvalues,
+                                    "Month=" + str(month)+" Markov probability")
                 warn(results.summary())
                 raise ValueError("The weather data has produced a low p-value fit"+
                                  " for Markov process fits! More data is needed "+
                                  "to produce a statistically significant result!")
+                
                     
             # normalize and assume that the probability of going to a cold snap 
             # directly from a heat wave is zero.
@@ -1204,46 +1273,55 @@ class ExtremeTemperatureWaves(Extremes):
         stats = {}
         
         is_heat_wave = [True,False]
-        for is_hw in is_heat_wave:
-            
-            if is_hw:
-                # above 90% criterion for TMAX_B or above the 90% criterion for the hourly maximum minimum temperature
-                extreme_days = df_combined[(df_combined["TMAX"] > df_combined["TMAX_B"])|
-                                             (df_combined["TMIN"] > df_combined["TMINMAX_B"])]
-            else:
-                # below 10% criterion TMIN or below 10% criterion for the minimum hourly maximum temperature
-                extreme_days = df_combined[(df_combined["TMIN"] < df_combined["TMIN_B"])|
-                                             (df_combined["TMAX"] < df_combined["TMAXMIN_B"])]
-            
-            # this is the number of heat wave days each month over the entire time period
-            num_days_each_month = extreme_days.groupby(extreme_days.index.month).count()["TMIN"] #TMIN just makes it a series
-            
-            # this is the total days in each month.
-            num_total_days = df_combined.groupby(df_combined.index.month).count()["TMIN"]
-            frac_tot_days = num_total_days/num_total_days.sum()
-            
-            months = np.arange(1,months_per_year+1)
-            
-            # do a different assessment for each month in the heat wave season because 
-            # the statistics show a significant peak at the end of summer and we do not
-            # want the probability to be smeared out as a result.
-            
-            # we need to determine if the month starts or ends with heat waves. If it does,
-            # the month with more days gets the heat wave. If its a tie, then the current month
-            # gets the heat wave and the heat wave is marked as taken so that it is 
-            # not double counted
-                
+        extreme_days = {}
+        waves_all_year = {}
         
-            # now the last false before a true is the start of each heat wave 
-            # then true until the next false is the duration of the heat wave
-            waves_all_year = self._isolate_waves(months,extreme_days) 
+        
+        # above 90% criterion for TMAX_B or above the 90% criterion for the hourly maximum minimum temperature
+        extreme_days['hw'] = df_combined[(df_combined["TMAX"] > df_combined["TMAX_B"])|
+                                     (df_combined["TMIN"] > df_combined["TMINMAX_B"])]
+
+        # below 10% criterion TMIN or below 10% criterion for the minimum hourly maximum temperature
+        extreme_days['cs'] = df_combined[(df_combined["TMIN"] < df_combined["TMIN_B"])|
+                                     (df_combined["TMAX"] < df_combined["TMAXMIN_B"])]
+        
+        # do a different assessment for each month in the heat wave season because 
+        # the statistics show a significant peak at the end of summer and we do not
+        # want the probability to be smeared out as a result.
+        
+        # we need to determine if the month starts or ends with heat waves. If it does,
+        # the month with more days gets the heat wave. If its a tie, then the current month
+        # gets the heat wave and the heat wave is marked as taken so that it is 
+        # not double counted
             
+    
+        # now the last false before a true is the start of each heat wave 
+        # then true until the next false is the duration of the heat wave
+        
+        months = np.arange(1,months_per_year+1)
+        waves_all_year['hw'] = self._isolate_waves(months,extreme_days['hw']) 
+        waves_all_year['cs'] = self._isolate_waves(months,extreme_days['cs']) 
+        
+        # this is the total days in each month. Nothing to do with waves.
+        num_total_days = df_combined.groupby(df_combined.index.month).count()["TMIN"]
+        frac_tot_days = num_total_days/num_total_days.sum()
+            
+        
+        for is_hw in is_heat_wave:
+            if is_hw:
+                waves_all_year_cur = waves_all_year['hw']
+                waves_all_year_other = waves_all_year['cs']
+            else:
+                waves_all_year_cur = waves_all_year['cs']
+                waves_all_year_other = waves_all_year['hw']
+
             if is_hw:
                 description = "heat wave"
             else:
                 description = "cold snap"
             
-            stats[description] = self._calculate_wave_stats(waves_all_year,
+            stats[description] = self._calculate_wave_stats(waves_all_year_cur,
+                                                            waves_all_year_other,
                                                             frac_tot_days,
                                                             time_hours,
                                                             is_hw,
@@ -1462,6 +1540,17 @@ class DeltaTransition_IPCC_FigureSPM6():
         Pcsm = cold_param["hourly prob of heat wave"]
         # probability of sustaining a cold snap
         Pcssm = cold_param["hourly prob stay in heat wave"]
+        # unpack gaussian distribution parameters
+        normalized_ext_temp = hot_param['extreme_temp_normal_param']
+        normalized_energy = hot_param['energy_normal_param']
+        maxtemp = hot_param['max extreme temp per duration']
+        mintemp = hot_param['min extreme temp per duration']
+        
+        norm_energy = hot_param['normalizing energy']
+        norm_temp = hot_param['normalizing extreme temp']
+        norm_duration = hot_param['normalizing duration']
+        alphaT = hot_param['normalized extreme temp duration fit slope']
+        betaT = hot_param['normalized extreme temp duration fit intercept']
 
         if use_global:
             # This is change in global temperature from 2020!
@@ -1478,69 +1567,66 @@ class DeltaTransition_IPCC_FigureSPM6():
         f_ipcc_ci_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]] 
         f_ipcc_ci_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
 
+       
+       
         
-        # equation 22 (number may change)
-        P_prime_hwm = Phwm * (f_ipcc_ci_50 * N10 + f_ipcc_ci_10 * N50)/(N10 + N50)
-        
-        
-        
-        # Estimate the interval positions of the 10 year and 50 year changes
-        # in temperature.
-        # equation 23 - all statistics have been translated to -1, 1, -1 is the minimum 
-        #               extreme temperature and 1 is the maximum extreme temperature
-        normalized_ext_temp = hot_param['extreme_temp_normal_param']
-        normalized_energy = hot_param['energy_normal_param']
-        maxtemp = hot_param['max extreme temp per duration']
-        mintemp = hot_param['min extreme temp per duration']
-        
-        norm_energy = hot_param['normalizing energy']
-        norm_temp = hot_param['normalizing extreme temp']
-        norm_duration = hot_param['normalizing duration']
-        alphaT = hot_param['normalized extreme temp duration fit slope']
-        betaT = hot_param['normalized extreme temp duration fit intercept']
-        
-        mu_norm = normalized_ext_temp['mu']
-        sig_norm = normalized_ext_temp['sig']
-        
-        # solve for the 10 year and 50 year expected peak temperature per duration
-        F0 = lambda x: cdf_truncnorm(transform_fit(x,mintemp,maxtemp),
-                                     mu_norm,
-                                     sig_norm,
-                                     -1,
-                                     1)
-        
-        S10 = - 1 + 1/(N10 * Phwm)
-        S50 = - 1 + 1/(N50 * Phwm)
-        
-        F10 = lambda x:F0(x) + S10
-        F50 = lambda x:F0(x) + S50
-        delTmax10_hwm, r10 = bisect(F10,mintemp,maxtemp,full_output=True)
-        delTmax50_hwm, r50 = bisect(F50,mintemp,maxtemp,full_output=True)
-
-        if not r10.converged:
-            raise ValueError("Bisection method failed to find 10 year expected value for heat wave temperature")
-        elif not r50.converged:
-            raise ValueError("Bisection method failed to find 50 year expected value for heat wave temperature")
+        if use_global:
+            P_prime_hwm = Phwm * (f_ipcc_ci_50 * N10 + f_ipcc_ci_10 * N50)/(N10 + N50)
             
-        # Find the -1..1 interval shift parameters that reflect the IPCC shift amounts
-        # in temperature for 10 and 50 year events. This can shift and stretch the distribution.
-        # solve for the shift in mean and standard deviation (2 equations two unknowns)
-        # equation 24 in the writeup
-        
-        # sig_s and mu_s are the independent shift and stretch variables that 
-        # are solvede as two unknowns. They are calculated within the original -1..1
-        # interval and are not dimensional.. use inverse_transform_fit to give them
-        # dimensions.
-        
-        # function for the establishment of truncated Gaussian shifting 
-        # due to increasing maximum temperatures from
-        # the original -1 .. 1 interval to a new interval S_m1 to S_1
-        # this funciton is used by fsolve below
-        
-        # must normalize by duration
-        # TODO - differentiate between the different months!!!!
-        D10 = np.log((1/(Phwm * N10)))/np.log(Phwsm)  # in hours - expected value
-        D50 = np.log((1/(Phwm * N50)))/np.log(Phwsm)  # in hours - expected value
+            
+            
+            # Estimate the interval positions of the 10 year and 50 year changes
+            # in temperature.
+            # equation 23 - all statistics have been translated to -1, 1, -1 is the minimum 
+            #               extreme temperature and 1 is the maximum extreme temperature
+            
+            mu_norm = normalized_ext_temp['mu']
+            sig_norm = normalized_ext_temp['sig']
+            
+            # solve for the 10 year and 50 year expected peak temperature per duration
+            F0 = lambda x: cdf_truncnorm(transform_fit(x,mintemp,maxtemp),
+                                         mu_norm,
+                                         sig_norm,
+                                         -1,
+                                         1)
+            
+            S10 = - 1 + 1/(N10 * Phwm)
+            S50 = - 1 + 1/(N50 * Phwm)
+            
+            F10 = lambda x:F0(x) + S10
+            F50 = lambda x:F0(x) + S50
+            delTmax10_hwm, r10 = bisect(F10,mintemp,maxtemp,full_output=True)
+            delTmax50_hwm, r50 = bisect(F50,mintemp,maxtemp,full_output=True)
+    
+            if not r10.converged:
+                raise ValueError("Bisection method failed to find 10 year expected value for heat wave temperature")
+            elif not r50.converged:
+                raise ValueError("Bisection method failed to find 50 year expected value for heat wave temperature")
+                
+            # Find the -1..1 interval shift parameters that reflect the IPCC shift amounts
+            # in temperature for 10 and 50 year events. This can shift and stretch the distribution.
+            # solve for the shift in mean and standard deviation (2 equations two unknowns)
+            # equation 24 in the writeup
+            
+            # sig_s and mu_s are the independent shift and stretch variables that 
+            # are solvede as two unknowns. They are calculated within the original -1..1
+            # interval and are not dimensional.. use inverse_transform_fit to give them
+            # dimensions.
+            
+            # function for the establishment of truncated Gaussian shifting 
+            # due to increasing maximum temperatures from
+            # the original -1 .. 1 interval to a new interval S_m1 to S_1
+            # this funciton is used by fsolve below
+            
+            # must normalize by duration
+            # TODO - differentiate between the different months!!!!
+            D10 = np.log((1/(Phwm * N10)))/np.log(Phwsm)  # in hours - expected value
+            D50 = np.log((1/(Phwm * N50)))/np.log(Phwsm)  # in hours - expected value
+        else:
+            Davg_hw = np.log(0.5)/np.log(Phwsm)
+            Davg_cs = np.log(0.5)/np.log(Pcssm)
+            D10 = np.log(1/(Phwm*(N10 - N10*(Phwm*Davg_hw + Pcsm*Davg_cs))))/np.log(Phwsm)
+            D50 = np.log(1/(Phwm*(N50 - N50*(Phwm*Davg_hw + Pcsm*Davg_cs))))/np.log(Phwsm)
         
         # IPCC values must be normalized per duration to assure the correct amount
         # is added.
@@ -1556,6 +1642,9 @@ class DeltaTransition_IPCC_FigureSPM6():
             # The new model only shifts probabilities!
             del_mu_delT_max_hwm = 0 #npar[0]
             del_sig_delT_max_hwm = 0 #npar[1]
+            # delta from -1...1 boundaries of the original transformed delT_max distribution.
+            del_a_delT_max_hwm = 0
+            del_b_delT_max_hwm = 0
         else:
             
             new_delT_10 = delTmax10_hwm + abs_delT_10/(
@@ -1611,9 +1700,9 @@ class DeltaTransition_IPCC_FigureSPM6():
             del_sig_delT_max_hwm = npar[1]
         
 
-        # delta from -1...1 boundaries of the original transformed delT_max distribution.
-        del_a_delT_max_hwm = del_mu_delT_max_hwm - (1 + mu_norm)/(sig_norm) * del_sig_delT_max_hwm
-        del_b_delT_max_hwm = del_mu_delT_max_hwm + (1 - mu_norm)/(sig_norm) * del_sig_delT_max_hwm
+            # delta from -1...1 boundaries of the original transformed delT_max distribution.
+            del_a_delT_max_hwm = del_mu_delT_max_hwm - (1 + mu_norm)/(sig_norm) * del_sig_delT_max_hwm
+            del_b_delT_max_hwm = del_mu_delT_max_hwm + (1 - mu_norm)/(sig_norm) * del_sig_delT_max_hwm
         
         # adjusted durations - assume durations increase proportionally with temperature duration
         # regression alpha_T, beta_T
@@ -1625,6 +1714,7 @@ class DeltaTransition_IPCC_FigureSPM6():
             S_D_10 = 1+(abs_delT_10 * norm_duration)/(alphaT * norm_temp * D10)
         if S_D_10 < 1.0:
             raise ValueError("A decrease in 10 year durations is not expected for the current analysis!")
+            
         if self.use_global:
             S_D_50 = new_delT_50 / delTmax50_hwm
         else:
@@ -1641,25 +1731,27 @@ class DeltaTransition_IPCC_FigureSPM6():
             delT_abs_max = abs_delT_50 
         else:
             # this new equation is correct!
-            alpha_delT = (abs_delT_50 - abs_delT_10)/(D50-D10)
-            beta_delT = abs_delT_50 - alpha_delT * D50
-            delT_applied = alpha_delT * norm_duration + beta_delT
-            Dmax = norm_duration
-            S_Dmax = 1+(delT_applied * Dmax) / (alphaT * norm_temp * Dmax)
+            # 2 equations and two unknowns to enforce 10 and 50 year event durations
+            # - 1. The hourly probability of a 10 year heat wave event is multiplied by the frequency multiplier and 
+            #      increases in duration sufficiently to lead to a delT per IPCC's increase in intensity projection.
+            # - 2. Same but for a 50 year event.
+            #
+            f_ipcc_ci_10 * Phwm * Phwsm**D10
+            P_prime_hwsm = np.exp((np.log(f_ipcc_ci_50/f_ipcc_ci_10)+(D50-D10)*np.log(Phwsm))/(D50_prime - D10_prime))
+            P_prime_hwm = f_ipcc_ci_10 * Phwm * (Phwsm)**D10/(P_prime_hwsm)**(D10_prime)
+ 
+            # Verify that I did my algebra correctly
+            #P_check = f_ipcc_ci_50 * Phwm * (Phwsm)**D50/(P_prime_hwsm)**(D50*S_D_50)
             
-            Dprime_max = norm_duration * S_Dmax
-            P_prime_hwsm = np.exp(Dmax/Dprime_max * np.log(Phwsm))
-            delT_abs_max = np.max([delT_applied, abs_delT_50])
-            # old model
-            #(N10 * np.exp(np.log(Phwsm)/S_D_50) + N50 * np.exp(np.log(Phwsm)/S_D_10))/(N10 + N50)
-            
-        epsilon = 1.0e-6
-        if P_prime_hwsm+epsilon < Phwsm:
-            raise ValueError("The probability of sustaining a heat wave has decreased. "+
-                             "This should not happen in the current analysis!")
+            delT_abs_max = abs_delT_50
             
         # equation 31 scaling of energy
         if self.use_global:
+            epsilon = 1.0e-6
+            if P_prime_hwsm+epsilon < Phwsm:
+                raise ValueError("The probability of sustaining a heat wave has decreased. "+
+                                 "This should not happen in the current analysis!")
+            
             # equation 30 optimal scaling of D_HW_Pm
             S_D_m = np.log(Phwsm)/np.log(P_prime_hwsm)
             if S_D_m + epsilon < 1.0:
@@ -1667,52 +1759,44 @@ class DeltaTransition_IPCC_FigureSPM6():
                                  " must be greater than 1.0")
             
             S_E_m = S_D_m * (new_delT_10/delTmax10_hwm + new_delT_50/delTmax50_hwm)/2
+            
+            del_mu_E_hw_m = transform_fit(
+                S_E_m * inverse_transform_fit(
+                    normalized_energy['mu'], 
+                    hot_param['max energy per duration'], 
+                    hot_param['min energy per duration'])
+                ,hot_param['min energy per duration'],
+                 hot_param['max energy per duration'])-normalized_energy['mu']     
+            # transformation is not needed here, 
+            # be careful here! inverse transform and transform have different 
+            # orders for the min and max inputs!
+            del_sig_E_hw_m = transform_fit(
+                (inverse_transform_fit(
+                    normalized_ext_temp['sig'] + del_sig_delT_max_hwm, 
+                    maxtemp, 
+                    mintemp)/
+                  inverse_transform_fit(normalized_ext_temp['sig'],
+                                              maxtemp, 
+                                              mintemp))*
+                  inverse_transform_fit(normalized_energy['sig'], 
+                                              hot_param['max energy per duration'],
+                                              hot_param['min energy per duration']),
+                  hot_param['min energy per duration'],
+                  hot_param['max energy per duration'])-normalized_energy['sig']
+            
         else:
-            # new definition ties scaling of energy to the original alpha/beta linear regression
-            org_energy = (betaT + alphaT/2)
-            norm_delT_10 = abs_delT_10/norm_temp
-            norm_delT_50 = abs_delT_50/norm_temp
-            
-            S_E_10_m =  org_energy + norm_delT_10/alphaT * (alphaT+betaT) + 0.5/alphaT * norm_delT_10**2 
-            S_E_50_m =  org_energy + norm_delT_50/alphaT * (alphaT+betaT) + 0.5/alphaT * norm_delT_50**2
-            S_E_m = (N10 * S_E_50_m + N50 * S_E_10_m)/(N10 + N50)
-            
-            
-
-        del_mu_E_hw_m = transform_fit(
-            S_E_m * inverse_transform_fit(
-                normalized_energy['mu'], 
-                hot_param['max energy per duration'], 
-                hot_param['min energy per duration'])
-            ,hot_param['min energy per duration'],
-             hot_param['max energy per duration'])-normalized_energy['mu']     
-        # transformation is not needed here, 
-        # be careful here! inverse transform and transform have different 
-        # orders for the min and max inputs!
-        del_sig_E_hw_m = transform_fit(
-            (inverse_transform_fit(
-                normalized_ext_temp['sig'] + del_sig_delT_max_hwm, 
-                maxtemp, 
-                mintemp)/
-              inverse_transform_fit(normalized_ext_temp['sig'],
-                                          maxtemp, 
-                                          mintemp))*
-              inverse_transform_fit(normalized_energy['sig'], 
-                                          hot_param['max energy per duration'],
-                                          hot_param['min energy per duration']),
-              hot_param['min energy per duration'],
-              hot_param['max energy per duration'])-normalized_energy['sig']
-        
-        if self.use_global == False:
-            # Heat and temperature are now shifted naturally through increasing
-            # the likelihood of longer duration heat waves!
+            # no changes to truncated Gaussian for new use case     
             del_mu_E_hw_m = 0.0
             del_sig_E_hw_m = 0.0
         
         # delta from the -1..1 boundaries of the transformed Energy distribution (still in transformed space but no 
         # longer on the -1...1 interval.)
-        del_a_E_hw_m = del_mu_E_hw_m - (1 + normalized_energy['mu'])/(normalized_energy['sig']) * del_sig_E_hw_m
-        del_b_E_hw_m = del_mu_E_hw_m + (1 - normalized_energy['mu'])/(normalized_energy['sig']) * del_sig_E_hw_m
+        if self.use_global:
+            del_a_E_hw_m = del_mu_E_hw_m - (1 + normalized_energy['mu'])/(normalized_energy['sig']) * del_sig_E_hw_m
+            del_b_E_hw_m = del_mu_E_hw_m + (1 - normalized_energy['mu'])/(normalized_energy['sig']) * del_sig_E_hw_m
+        else:
+            del_a_E_hw_m = 0.0
+            del_b_E_hw_m = 0.0
         
         # for the current work, assume cold snaps do not change with climate
         # TODO - add cold snap changes (decreases?)
@@ -1721,6 +1805,10 @@ class DeltaTransition_IPCC_FigureSPM6():
         
         # NEXT STEPS - GATHER ALL YOUR VARIABLES AND FORMULATE THE DELTA M matrix
         # RETURN THEM SO YOU CAN GET THEM INTO MEWS' original EXTREMES class.
+        if abs(P_prime_hwm) > 1 or abs(P_prime_hwsm) > 1:
+            breakpoint()
+            raise ValueError("The adjusted probabilities must be less than one!")
+
         self.transition_matrix_delta = np.array(
             [[Phwm + Pcsm - P_prime_hwm - P_prime_csm, P_prime_csm - Pcsm, P_prime_hwm - Phwm],
              [Pcssm - P_prime_cssm, P_prime_cssm - Pcssm, 0.0],
@@ -1738,6 +1826,7 @@ class DeltaTransition_IPCC_FigureSPM6():
         dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
         dfraw.columns = ["10 year event","50 year event"]
         self.ipcc_fact = dfraw
+        self._durations = [D10,D10_prime,D50,D50_prime]
         
         
     def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):

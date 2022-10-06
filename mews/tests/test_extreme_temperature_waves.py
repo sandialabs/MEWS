@@ -7,6 +7,7 @@ Created on Thu Dec 16 16:07:57 2021
 
 
 from numpy.random import default_rng
+import pandas as pd
 
 import unittest
 import os
@@ -18,6 +19,7 @@ import warnings
 
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
+from mews.events.extreme_temperature_waves import fit_exponential_distribution
 from mews.graphics.plotting2D import Graphics
 import matplotlib.pyplot as plt
 import os
@@ -272,8 +274,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
 
         """
         
-        num_realizations = 10  # DO NOT CHANGE 
-                               # this test is focussing on validation for a 10 year event 
+        num_realizations = 10  
         
         future_year = 2080
         
@@ -296,7 +297,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         weather_files = [os.path.join("data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
         
         
-        metric_dict, mean5,mean50, mean95, obj = self._run_verification_study_of_use_global_False(
+        metric_dict, meanval, obj, clim_scen, scen_dict  = self._run_verification_study_of_use_global_False(
             num_realizations, 
             future_year, 
             random_seed, 
@@ -306,10 +307,12 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             self.data_folder,
             weather_files,
             station,
-            run_parallel = run_parallel)
+            run_parallel = run_parallel,
+            use_breakpoint=True)
         
-        self.assertGreater(mean50,mean5)
-        self.assertGreater(mean95, mean50)
+        breakpoint()
+        self.assertGreater(meanval["50%"],meanval["5%"])
+        self.assertGreater(meanval["95%"], meanval["50%"])
         
         for key,subdict in metric_dict.items():
             for key2, subdict2 in subdict.items():
@@ -325,7 +328,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                             self.assertGreaterEqual(perc_err_allowed, 100 * np.abs(sim_result / act_result-1))
                     
         # verify uniqueness and that random seed keeps random processes consistent
-        metric_dict_try1, mean5,mean50, mean95, obj0 = self._run_verification_study_of_use_global_False(
+        metric_dict_try1, meanval, obj0, clim_scen, scen_dict = self._run_verification_study_of_use_global_False(
             1, 
             future_year, 
             random_seed, 
@@ -336,7 +339,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             weather_files,
             station)
         
-        metric_dict_try2, mean5,mean50, mean95, obj1 = self._run_verification_study_of_use_global_False(
+        metric_dict_try2, meanval, obj1, clim_scen, scen_dict = self._run_verification_study_of_use_global_False(
             1, 
             future_year, 
             random_seed, 
@@ -362,7 +365,11 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     @staticmethod
     def _run_verification_study_of_use_global_False(num_realizations,future_year,random_seed,plot_results,scenario,
                                                     model_guide,data_folder,weather_files,station,print_progress=False,run_parallel=True,
-                                                    number_cores=20,write_results=False,scen_dict=None,clim_scen=None):
+                                                    number_cores=20,write_results=False,scen_dict=None,clim_scen=None,obj=None,
+                                                    ci_interval=["5%","50%","95%"],use_breakpoint=False):
+        
+
+        
         # this provides a template for the new use case where use_global = False. # target albuquerque, NM
         
         if clim_scen is None:
@@ -387,112 +394,229 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         ipcc = {}
         real_stats = {}
         prob_state = {}
-
-        obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
-                                          use_local=True,random_seed=random_seed,
-                                          include_plots=plot_results,
-                                          run_parallel=run_parallel,use_global=False,delT_ipcc_min_frac=1.0,
-                                          num_cpu=number_cores,write_results=write_results)
-
-        results0_05 = obj.create_scenario(scenario, 2014, num_year, 
-                                          scen_dict[scenario], 
-                                          num_realization=num_realizations,
-                                          obj_clim=clim_scen,
-                                          increase_factor_ci="5%")
-        ipcc['0_5%']= deepcopy(obj.ipcc_results['ipcc_fact'])
-
-        prob_state['0_5%'] = obj._objDM
-                
-
-        # Get temperature delT's in degrees centigrade
-
-        real_stats['0_5%'] = obj._real_value_stats('heat wave',scenario,2014,"5%","delT",np.array([192]))
-        
-        results0_50 = obj.create_scenario(scenario, 2014, num_year, 
-                                          scen_dict[scenario], 
-                                          num_realization=num_realizations,
-                                          obj_clim=clim_scen,
-                                          increase_factor_ci="50%")
-        ipcc['0_50%']= deepcopy(obj.ipcc_results['ipcc_fact'])  
-        prob_state['0_50%'] = obj._objDM
-        
-        # Get temperature delT's in degrees centigrade
-        real_stats['0_50%'] = obj._real_value_stats('heat wave',scenario,2014,"50%","delT",np.array([192]))
-
-        results0_95 = obj.create_scenario(scenario, 2014, num_year, 
-                                          scen_dict[scenario], 
-                                          num_realization=num_realizations,
-                                          obj_clim=clim_scen,
-                                          increase_factor_ci="95%")
-        ipcc['0_95%']= deepcopy(obj.ipcc_results['ipcc_fact']) 
-        prob_state['0_95%'] = obj._objDM
-        
-        # Get temperature delT's in degrees centigrade
-        real_stats['0_95%'] = obj._real_value_stats('heat wave',scenario,2014,"95%","delT",np.array([192]))
-
-        results5 = obj.create_scenario(scenario, future_year, num_year, 
-                                          scen_dict[scenario], 
-                                          num_realization=num_realizations,
-                                          obj_clim=clim_scen,
-                                          increase_factor_ci="5%")
-        
-        ipcc['5%'] = deepcopy(obj.ipcc_results['ipcc_fact'])
-        prob_state['5%'] = obj._objDM
-        
-        # Get temperature delT's in degrees centigrade
-        real_stats['5%'] = obj._real_value_stats('heat wave',scenario,future_year,"5%","delT",np.array([192]))
-        
-        results50 = obj.create_scenario(scenario, future_year, num_year, 
-                                          scen_dict[scenario], 
-                                          num_realization=num_realizations,
-                                          obj_clim=clim_scen,
-                                          increase_factor_ci="50%")
-        
-        ipcc['50%'] = deepcopy(obj.ipcc_results['ipcc_fact'])
-        prob_state['50%'] = obj._objDM
-        
-        # Get temperature delT's in degrees centigrade
-        real_stats['50%'] = obj._real_value_stats('heat wave',scenario,future_year,"50%","delT",np.array([192]))
-
-        results95 = obj.create_scenario(scenario, future_year, num_year, 
-                                          scen_dict[scenario], 
-                                          num_realization=num_realizations,
-                                          obj_clim=clim_scen,
-                                          increase_factor_ci="95%")
-        
-        # Get temperature delT's in degrees centigrade
-        real_stats['95%'] = obj._real_value_stats('heat wave',scenario,future_year,"95%","delT",np.array([192]))
-        
-        ipcc['95%'] = deepcopy(obj.ipcc_results['ipcc_fact'])
-        prob_state['95%'] = obj._objDM
         
         def get_mean(res,nr):
             sum_val = 0
             for year,alter_dict in res.items():
                 for tup, alter_obj in alter_dict.items():
                     sum_val = sum_val + alter_obj.epwobj.dataframe['Dry Bulb Temperature'].mean()
-            return sum_val/nr   
+            return sum_val/nr  
         
-        mean5 = get_mean(results5,num_realizations)
-        mean50 = get_mean(results50,num_realizations)
-        mean95 = get_mean(results95,num_realizations)
+        if obj is None:
+            obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
+                                              use_local=True,random_seed=random_seed,
+                                              include_plots=plot_results,
+                                              run_parallel=run_parallel,use_global=False,delT_ipcc_min_frac=1.0,
+                                              num_cpu=number_cores,write_results=write_results,test_markov=True)
+        
+        ipcc = {}
+        real_stats = {}
+        prob_state = {}
+        res_dict = {}
+        mean = {}
+        vdata = {}
+        
+        for ci_int in ci_interval:
+            id0 = "0_"+ci_int
+            
+            res_dict[id0] = obj.create_scenario(scenario, 2014, num_year, 
+                                          scen_dict[scenario], 
+                                          num_realization=num_realizations,
+                                          obj_clim=clim_scen,
+                                          increase_factor_ci=ci_int)
+            ipcc[id0]= deepcopy(obj.ipcc_results)
+
+            
+            prob_state[id0] = obj._objDM  
+
+            # Get temperature delT's in degrees centigrade
+
+            real_stats[id0] = obj._real_value_stats('heat wave',scenario,2014,ci_int,"delT",np.array([192]))
+        
+
+
+            res_dict[ci_int] = obj.create_scenario(scenario, future_year, num_year, 
+                                          scen_dict[scenario], 
+                                          num_realization=num_realizations,
+                                          obj_clim=clim_scen,
+                                          increase_factor_ci=ci_int)
+        
+            ipcc[ci_int] = deepcopy(obj.ipcc_results)
+            
+            prob_state[ci_int] = obj._objDM
+            # Get temperature delT's in degrees centigrade
+            real_stats[ci_int] = obj._real_value_stats('heat wave',scenario,future_year,ci_int,"delT",np.array([192]))
+            
+            vdata[ci_int] = obj._verification_data
+        
+            mean[ci_int] = get_mean(res_dict[ci_int],num_realizations)
+        
+
         # basic test making sure the multiplying factors have the right monotonic
         # trend on the CI. A more specific test is needed though verifying that
         # actual content is correct.
         
-        # Manually entered values that depend on the shift table.
-        res_dict = {"5%":results5,
-                    "50%":results50,
-                    "95%":results95,
-                    "0_5%":results0_05,
-                    "0_50%":results0_50,
-                    "0_95%":results0_95}
-    
+        #num_hw_dict = Test_ExtremeTemperatureWaves()._get_hw_statistics(res_dict,num_realizations)
+        
+        
+        # Create metrics needed.
+        metric_dict = {"Frequency":{},"Intensity":{}}
+        
 
+        temp_diff = {}
+        for key,tup in res_dict.items(): # confidence interval loop [5%,50%,95%]
+            if key[0] != '0':  
+
+                ipcc_delT_exact = {}
+                freq_result_act = {}
+                freq_result_sim = {}
+                
+                for month in range(1,13):  # month loop
+
+                    mean_val = []
+                    max_val = []
+                    
+                    # get durations of extreme events.
+                    #D10 = ipcc[key]['durations'][month][0]
+                    fut_D10_prime = ipcc[key]['durations'][month][1]
+                    #D50 = ipcc[key]['durations'][month][2]
+                    fut_D50_prime = ipcc[key]['durations'][month][3]
+                    #D10 = ipcc['0_'+key]['durations'][month][0]
+                    base_D10_prime = ipcc['0_'+key]['durations'][month][1]
+                    #D50 = ipcc['0_'+key]['durations'][month][2]
+                    base_D50_prime = ipcc['0_'+key]['durations'][month][3]
+
+                    # get heat wave duration data
+                    
+                    # future year 
+                    fut_hws_arr = np.array([])
+                    for realization in range(num_realizations):
+                        # realization heat wave sustained array
+                        hws_arr0 = np.concatenate([np.array(li[1]) for li in vdata[key][2080]['freq_s'] if li[2]==month and li[0][1]==realization])
+                        fut_hws_arr = np.concatenate([fut_hws_arr,hws_arr0])
+                    
+                    fut_num_10_events = (fut_hws_arr > fut_D10_prime).sum()
+                    fut_num_50_events = (fut_hws_arr > fut_D50_prime).sum()
+                    
+                    # base year 
+                    base_hws_arr = np.array([])
+                    for realization in range(num_realizations):
+                        # realization heat wave sustained array
+                        hws_arr0 = np.concatenate([np.array(li[1]) for li in vdata[key][2014]['freq_s'] if li[2]==month and li[0][1]==realization])
+                        base_hws_arr = np.concatenate([base_hws_arr,hws_arr0])
+                    
+                    base_num_10_events = (base_hws_arr > base_D10_prime).sum()
+                    base_num_50_events = (base_hws_arr > base_D50_prime).sum()
+                    
+
+                    # get ipcc factors.  
+                    base_freq_incr_10 = ipcc['0_'+key]['ipcc_fact'][1].loc[key+" CI Increase in Frequency","10 year event"]
+                    base_freq_incr_50 = ipcc['0_'+key]['ipcc_fact'][1].loc[key+" CI Increase in Frequency","50 year event"]
+                    
+                    fut_freq_incr_10 = ipcc[key]['ipcc_fact'][1].loc[key+" CI Increase in Frequency","10 year event"]
+                    fut_freq_incr_50 = ipcc[key]['ipcc_fact'][1].loc[key+" CI Increase in Frequency","50 year event"]
+
+                    for year in [2014,2080]:
+                        df_temp = pd.DataFrame(np.array([[val['delT_max_0']+
+                                                     val['delTmax']]
+                                   for val in vdata[key][year]['delTmax'] if val['s_month']==month]),columns=[
+                                           "delTmax original"])
+
+                        mean_val.append(df_temp.mean().values[0])
+                        max_val.append(df_temp.max().values[0])
+                    temp_diff[month] = {'mean':mean_val[1] - mean_val[0],'max':max_val[1] - max_val[0]}
+                    
+                                        
+                    # original IPCC check 
+                    ipcc_delT_exact[month] = (ipcc[key]['ipcc_fact'][month].loc[key+" CI Increase in Intensity","10 year event"]-
+                                       ipcc['0_'+key]['ipcc_fact'][month].loc[key+" CI Increase in Intensity","10 year event"],
+                                       ipcc[key]['ipcc_fact'][month].loc[key+" CI Increase in Intensity","50 year event"]-
+                                       ipcc['0_'+key]['ipcc_fact'][month].loc[key+" CI Increase in Intensity","50 year event"])
+                    
+                    freq_result_sim[month] = (fut_num_10_events/base_num_10_events, fut_num_50_events/base_num_50_events)
+                    freq_result_act[month] = (fut_freq_incr_10/base_freq_incr_10, fut_freq_incr_50/base_freq_incr_50)
+                
+                # collect all of the metrics into a dictionary useful for the convergence study.
+                metric_dict["Frequency"][key] = {"MEWS statistical value": freq_result_sim,"IPCC actual value":freq_result_act}
+                metric_dict["Intensity"][key] = {"MEWS statistical value": temp_diff,"IPCC actual value":ipcc_delT_exact}
+                
+                    
+                    # if num_hw_dict['0_'+key][0]['0_'+key][month] == 0:
+                    #     mult[month] = None
+                    # else:
+                    #     mult[month] = num_hw_dict[key][0][key][month]/num_hw_dict['0_'+key][0]['0_'+key][month]
+                    
+                    # # this isn't exact. There is some variation month to month  but it is minor variation
+                    # # so we don't integrate across the months. 
+                    # # base_freq_incr_10 = ipcc['0_'+key][1].loc[key+" CI Increase in Frequency","10 year event"]
+                    # # base_freq_incr_50 = ipcc['0_'+key][1].loc[key+" CI Increase in Frequency","50 year event"]
+                    
+                    # # fut_freq_incr_10 = ipcc[key][1].loc[key+" CI Increase in Frequency","10 year event"]
+                    # # fut_freq_incr_50 = ipcc[key][1].loc[key+" CI Increase in Frequency","50 year event"]
+            
+                    # # This adjustment is needed because we are only assessing times when the possibility of
+                    # # a heat wave is the adjusted probability. This excludes times inside a heat wave and
+                    # # also excludes times in cold snaps.
+                    # hour_in_month = monthrange(future_year,month)[1]*hour_in_day
+                    # adj[month] = ((1 - (num_hw_dict[key][2][key][month]+num_hw_dict[key][3][key][month])/hour_in_month)/
+                    #       (1 - (num_hw_dict['0_'+key][2]['0_'+key][month]+num_hw_dict['0_'+key][3]['0_'+key][month])/hour_in_month))
+                    
+                    # # These raw factors have been verified to be correctly passed.
+                    # #res_ = (fut_freq_incr_10 * N50 + fut_freq_incr_50 * N10)/(N10 + N50)
+                    # #res_0 = (base_freq_incr_10 * N50 + base_freq_incr_50 * N10)/(N10 + N50)
+                    
+                    # skey = (weather_files[0], 0, future_year)
+                    # okey = (weather_files[0], 0, 2014)
+                    
+                    # act_result[month] = prob_state[key][skey][month]._mat[0,2]/prob_state['0_'+key][okey][month]._mat[0,2]
+                        
+                    # if mult[month] is None:
+                    #     sim_result[month] = None
+                    # else:
+                    #     sim_result[month] = mult[month]/adj[month]
+    
+                    # #print("Error between table lookup and \n\n {0:5.2f}".format(100 * np.abs(sim_result / act_result-1)))
+                    
+                    
+                    # # now focus on temperature
+                    # if (not num_hw_dict[key][1][key][month] is None) and (not num_hw_dict['0_'+key][1]['0_'+key][month] is None):
+                    #     delTmax0 = num_hw_dict['0_'+key][1]['0_'+key][month] #(np.array(num_hw_dict['0_'+key][4]['0_'+key][month])/np.array(num_hw_dict['0_'+key][5]['0_'+key][month]))
+                    #     delTmax = num_hw_dict[key][1][key][month]
+                    #     # difference in the 10 year event!
+
+                    #     ipcc_delT_estimated[month] = delTmax.max() - delTmax0.max()
+                        
+                    # else:
+
+                    #     ipcc_delT_estimated[month] = None
+                    
+                    # # original IPCC check 
+                    # ipcc_delT_exact[month] = (ipcc[key][month].loc[key+" CI Increase in Intensity","10 year event"]-
+                    #                    ipcc['0_'+key][month].loc[key+" CI Increase in Intensity","10 year event"],
+                    #                    ipcc[key][month].loc[key+" CI Increase in Intensity","50 year event"]-
+                    #                    ipcc['0_'+key][month].loc[key+" CI Increase in Intensity","50 year event"])
+                    
+                    
+
+
+        
+        # These results are not what you expected. The temperature increase 
+        # is much too big per heat wave.
+        if plot_results:
+            fig,ax = Graphics.plot_realization(res_dict[ci_interval[0]],"Dry Bulb Temperature",1)
+
+        if use_breakpoint:
+            breakpoint()
+        return metric_dict, mean, obj, clim_scen, scen_dict
+            
+    @staticmethod
+    def _get_hw_statistics(res_dict,num_realizations):
+        # post process to get heat wave statistics between 2014 and 2080
         num_hw_dict = {}
         
         num_hw_d = {}
         Tmax_d = {}
+        hw_duration = {}
         num_hr_in_hw_d = {}
         num_hr_in_cs_d = {}
         
@@ -505,6 +629,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             #LOOP OVER CI AND 2014 (0_) vs 2080 
             num_hw_d[key] = {}
             Tmax_d[key] = {}
+            hw_duration[key] = {}
             num_hr_in_hw_d[key] = {}
             num_hr_in_cs_d[key] = {}  
             
@@ -522,11 +647,19 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                             num_hw_d[key][month] = 0
                             num_hw_d[key][month] = 0
                             Tmax_d[key][month] = []
+                            hw_duration[key][month] = []
                             num_hr_in_hw_d[key][month] = 0
                             num_hr_in_cs_d[key][month] = 0    
-                    
+
                     df_status = objA.status()
                     df_status['month'] = objA.reindex_2_datetime().index.month
+                    
+                    total_hw_hr = (df_status["Status"]==1).sum()
+                    
+                    for month in range(1,13):
+                        num_hr_in_hw_d[key][month] += ((df_status["Status"]==1) & (df_status["month"]==month)).sum()
+                        num_hr_in_cs_d[key][month] += ((df_status["Status"]==-1) & (df_status["month"]==month)).sum()
+                    
                     
                     for key4, alt in objA.alterations.items():
                         if key4 != "global temperature trend":
@@ -536,25 +669,25 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                 else:
                                     next_month = month + 1
                                 
-                                num_in_month = (df_status.loc[alt.index,"month"]==month).sum()
+                                num_in_month = Test_ExtremeTemperatureWaves().get_hw_hour_count(df_status,alt,month)
+                                
                                 if num_in_month == 0:
                                     continue
                                 else:
-                                    num_in_next_month = (df_status.loc[alt.index,"month"]==next_month).sum()
+                                    num_in_next_month = Test_ExtremeTemperatureWaves().get_hw_hour_count(df_status,alt,next_month)
                                     # then we have a heat wave or cold snap that belongs to this month.    
                                     if alt.sum().values[0] > 0.0:
                                         if num_in_month >= num_in_next_month:
                                             num_hw_d[key][month] += 1
                                             Tmax_d[key][month].append(alt.max().values[0] + objA._unit_test_data[key4][1])
+                                            hw_duration[key][month].append(len(alt)/objA._unit_test_data[key4][3])
                                         else:
                                             num_hw_d[key][next_month] += 1
                                             Tmax_d[key][next_month].append(alt.max().values[0] + objA._unit_test_data[key4][1])
+                                            hw_duration[key][next_month].append(len(alt)/objA._unit_test_data[key4][3])
                                         
-                                        num_hr_in_hw_d[key][month] += num_in_month
-                                        num_hr_in_hw_d[key][next_month] += num_in_next_month 
-                                    else:
-                                        num_hr_in_cs_d[key][month] += num_in_month
-                                        num_hr_in_cs_d[key][next_month] += num_in_next_month
+              
+                    check_hr_count = np.array([num_hr_in_hw_d[key][mon] for mon in range(1,13)]).sum()
 
             
 
@@ -568,88 +701,18 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     max_Tmax[key][month] = None
                 avg_hr_in_cs[key][month] = num_hr_in_cs_d[key][month] / num_realizations
             
-            num_hw_dict[key] = [avg_num_hw,max_Tmax,avg_hr_in_hw,avg_hr_in_cs,Tmax_d]
-        
-        metric_dict = {"Frequency":{},"Intensity":{}}
-        
-        
-        for key,tup in res_dict.items():
-            if key[0] != '0':  
-                ipcc_delT_estimated = {} 
-                ipcc_delT_exact = {}
-                mult = {}
-                sim_result = {}
-                act_result = {}
-                for month in range(1,13):
-                    if num_hw_dict['0_'+key][0]['0_'+key][month] == 0:
-                        mult[month] = None
-                    else:
-                        mult[month] = num_hw_dict[key][0][key][month]/num_hw_dict['0_'+key][0]['0_'+key][month]
-                    
-                    # this isn't exact. There is some variation month to month  but it is minor variation
-                    # so we don't integrate across the months. 
-                    # base_freq_incr_10 = ipcc['0_'+key][1].loc[key+" CI Increase in Frequency","10 year event"]
-                    # base_freq_incr_50 = ipcc['0_'+key][1].loc[key+" CI Increase in Frequency","50 year event"]
-                    
-                    # fut_freq_incr_10 = ipcc[key][1].loc[key+" CI Increase in Frequency","10 year event"]
-                    # fut_freq_incr_50 = ipcc[key][1].loc[key+" CI Increase in Frequency","50 year event"]
+            num_hw_dict[key] = [avg_num_hw,max_Tmax,avg_hr_in_hw,avg_hr_in_cs,Tmax_d,hw_duration]
             
-                    # This adjustment is needed because we are only assessing times when the possibility of
-                    # a heat wave is the adjusted probability. This excludes times inside a heat wave and
-                    # also excludes times in cold snaps.
-                    hour_in_month = monthrange(future_year,month)[1]*hour_in_day
-                    adj = ((1 - (num_hw_dict[key][2][key][month]+num_hw_dict[key][3][key][month])/hour_in_month)/
-                          (1 - (num_hw_dict['0_'+key][2]['0_'+key][month]+num_hw_dict['0_'+key][3]['0_'+key][month])/hour_in_month))
-                    
-                    # These raw factors have been verified to be correctly passed.
-                    #res_ = (fut_freq_incr_10 * N50 + fut_freq_incr_50 * N10)/(N10 + N50)
-                    #res_0 = (base_freq_incr_10 * N50 + base_freq_incr_50 * N10)/(N10 + N50)
-                    
-                    skey = (weather_files[0], 0, future_year)
-                    okey = (weather_files[0], 0, 2014)
-                    
-                    act_result[month] = prob_state[key][skey][month]._mat[0,2]/prob_state['0_'+key][okey][month]._mat[0,2]
-                        
-                    if mult[month] is None:
-                        sim_result[month] = None
-                    else:
-                        sim_result[month] = mult[month]/adj
+        return num_hw_dict
     
-                    #print("Error between table lookup and \n\n {0:5.2f}".format(100 * np.abs(sim_result / act_result-1)))
-                    
-                    
-                    # now focus on temperature
-                    if (not num_hw_dict[key][1][key][month] is None) and (not num_hw_dict['0_'+key][1]['0_'+key][month] is None):
-                        
-                        delTmax0 = num_hw_dict['0_'+key][1]['0_'+key][month]
-                        delTmax = num_hw_dict[key][1][key][month]
-                        # difference in the 10 year event!
-                        ipcc_delT_estimated[month] = delTmax.max() - delTmax0.max()
-                        
-                    else:
-                        ipcc_delT_estimated[month] = None
-                    
-                    # original IPCC check 
-                    ipcc_delT_exact[month] = (ipcc[key][month].loc[key+" CI Increase in Intensity","10 year event"]-
-                                       ipcc['0_'+key][month].loc[key+" CI Increase in Intensity","10 year event"],
-                                       ipcc[key][month].loc[key+" CI Increase in Intensity","50 year event"]-
-                                       ipcc['0_'+key][month].loc[key+" CI Increase in Intensity","50 year event"])
-                    
-                    
+    @staticmethod
+    def get_hw_hour_count(df_status,alt,month):
 
-                metric_dict["Frequency"][key] = {"MEWS statistical value": sim_result,"IPCC actual value":act_result}
-                metric_dict["Intensity"][key] = {"MEWS statistical value": ipcc_delT_estimated,"IPCC actual value":ipcc_delT_exact}
-        
-        # These results are not what you expected. The temperature increase 
-        # is much too big per heat wave.
-        if plot_results:
-            fig,ax = Graphics.plot_realization(results95,"Dry Bulb Temperature",1)
-        
-        
-        return metric_dict, mean5, mean50, mean95, obj, clim_scen, scen_dict
+        df_pass_ind = df_status.loc[alt.index,"month"] == month
+        num_in_month = len(alt.loc[df_pass_ind])
+
+        return num_in_month
             
-            
-        
         
         
             

@@ -515,13 +515,15 @@ class Extremes():
                  use_global=True,
                  baseline_year=2014,
                  norms_hourly=None,
-                 num_cpu=None):
+                 num_cpu=None,
+                 test_markov=False):
         
         self._num_cpu = filter_cpu_count(num_cpu)
         self.use_global = use_global
         self.baseline_year = baseline_year
-        self.delTmax_verification_data = [] # used in unit testing
+        self._delTmax_verification_data = {"delTmax":[],"freq_s":[]} # used in unit testing
         self._objDM = None
+        
         # input checking
         if not isinstance(weather_files,list):
             raise TypeError("The 'weather_files' input must be a list of strings!")
@@ -599,7 +601,7 @@ class Extremes():
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
                                 new_input_format,climate_temp_func,averaging_steps,rng,
-                                no_climate_trend,norms_hourly)
+                                no_climate_trend,norms_hourly,key_name,test_markov)
                         results[key_name] = pool.apply_async(self._process_wfile,
                                                          args=args)
                     else:
@@ -613,7 +615,8 @@ class Extremes():
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
                                 new_input_format,climate_temp_func,averaging_steps,
-                                self.rng,no_climate_trend,norms_hourly)
+                                self.rng,no_climate_trend,norms_hourly,key_name,
+                                test_markov)
         
         if run_parallel:
             results_get = {}
@@ -705,7 +708,7 @@ class Extremes():
                        test_shape_func,doe2_in, max_E_dist,del_max_E_dist,
                        min_E_dist,del_min_E_dist, new_input_format,
                        climate_temp_func,averaging_steps,rng, no_climate_trend,
-                       norms_hourly):
+                       norms_hourly,key_name,test_markov):
         # THIS IS USUALLY IN A PARALLEL mode so debugging can be hard unless
         # you set run_parallel to False.
         objDM_dict = {}
@@ -735,20 +738,40 @@ class Extremes():
                 objDM = DiscreteMarkov(rng, modified_trans_matrix, 
                                        state_name, use_cython)
                 
-                if states_arr is None:
-                    states_arr = objDM.history(month_num_steps, state0,count_in_min_steps_intervals=False)
+                if test_markov:
+                    # adjust to a longer time period so that it is nearly
+                    # certain another heat wave will occur.
+                    adj_num_step = 8760 # simulate an entire year
                 else:
-                    states_arr = np.concatenate((states_arr, objDM.history(
-                                    month_num_steps, 
-                                    state0,
-                                    count_in_min_steps_intervals=False)))
-                
+                    adj_num_step = month_num_steps
+
+                states_arr0 = objDM.history(adj_num_step, state0,count_in_min_steps_intervals=False)    
+
+                if test_markov:
+                    # this testing allows the markov process to continue beyond the extend of the current month
+                    # so that the heat wave duration and time between heat waves can be quantified for an unchanging Markov process.
+                    # this information is used to properly validate the frequency and duration characteristics of 10 and 50 year events that 
+                    # MEWS focuses on.
+
+                    state_intervals = self._find_extreme_intervals(states_arr0, state_int)
+                    delt_between_hw = [tup1[0]-tup0[0] for tup1,tup0 in zip(state_intervals[1][1:],state_intervals[1][0:-1]) if tup0[0] <= month_num_steps]
+                    delt_in_hw = [tup[1]-tup[0]+1 for tup in state_intervals[1] if tup[0] <= month_num_steps]
+                    self._delTmax_verification_data["freq_s"].append({"key_name":key_name,"time delta between consecutive heat waves":delt_between_hw,month,"heat wave duration":delt_in_hw})
+                    states_arr0 = states_arr0[0:month_num_steps]
+                    
+                if states_arr is None:
+                    states_arr = states_arr0
+                else:
+                    states_arr = np.concatenate((states_arr, states_arr0))
+                    
                 objDM_dict[month] = objDM 
                 state0 = state_name[states_arr[-1]]
             
             #import matplotlib.pyplot as plt
             #plt.plot(states_arr)
         else:
+
+            
             objDM = DiscreteMarkov(rng,transition_matrix 
                                + transition_matrix_delta 
                                * (year - start_year),
@@ -756,15 +779,16 @@ class Extremes():
             
             objDM_dict["no months"] = objDM
             
-
+            # generate a history
+            states_arr = objDM.history(num_step,"normal",min_steps=min_steps)
+            
         # distinguish the shape function type
         if new_input_format:
             shape_function_type = "heat_wave_shape_func"
         else:
             shape_function_type = "double_shape_func"
         
-            # generate a history
-            states_arr = objDM.history(num_step,"normal",min_steps=min_steps)
+
         # separate history into extreme states.
         state_intervals = self._find_extreme_intervals(states_arr, state_int)
         for state, s_ind in zip(state_intervals,state_int):
@@ -813,7 +837,7 @@ class Extremes():
                 else:
                     local_norms_hourly = None
                 
-                new_vals,heat_added_0,delT_max_0 = self._add_extreme(org_series.iloc[tup[0]:tup[1]+1], 
+                new_vals,heat_added_0,delT_max_0,norm_temp, norm_dur = self._add_extreme(org_series.iloc[tup[0]:tup[1]+1], 
                                   avg_dist, avg_delta,
                                   frac_long_wave=frac_long_wave,
                                   min_steps=min_steps,
@@ -824,7 +848,8 @@ class Extremes():
                                   org_dates=org_dates[tup[0]:tup[1]+1],
                                   rng=rng,
                                   norms_hourly=local_norms_hourly,
-                                  is_hw=is_hw)
+                                  is_hw=is_hw,
+                                  key_name=key_name)
 
                 new_date_start = org_dates[new_vals.index[0]]
                 duration = len(new_vals)
@@ -845,7 +870,7 @@ class Extremes():
                 
                 # this is used to figure out what the actual delT is for each
                 # heat wave as sampled before renormalizing to the climate normals.
-                objA._unit_test_data[alt_name] = (heat_added_0,delT_max_0)
+                objA._unit_test_data[alt_name] = (heat_added_0,delT_max_0,norm_temp,norm_dur)
                 
         if not climate_temp_func is None and not no_climate_trend:
             # TODO - add the ability to continuously change the trend or to
@@ -909,8 +934,28 @@ class Extremes():
         return objA
 
     def _find_extreme_intervals(self,states_arr,states):
+        """
+        This function returns a dictionary whose entry keys are 
+        the "states" input above. Each dictionary element contains 
+        a list of tuples. Each tuple contains the start and end times 
+        of an event where "states_arr" was equal to the corresponding state
+
+        Parameters
+        ----------
+        states_arr : array-like
+            a 1-D array of integers of values that are only in the states input
+        states : array-like,list-like
+            a 1-D array of values to look for in states_arr. 
+
+        Returns
+        -------
+        state_int_dict : TYPE
+            DESCRIPTION.
+
+        """ 
+        
         diff_states = np.concatenate((np.array([0]),np.diff(states)))
-        state_int_list = []
+        state_int_dict = {}
         for state in states:
             state_ind = [i for i, val in enumerate(states_arr==state) if val]
             end_points = [i for i, val in enumerate(np.diff(state_ind)>1) if val]
@@ -924,8 +969,8 @@ class Extremes():
                 for ep in end_points:
                     ep_list.append((state_ind[start_point],state_ind[ep]))
                     start_point = ep+1
-            state_int_list.append(ep_list)
-        return state_int_list
+            state_int_dict[state] = ep_list
+        return state_int_dict
 
     @staticmethod
     def double_shape_func(t,A,B,D,min_s):
@@ -951,7 +996,7 @@ class Extremes():
     
     def _add_extreme(self,org_vals,integral_dist,integral_delta,frac_long_wave,min_steps,
                      shape_func_type=None, test_shape_func=False, peak_dist=None, peak_delta=None,
-                     org_dates=None,rng=None,norms_hourly=None,is_hw=True):
+                     org_dates=None,rng=None,norms_hourly=None,is_hw=True,key_name=None):
         """
         >>> obj._add_extreme(org_vals,
                              integral_dist,
@@ -963,7 +1008,8 @@ class Extremes():
                              peak_dist=None,
                              peak_delta=None,
                              norms_hourly=None,
-                             is_hw=True)
+                             is_hw=True,
+                             key_name=None)
 
         Parameters
         ----------
@@ -1023,6 +1069,10 @@ class Extremes():
         is_hw : optional : Boolean : Default = True
             If false, a cold snap is being added 
             If true , a heat wave is being added.
+            
+        key_name : optional : tuple : Default = None
+            Passes on the tuple of realization number, weather file and year
+            for identifying the exact placement of a heat wave in validation data
 
         Returns
         -------
@@ -1108,6 +1158,11 @@ class Extremes():
             S_E = 0.0
             S_T = 0.0
             abs_maxval_delT = param['normalizing extreme temp']
+            
+            if abs_maxval_delT > 0.0:
+                pass  # place to debug for heat waves
+            else:
+                pass  # place to debug for cold snaps
 
             # introduce a delta if it exists.
             if not integral_delta is None:
@@ -1159,15 +1214,14 @@ class Extremes():
                     # heat between current weather and climate norms. This is heat that already
                     # counts for heat waves that are baselined off the climate norms
                     heat_added_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).sum()
-                    delT_max_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).min()
+                    delT_max_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).mean()
                     
                 else:
                     heat_added_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).sum()
-                    delT_max_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).max()
+                    delT_max_0 = (org_vals.values - norms_hourly["HLY-TEMP-NORMAL"].values).mean()
             else:
                 heat_added_0 = 0.0
                 delT_max_0 = 0.0
-                
                 
             # these are both normalized off of the original climate normals that were used as the heat wave
             # standard. 
@@ -1239,7 +1293,24 @@ class Extremes():
             
             if iter0 >= max_iter:
                 raise ValueError("The E and delTmax sampling could not find a physically real solution!")
-                
+            
+            if is_hw:
+                self._delTmax_verification_data["delTmax"].append({"delT_max_0":delT_max_0,
+                                                                   "delTmax":delTmax,
+                                                                   "coef_delTmax":Acoef + 2*Bcoef,
+                                                                   "norm_temperature":norm_temperature,
+                                                                   "maxval_T":maxval_T,
+                                                                   "T_per_duration":T_per_duration,
+                                                                   "duration":duration,
+                                                                   "norm_duration":norm_duration,
+                                                                   "minval_T":minval_T,
+                                                                   "mu_T":mu_T,
+                                                                   "sig_T":sig_T,
+                                                                   "abs_maxval_delT":abs_maxval_delT,
+                                                                   "s_month":s_month,
+                                                                   "org_dates":org_dates,
+                                                                   "key_name":key_name})    
+            
             # for unit testing, assure the shape function used integrates 
             # correctly
      
@@ -1256,7 +1327,7 @@ class Extremes():
         
 
         
-        return new_vals, heat_added_0, delT_max_0
+        return new_vals, heat_added_0, delT_max_0, norm_temperature, norm_duration
         
         
         
