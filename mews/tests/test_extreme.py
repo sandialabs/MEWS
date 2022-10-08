@@ -20,9 +20,8 @@ must be replicated in any derivative works that use the source code.
 @author: dlvilla
 """
 
-from mews.weather import Alter
-from mews.cython import markov_chain
-from mews.stats.markov import MarkovPy
+
+
 from mews.stats.extreme import DiscreteMarkov
 from mews.stats.extreme import Extremes
 from mews.graphics.plotting2D import Graphics
@@ -32,11 +31,10 @@ import unittest
 import os
 from matplotlib import pyplot as plt
 from matplotlib import rc
-from time import perf_counter_ns
-import scipy as sp
+
 from datetime import datetime
 import warnings
-import logging
+
 rng = default_rng()
 
 
@@ -88,94 +86,6 @@ class Test_Extreme(unittest.TestCase):
         if cls.from_main_dir:
             os.chdir(os.path.join("..",".."))
 
-            
-    def test_MarkovChain(self):
-        always0 = np.array([[1,0],[1,0]],dtype=np.float)
-        state0 = np.int32(0)
-        rand = self.rng.random(10000)
-
-        value = markov_chain(always0,rand,state0)
-        value_py = MarkovPy.markov_chain_py(always0,rand,state0)
-        np.testing.assert_array_equal(value,value_py)
-        self.assertTrue(value_py.sum() == 0.0)
-        
-        two_state_equal = np.array([[0.5,0.5],[0.5,0.5]])
-        rand = self.rng.random(100000)
-        value = markov_chain(two_state_equal.cumsum(axis=1),rand,state0)
-        value_py = MarkovPy.markov_chain_py(two_state_equal.cumsum(axis=1),rand,state0)
-        np.testing.assert_array_equal(value,value_py)
-        # in the limit, the average value should approach 0.5.
-        self.assertTrue(np.abs(value.sum()/100000 - 0.5) < 0.01)
-        
-        always1 = np.array([[0,1],[0,1]],dtype=np.float)
-        state0 = 1
-        rand = self.rng.random(10000)
-        
-        value = markov_chain(always1,rand,state0)
-        self.assertTrue(value.sum() == 10000)
-        
-        
-        # now do a real calculation
-        three_state = np.array([[0.9,0.04,0.06],[0.5,0.495,0.005],[0.5,0.005,0.495]])
-        val,vec = np.linalg.eig(np.transpose(three_state))
-        rand = self.rng.random(np.int(1e6))
-        
-        tic_c = perf_counter_ns()
-        value = markov_chain(three_state.cumsum(axis=1),rand,state0)
-        toc_c = perf_counter_ns()
-        
-        tic_py = perf_counter_ns()
-        value_py = MarkovPy.markov_chain_py(three_state.cumsum(axis=1),rand,state0)
-        toc_py = perf_counter_ns()
-        
-        self.assertAlmostEqual((value-value_py).sum(),0.0)
-
-        ctime = toc_c - tic_c
-        pytime = toc_py - tic_py
-
-        self.assertTrue(ctime < pytime)
-        
-        # calculate the steady state via taking the eigenvector of eigenvalue 1
-        # eig will handle a left-stochastic matrix so a transpose operation
-        # is needed.
-        val,vec = np.linalg.eig(np.transpose(three_state))
-        steady = vec[:,0]/vec.sum(axis=0)[0]
-        
-        fig,axl = plt.subplots(1,2,figsize=(20,10))
-        nn = axl[1].hist(value,bins=[-0.5,0.5,1.5,2.5],density=True)
-        axl[1].set_ylabel("Fraction of time in state")
-        axl[0].plot(value[0:1000])
-        if not self.plot_results:
-            plt.close(fig=fig)
-        
-        # verify loose convergence.
-        self.assertTrue(np.linalg.norm(nn[0] - steady) < 0.01)
-        
-        logging.log(0,"\n\n")
-        logging.log(0,"For 1e6 random numbers a 3-state Markov"
-               +" Chain in python took: {0:5.3e} seconds".format(
-                   (toc_py - tic_py)/1e9))
-        logging.log(0,"For 1e6 random numbers a 3-state Markov"
-               +" Chain in cython took: {0:5.3e} seconds".format(
-                   (toc_c - tic_c)/1e9))
-        
-        if pytime/10 < ctime:  
-            raise UserWarning("The cython markov_chain function is less than"
-                              +" 10x faster than native python!")
-
-        state0 = 1 # 2 on wikipedia
-        cat_and_mouse = np.array([[0,0,0.5,0,0.5],
-                                  [0,0,1,0,0],
-                                  [0.25,0.25,0,0.25,0.25],
-                                  [0,0,0.5,0,0.5],
-                                  [0,0,0,0,1.0]],dtype=np.float)                  
-        rand = self.rng.random(1000)
-        
-        # this is a markov process which must reach a stationary state of 4 
-        # no matter what see https://en.wikipedia.org/wiki/Stochastic_matrix
-        value = markov_chain(cat_and_mouse.cumsum(axis=1),rand,state0)[-1]
-        
-        self.assertEqual(value,4)
     
     def test_extreme_exceptions(self):
         

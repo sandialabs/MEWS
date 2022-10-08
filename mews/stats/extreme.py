@@ -756,7 +756,9 @@ class Extremes():
                     state_intervals = self._find_extreme_intervals(states_arr0, state_int)
                     delt_between_hw = [tup1[0]-tup0[0] for tup1,tup0 in zip(state_intervals[1][1:],state_intervals[1][0:-1]) if tup0[0] <= month_num_steps]
                     delt_in_hw = [tup[1]-tup[0]+1 for tup in state_intervals[1] if tup[0] <= month_num_steps]
-                    self._delTmax_verification_data["freq_s"].append({"key_name":key_name,"time delta between consecutive heat waves":delt_between_hw,month,"heat wave duration":delt_in_hw})
+                    self._delTmax_verification_data["freq_s"].append({"key_name":key_name,
+                                                                      "time delta between consecutive heat waves":delt_between_hw,"month":month,
+                                                                      "heat wave duration":delt_in_hw})
                     states_arr0 = states_arr0[0:month_num_steps]
                     
                 if states_arr is None:
@@ -791,7 +793,7 @@ class Extremes():
 
         # separate history into extreme states.
         state_intervals = self._find_extreme_intervals(states_arr, state_int)
-        for state, s_ind in zip(state_intervals,state_int):
+        for (junk,state),s_ind in zip(state_intervals.items(),state_int):
 
             if s_ind==1:
                 is_hw = False
@@ -1126,6 +1128,8 @@ class Extremes():
             # more recent use case.
             heat_added_0 = None
             delT_max_0 = None
+            norm_temperature = None
+            norm_duration = None
             
         elif shape_func_type == "heat_wave_shape_func":
             # THIS IS HIGHLY REPETITIVE - perhaps some code refactoring would be appropriate

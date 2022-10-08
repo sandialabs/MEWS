@@ -31,13 +31,28 @@ ext_modules = []
 if use_cython:
     # include_dirs is needed here for MAC OS systems
     ext_modules += [
-        Extension("mews.cython.markov", ["mews/cython/markov.pyx"],include_dirs=[np.get_include()]),
-    ]
+        Extension("mews.cython.markov",
+                  ["mews/cython/markov.pyx"],
+                  include_dirs=[np.get_include()],
+                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),
+        Extension("mews.cython.markov_time_dependent",
+                  ["mews/cython/markov_time_dependent.pyx"],
+                  include_dirs=[np.get_include()],
+                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),]
+    
     cmdclass.update({'build_ext': build_ext})
 else:
-    ext_modules += [
-        Extension("mews.cython.markov", ["mews/cython/markov.pyx"],include_dirs=[np.get_include()]),
-    ]
+    pass
+    # ext_modules += [
+    #     Extension("mews.cython.markov",
+    #               ["mews/cython/markov.pyx"],
+    #               include_dirs=[np.get_include()],
+    #               define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),
+    #     Extension("mews.cython.markov_time_dependent",
+    #               ["mews/cython/markov_time_dependent.pyx"],
+    #               include_dirs=[np.get_include()],
+    #               define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),
+    # ]
 
 # use README file as the long description
 file_dir = os.path.abspath(os.path.dirname(__file__))
@@ -67,7 +82,7 @@ setup(name=DISTNAME,
       maintainer_email=MAINTAINER_EMAIL,
       license=LICENSE,
       url=URL,
-      download_url='https://github.com/sandialabs/MEWS/archive/refs/tags/v0.0.0.tar.gz',
+      download_url='https://github.com/sandialabs/MEWS/archive/refs/tags/v0.1.0.tar.gz',
       zip_safe=False,
       install_requires=DEPENDENCIES,
       scripts=[],

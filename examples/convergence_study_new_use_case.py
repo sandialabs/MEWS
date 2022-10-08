@@ -24,13 +24,27 @@ def single_row_of_avg_vals(subdict):
             df = pd.DataFrame(sub3dict)
             if key == "Intensity":
                 df["IPCC actual value"] = df["IPCC actual value"].apply(lambda x: x[1])
-            columns.append((key,key2,df.columns[0]))
-            columns.append((key,key2,df.columns[1]))
+                columns.append((key,key2,df.columns[0],"50 year"))
+                columns.append((key,key2,df.columns[1],"50 year"))
+            else:
+                columns.append((key,key2,df.columns[0],"10 year"))
+                columns.append((key,key2,df.columns[0],"50 year"))
+                columns.append((key,key2,df.columns[1],"10 year"))
+                columns.append((key,key2,df.columns[1],"50 year"))
             
             if arr is None:
-                arr = df.mean().values.reshape([1,2])
+                if key=="Intensity":
+                    temp_arr = np.array([[row[0]['mean'],row[1]]for row in df.values])
+                else:
+                    temp_arr = np.array([[row[0][0],row[0][1],row[1][0],row[1][1]] for row in df.values])
+                arr = temp_arr.mean(axis=0).reshape([1,temp_arr.shape[1]])
+                #arr = df.mean().values.reshape([1,2])
             else:
-                arr = np.concatenate([arr,df.mean().values.reshape([1,2])],axis=1)
+                if key=="Intensity":
+                    temp_arr = np.array([[row[0]['mean'],row[1]]for row in df.values])
+                else:
+                    temp_arr = np.array([[row[0][0],row[0][1],row[1][0],row[1][1]] for row in df.values])
+                arr = np.concatenate([arr,temp_arr.mean(axis=0).reshape([1,temp_arr.shape[1]])],axis=1)
             
     return arr,columns
     
@@ -45,15 +59,15 @@ station = os.path.join(fpath,"..","mews","tests","data_for_testing","USW00023050
 weather_files = [os.path.join(fpath,"..","mews","tests","data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
 
 # frequency convergence
-convergence_array = [40,80,120,160,200,300,400]#,400,500,600,700,800,900,1000]
-random_seed = [522903,31023,38405,50647,708349,3123201,443005]#,654,765,876,987,23354,23123,46234]
+convergence_array = [25,50,100,200,300,400,500,750,1000]#,400,500,600,700,800,900,1000]
+random_seed = [38405,50647,708349,3123201,443005,65574,73365,8746,9870]#,23354,23123,46234]
 
 
 seconds_in_minute = 60
-runme = False
+runme = True
 restart = False
-current_file_name = "convergence_study_5.pickle"
-next_file_name = "convergence_study_6.pickle"
+current_file_name = "convergence_study_7.pickle"
+next_file_name = "convergence_study_7.pickle"
 
 if runme:
     if restart:

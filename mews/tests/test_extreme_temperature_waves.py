@@ -492,9 +492,14 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     fut_hws_arr = np.array([])
                     for realization in range(num_realizations):
                         # realization heat wave sustained array
-                        hws_arr0 = np.concatenate([np.array(li[1]) for li in vdata[key][2080]['freq_s'] if li[2]==month and li[0][1]==realization])
+                        try:
+                            hws_arr0 = np.concatenate([np.array(li["heat wave duration"]) for 
+                                                       li in vdata[key][2080]['freq_s'] if li["month"]==month 
+                                                       and li["key_name"][1]==realization])
+                        except ValueError:
+                            hws_arr0 = np.array([])
                         fut_hws_arr = np.concatenate([fut_hws_arr,hws_arr0])
-                    
+
                     fut_num_10_events = (fut_hws_arr > fut_D10_prime).sum()
                     fut_num_50_events = (fut_hws_arr > fut_D50_prime).sum()
                     
@@ -502,7 +507,12 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     base_hws_arr = np.array([])
                     for realization in range(num_realizations):
                         # realization heat wave sustained array
-                        hws_arr0 = np.concatenate([np.array(li[1]) for li in vdata[key][2014]['freq_s'] if li[2]==month and li[0][1]==realization])
+                        try:
+                            hws_arr0 = np.concatenate([np.array(li["heat wave duration"]) for 
+                                                       li in vdata[key][2014]['freq_s'] if li["month"]==month 
+                                                       and li["key_name"][1]==realization])
+                        except ValueError:
+                            hws_arr0 = np.array([])
                         base_hws_arr = np.concatenate([base_hws_arr,hws_arr0])
                     
                     base_num_10_events = (base_hws_arr > base_D10_prime).sum()
@@ -535,7 +545,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     
                     freq_result_sim[month] = (fut_num_10_events/base_num_10_events, fut_num_50_events/base_num_50_events)
                     freq_result_act[month] = (fut_freq_incr_10/base_freq_incr_10, fut_freq_incr_50/base_freq_incr_50)
-                
+                    
+                    breakpoint()
                 # collect all of the metrics into a dictionary useful for the convergence study.
                 metric_dict["Frequency"][key] = {"MEWS statistical value": freq_result_sim,"IPCC actual value":freq_result_act}
                 metric_dict["Intensity"][key] = {"MEWS statistical value": temp_diff,"IPCC actual value":ipcc_delT_exact}

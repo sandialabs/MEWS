@@ -61,6 +61,7 @@ class MarkovPy():
                     break
                 if idy == num_state-1:
                     yy[idx] = idy
+                    state0 = idy
         
         return yy
     
