@@ -97,28 +97,108 @@ def create_complementary_histogram(sample, hist0):
     ValueError - if the input histogram 
     
     """
-    check_for_nphistogram(hist0)
+    if len(sample) == 0:
+        # no waves occured and all zeros must be used to evaluate
+        hist1 = np.zeros(len(hist0[0]))
+        bin_avg = (hist0[1][1:]+hist0[1][0:-1])/2
+        return (hist1,hist0[1]), (np.ones(len(hist0[0])), bin_avg)
+    else:
     
-    bin_spacing = np.diff(hist0[1])
+        check_for_nphistogram(hist0)
+        
+        bin_spacing = np.diff(hist0[1])
+        
+        # assure a constant
+        if (bin_spacing < bin_spacing[0]*(1-0.000001)).any() or (bin_spacing > bin_spacing[0]*1.000001).any():
+            raise ValueError("The histogram input 'hist0' must have a constant bin spacing")
+        
     
-    # assure a constant
-    if (bin_spacing < bin_spacing[0] *1.00001).any() or (bin_spacing > bin_spacing[0]).any():
-        raise ValueError("The histogram input 'hist0' must have a constant bin spacing")
     
+        # this always comes out to a positive integer under the constraints present 
+        num_bin = int((sample.max() - sample.min())/bin_spacing[0])+2
+        
+        hist1 = np.histogram(sample,num_bin,range=(np.floor(sample.min()/bin_spacing[0])*bin_spacing[0],
+                                                   np.ceil(sample.max()/bin_spacing[0])*bin_spacing[0]))
+        
+        bin_avg = (hist1[1][1:]+hist1[1][0:-1])/2
+        
+        hist1_prob = hist1[0]/hist1[0].sum() 
+        
+        cdf = (hist1_prob).cumsum()
+        
+        return (hist1_prob,hist1[1]), (cdf, bin_avg)
 
+def linear_interp_discreet_func(vals, discreet_func_tup, is_x_interp=False):
+    """
+    linear interpolation of a function. Naturally written for y interpolation
+    of a cdf but just have to reverse terms for x-interpolation
+    
+    
+    """
+    
+    if is_x_interp:
+        xf = discreet_func_tup[0]
+        yf = discreet_func_tup[1]
+    else:
+        xf = discreet_func_tup[1]
+        yf = discreet_func_tup[0]
 
-    # this always comes out to a positive integer under the constraints present 
-    num_bin = int((sample.max() - sample.min())/bin_spacing[0])+1
-    
-    hist1 = np.histogram(sample,num_bin,range=(sample.min()-bin_spacing[0]/2,
-                                               sample.max()+bin_spacing[0]/2))
-    
-    bin_avg = (hist1[1][1:]+hist1[1][0:-1])/2
-    
-    hist1_prob = hist1[0]/hist1[0].sum() 
-    
-    cdf = (hist1_prob).cumsum()
-    
-    return (hist1_prob,hist1[1]), (cdf, bin_avg)
+    len_s = len(xf)
+    # must handle values beyond the range of yf (=xf if is_x_interp=True)
+    idi = np.array([0 if va <= yf[0] else len_s if va >= yf[-1] else np.where(np.logical_and(yf[0:-1]<=va,yf[1:]>va))[0][0] for va in vals])
+    interp = np.array([ xf[idix] + (va - yf[idix])/(yf[idix+1]-yf[idix]) * (xf[idix+1]-xf[idix])
+                     if idix < len_s
+                     else 
+                      xf[-1]
+                     for va, idix in zip(vals,idi) ])
+    return interp
             
+def find_extreme_intervals(states_arr,states):
+    """
+    This function returns a dictionary whose entry keys are 
+    the "states" input above. Each dictionary element contains 
+    a list of tuples. Each tuple contains the start and end times 
+    of an event where "states_arr" was equal to the corresponding state
+
+    Parameters
+    ----------
+    states_arr : array-like
+        a 1-D array of integers of values that are only in the states input
+    states : array-like,list-like
+        a 1-D array of values to look for in states_arr. 
+
+    Returns
+    -------
+    state_int_dict : TYPE
+        A dictionary with key "state" each value contains a list of tuples
+        that indicate the start and end time of an extreme event.
+
+    """ 
     
+    diff_states = np.concatenate((np.array([0]),np.diff(states)))
+    state_int_dict = {}
+    for state in states:
+        state_ind = [i for i, val in enumerate(states_arr==state) if val]
+        end_points = [i for i, val in enumerate(np.diff(state_ind)>1) if val]
+        start_point = 0
+        if len(end_points) == 0 and len(state_ind) > 0:
+            ep_list = [(state_ind[0],state_ind[-1])]
+        elif len(end_points) == 0 and len(state_ind) == 0:
+            ep_list = []
+        else:
+            ep_list = []
+            for ep in end_points:
+                ep_list.append((state_ind[start_point],state_ind[ep]))
+                start_point = ep+1
+        state_int_dict[state] = ep_list
+    return state_int_dict    
+
+def _bin_avg(hist):
+    return (hist[1][1:] + hist[1][0:-1])/2
+
+def bin_avg(hist):
+    if len(hist[1]) == len(hist[0]) + 1:
+        bin0 = _bin_avg(hist)
+    else:
+        bin0 = hist[1]
+    return bin0

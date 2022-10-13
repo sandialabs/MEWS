@@ -40,9 +40,6 @@ from warnings import warn
 import matplotlib.pyplot as plt
 
 
-
-
-
 class ExtremeTemperatureWaves(Extremes):
     
     """

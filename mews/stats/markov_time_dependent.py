@@ -30,6 +30,123 @@ function M.cumsum(axis=1)
 
 import numpy as np
 from math import exp
+from mews.cython.markov_time_dependent import markov_chain_time_dependent
+
+def cython_function_input_checks(cdf, 
+                                rand, 
+                                state0,
+                                coef,
+                                func_type):
+    def array_check(arr,type_needed,inp_name,dim_needed):
+        if not isinstance(arr,np.ndarray):
+            raise TypeError("input '"+inp_name+"' must be a numpy array (i.e. type np.ndarray)")
+        else:
+            if not isinstance(arr[tuple([0 for idx in range(dim_needed)])], type_needed):
+                raise TypeError("Array input '"+inp_name+"' must have elements of type "+str(type_needed))
+                
+        if len(arr.shape) != dim_needed:
+            raise ValueError("Array input '"+inp_name+"' must be of dimension {0:d}".format(dim_needed))
+            
+    def int_check(intvar,name,bounds):
+        if not isinstance(intvar, int):
+            try:
+                intnew = int(intvar)
+            except:
+                raise ValueError("Integer input '"+name+"' must be convertable into an integer.")
+        else:
+            intnew = intvar
+            
+        if intnew > bounds[1] or intnew < bounds[0]:
+            raise ValueError("Integer input '"+name+"' must be within the interval "+str(bounds))
+            
+        return intvar
+        
+        
+    # Thorough protection of inputs is required to avoid strange cython errors that the user will not understand
+    array_check(cdf,float,"cdf",2)
+    array_check(rand,float,"rand",1)
+    state0 = int_check(state0,'state0',[0,cdf.shape[0]-1])
+    func_type = int_check(func_type,'func_type',[0,3])
+
+    if (rand > 1).any() or (rand < 0).any():
+        raise ValueError("The rand input vector elements must be a probabilities (i.e. 0<=rand<=1)")
+    elif (cdf > 1).any() or (cdf < 0).any():
+        raise ValueError("The cdf input matrix's elements must be probabilities (i.e. 0<=cdf<=1)")
+    elif cdf.shape[0] != cdf.shape[1]:
+        raise ValueError("The cdf must be a square matrix!")
+        
+    return state0, func_type
+
+
+def markov_chain_time_dependent_wrapper(cdf, 
+                                rand, 
+                                state0,
+                                coef,
+                                func_type,
+                                check_inputs=True):
+    """
+    This function wraps around the cython implementation of 
+    mews.cython.markov_time_dependent.markov_chain_time_dependent to handle 
+    its error conditions gracefully and provide proper raising of python 
+    exceptions
+    
+    See the function explanation for 
+    mews.cython.markov_time_dependent.markov_chain_time_dependent
+    for clear documentation of the function.
+    
+    Parameters
+    ----------
+    cdf : a discreet cumulative probability distribution function. This will
+          be altered for rows 2..num rows as indicated above
+          
+    rand : an array of random numbers that indicates the number of steps to
+           take.
+           
+    state0 : the initial state of the random process
+    
+    coef : an array of coefficients that must be of size  (m-1)xp where 
+           m is the number of states (cdf.shape[0]) and p is the number of 
+           coefficients that the decay functions require. A new function
+           has to be created in this module if a new function type is needed.
+           for example the function "exponential_decay" has already been added
+           and p = 1 since only one lambda exponent is needed.
+           
+           Note: The first state does not need coefficients because it is 
+           assumed to be a constant markov process. Only rows 2...m have 
+           time decay.
+           
+    func_type : an integer that indicates what function type to use. 
+           
+           0 - use exponential_decay
+           1 - use linear_decay
+           2 - use exponential_decay with cut-off point
+           3 - use linear_decay with cut-off point
+           
+    check_inputs : bool : optional : Default = True
+        Check all of the inputs types to assure that cython
+        c code will not throw a strange error that is hard to understand 
+        for python coders.
+    
+    
+    Returns
+    -------
+    yy : state vector of len(rand)
+         if the function returns all -999,
+         then an incorrect input for the func_type was given.
+    
+    
+    """
+    # this should not change the value of state0 and func_type but will
+    # change from float to int if the wrong type is passed
+    if check_inputs:
+        state0, func_type = cython_function_input_checks(cdf, rand, state0, coef, func_type)
+
+    yy = markov_chain_time_dependent(cdf, 
+                                    rand, 
+                                    state0,
+                                    coef,
+                                    func_type)
+    return yy
 
 
 # All of these functions must have f(time_in_state=0) = 1 and must monotonically
@@ -54,7 +171,7 @@ def exponential_decay_with_cutoff(time_in_state,
     """
     zero = 0.0
     
-    if time_in_state > cutoff:
+    if time_in_state >= cutoff:
         val = zero
     else:
         val = exp(-time_in_state * lamb)
@@ -91,7 +208,7 @@ def linear_decay_with_cutoff(time_in_state,
     one = 1.0
     zero = 0.0
     
-    if time_in_state > cutoff:
+    if time_in_state >= cutoff:
         val = zero
     else:    
         val = one - slope * time_in_state
@@ -124,9 +241,9 @@ def evaluate_decay_function(cdf0,
     elif func_type == 2:
         func_eval = exponential_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idym1,1])
     elif func_type == 3:
-        func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idym1,1])
+        func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idy,1])
     else:
-        return np.zeros(len(cdf0))
+        print("func_type must be 0,1,2,3...upredictable behavior is resulting!")
         
     cdf1[0] = cdf0[0] + P0 * func_eval
     cdf1[idy] = one - P0 * func_eval
@@ -137,7 +254,8 @@ def markov_chain_time_dependent_py(cdf,
                                 rand, 
                                 state0,
                                 coef,
-                                func_type):
+                                func_type,
+                                check_input=False):
 # cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_t, ndim=2] cdf, 
 #                                                np.ndarray[DTYPE_t, ndim=1] rand, 
 #                                                np.int_t state0,
@@ -189,7 +307,12 @@ def markov_chain_time_dependent_py(cdf,
     -------
     
     """
-    
+    if check_input:
+        state0,func_type = cython_function_input_checks(cdf, 
+                                        rand, 
+                                        state0,
+                                        coef,
+                                        func_type)
     # yy is the output sample of states.
     # assign initial values
     #cdef np.int_t num_step = len(rand)
@@ -205,9 +328,9 @@ def markov_chain_time_dependent_py(cdf,
     #cdef np.ndarray[DTYPE_t, ndim=1] cdf_local
     
     # assign first value the initial value.
+    # assign first value the initial value.
     yy[0] = state0
     step_in_cur_state = 0
-    invalid_input = -999
     
     for idx in range(1, num_step):
         
@@ -221,7 +344,7 @@ def markov_chain_time_dependent_py(cdf,
             # significant savings because our cdf is only
             # two terms. The first is always the only change before 
             # state0 
-            if state0 > 0 and idy >0:
+            if state0 > 0 and idy > 0:
                 # no further evaluation needed, for the form of cdf used
                 # here where the first row is fully populated and all subsequent6
                 # rows only have two values that change, we know that the 
@@ -238,11 +361,6 @@ def markov_chain_time_dependent_py(cdf,
                                                         coef,
                                                         idy,
                                                         step_in_cur_state)
-                    # this is a mechanism for indicating that the 
-                    # function type is invalid. An all -999 response is
-                    # incorrect.
-                    if cdf_local.sum() == 0.0:
-                        return invalid_input*np.ones(num_step,dtype=np.int)
                 else:
                     cdf_local = cdf[state0,:]
                     
@@ -259,5 +377,9 @@ def markov_chain_time_dependent_py(cdf,
                 if idy == num_state-1:
                     yy[idx] = idy
                     state0 = idy
+                    if idy != yy[idx-1]:
+                        step_in_cur_state = 0
+                    else:
+                        step_in_cur_state += 1
     
     return yy

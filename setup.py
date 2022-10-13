@@ -33,12 +33,14 @@ if use_cython:
     ext_modules += [
         Extension("mews.cython.markov",
                   ["mews/cython/markov.pyx"],
-                  include_dirs=[np.get_include()],
-                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),
+                  include_dirs=[np.get_include()]),
+                  #define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),
+                  # This define macros gets rid of an error but then causes the cython code
+                  # to not accept .shape[0] type calls on arrays. https://stackoverflow.com/questions/35414980/cython-dimensions-is-not-a-member-of-tagpyarrayobject
         Extension("mews.cython.markov_time_dependent",
                   ["mews/cython/markov_time_dependent.pyx"],
-                  include_dirs=[np.get_include()],
-                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),]
+                  include_dirs=[np.get_include()])]
+                  #define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")]),]
     
     cmdclass.update({'build_ext': build_ext})
 else:

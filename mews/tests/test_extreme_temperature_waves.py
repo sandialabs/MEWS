@@ -308,9 +308,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             weather_files,
             station,
             run_parallel = run_parallel,
-            use_breakpoint=True)
+            use_breakpoint=False)
         
-        breakpoint()
         self.assertGreater(meanval["50%"],meanval["5%"])
         self.assertGreater(meanval["95%"], meanval["50%"])
         
@@ -352,7 +351,6 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
         self.assertEqual(metric_dict_try1,metric_dict_try2)
         
-        breakpoint()
         # check get_results
         es000 = obj1.get_results(scenario,future_year,"95%")
         
@@ -545,8 +543,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     
                     freq_result_sim[month] = (fut_num_10_events/base_num_10_events, fut_num_50_events/base_num_50_events)
                     freq_result_act[month] = (fut_freq_incr_10/base_freq_incr_10, fut_freq_incr_50/base_freq_incr_50)
-                    
-                    breakpoint()
+
                 # collect all of the metrics into a dictionary useful for the convergence study.
                 metric_dict["Frequency"][key] = {"MEWS statistical value": freq_result_sim,"IPCC actual value":freq_result_act}
                 metric_dict["Intensity"][key] = {"MEWS statistical value": temp_diff,"IPCC actual value":ipcc_delT_exact}

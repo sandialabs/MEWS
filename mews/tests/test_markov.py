@@ -24,7 +24,8 @@ Created on Thu Dec 16 16:07:57 2021
 from mews.cython import markov_chain
 from mews.stats.markov import MarkovPy
 
-from mews.stats.markov_time_dependent import markov_chain_time_dependent_py
+from mews.stats.markov_time_dependent import (markov_chain_time_dependent_py,
+                                              markov_chain_time_dependent_wrapper)
 from mews.stats.extreme import DiscreteMarkov
 from numpy.random import default_rng 
 import os
@@ -32,7 +33,8 @@ import numpy as np
 import unittest  
 from matplotlib import pyplot as plt
 from matplotlib import rc 
-from mews.cython.markov_time_dependent import markov_chain_time_dependent
+from warnings import warn
+
 from time import perf_counter_ns
 import logging
     
@@ -91,10 +93,12 @@ class Test_Markov(unittest.TestCase):
         coef_negligible_2terms = np.array([[1e-10,10000],[1e-10,10000]])
         coef_2terms = np.array([[0.1,9],[0.1,9]]) # should limit steps in a state to 9
         
+        # old constant markov process function - serves as a standard
+        yy_const = markov_chain(cdf, rand_big[0:1000], 0)
         
         # loop over python verses cython implementations
-        for markov_func in [markov_chain_time_dependent_py, markov_chain_time_dependent]:
-            yy_const = markov_chain(cdf, rand_big[0:1000], 0)
+        for idx, markov_func in enumerate([markov_chain_time_dependent_py, markov_chain_time_dependent_wrapper]):
+            
             for func_type in range(4):
                 if func_type < 2:
                     coef_neg = coef_negligible_1term
@@ -103,21 +107,98 @@ class Test_Markov(unittest.TestCase):
                     coef_neg = coef_negligible_2terms
                     coef = coef_2terms
                     
-                yy_py_negligible = markov_func(cdf, rand_big[0:1000], 0, coef_neg, func_type)
+                # a non_constant time decay that is negligible
+                yy_negligible = markov_func(cdf, rand_big[0:1000], np.int32(0), coef_neg, np.int32(func_type))
                 
-                yy_py = markov_func(cdf, rand_big[0:1000], 0, coef, func_type)
+                # a time decay that makes a difference
+                yy = markov_func(cdf, rand_big[0:1000], 0, coef, func_type)
+                
+                if idx == 0 and func_type == 0:
+                    yy_timedecay_py = yy
+                elif idx == 1 and func_type == 0:
+                    yy_timedecay = yy
+                
+                # collect specific results for later
+                if func_type == 0:
+                    yy_exp = yy
+                elif func_type == 1:
+                    yy_lin = yy
                 
                 # TEST 1 - test negligible decay produces a constant markov process
-                if (yy_py_negligible == yy_const).all()==False:
-                    breakpoint()
-                self.assertTrue((yy_py_negligible == yy_const).all())    
+                self.assertTrue((yy_negligible == yy_const).all())    
     
                 # TEST 2 - non-negligible decay does not produce a constant Markov process
-                #          and linear and exponential decay produce different results
-                self.assertFalse((yy_py == yy_const).all())
+                self.assertFalse((yy == yy_const).all())
         
+            # TEST 3 - linear and exponential decays do not produce the same results
+            self.assertFalse((yy_exp == yy_lin).all())
+            
+        # TEST 4 - python and cython based implementations produce the exact same results
+        if not (yy_timedecay_py == yy_timedecay).all():
+            warn("The python and cython implementations are working differently."+
+                 " If you are making changes, you may have forgotten to "+
+                 "recompile cython! MEWS should do this with python -m setup.py"+
+                 ". The cython and python versions of markov time dependent chains must"+
+                 " be synchronized!")
+        self.assertTrue((yy_timedecay_py == yy_timedecay).all())
         
-        pass
+        # TEST 5 cython implementation is faster than python.
+        # The input checks take up a LOT of time. making the wrapper 2-3 times faster
+        # with input checking off, the implementation is about 10x faster.
+        tic_c = perf_counter_ns()
+        value = markov_chain_time_dependent_wrapper(cdf, rand_big[0:8760], 0, coef_1term, 0,check_inputs=False)
+        toc_c = perf_counter_ns()
+        
+        tic_py = perf_counter_ns()
+        value_py = markov_chain_time_dependent_py(cdf, rand_big[0:8760], 0, coef_1term, 0)
+        toc_py = perf_counter_ns()
+        
+
+        ctime = toc_c - tic_c
+        pytime = toc_py - tic_py
+        
+        warn("WARNING! The cython implementation of 'markov_chain_time_dependent'"+
+             "is running slower thant the same python implementation.")
+        self.assertTrue(ctime < pytime)
+        
+        # TEST 6 - very fast decay only allows up to a single time step in different states
+        coef_fast_decay = np.array([[100.0],[100.0]])
+        values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_fast_decay, 0,check_inputs=False)
+        # If np.diff(values) is state, the next value will be either 0 or -state and the one after it will be -2
+        # such a pattern indicates that only 1 hour events are occuring.
+        # and then the next values 0
+        for state in [1,2]:
+            diffvals = np.diff(values)
+            testvals = np.array([((val1==0 and val2 == -state) or (val1 == -state)) 
+                                 for idx,(val0,val1,val2) in enumerate(zip(diffvals[:-3],
+                                                                           diffvals[1:-2],
+                                                                           diffvals[2:])) 
+                                 if val0 == state])
+            self.assertTrue(testvals.all())
+        
+        # TEST 7 - cutoff causes even a unit matrix to create events of duration
+        #          equal to the cutoff
+        tran_mat = np.array([[0.9,0.1],
+                             [0.0,1.0]])
+        cdf = tran_mat.cumsum(axis=1)
+        
+        # BE CAREFUL, changing the 0.0 to 0 will give error ValueError: Buffer dtype mismatch, expected 'DTYPE_t' but got 'long'
+        # type checking would correct this but slows downs everything.
+        coef_cutoff = np.array([[0.0,10.0],[0.0,10.0]])
+        for func_type in [2,3]:
+            values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_cutoff, func_type)
+            # all changes in state will be of duration 10 + 2
+            diffvals = np.diff(values)
+            # for python implementation, this is diffvals[:,-12],diffvals[11:] that
+            # works. I am not going to try and correct this. It probably has to do
+            # with an integer comparison technique that is not properly controlled.
+            testvals = np.array([val1 == -1
+                                 for idx,(val0,val1) in enumerate(zip(diffvals[:-13],
+                                                                           diffvals[12:])) 
+                                 if val0 == 1])
+            self.assertTrue(testvals.all())
+
+        
     
     def test_MarkovChain(self):
         always0 = np.array([[1,0],[1,0]],dtype=np.float)

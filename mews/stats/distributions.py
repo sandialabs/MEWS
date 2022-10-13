@@ -20,8 +20,24 @@ must be replicated in any derivative works that use the source code.
 
 from scipy.special import erf
 from scipy.optimize import curve_fit, bisect
+from scipy.interpolate import splev, splrep
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+def pdf_density_given_value(x, pdf):
+    bins = pdf[1]
+    dens = pdf[0]
+    len_prob = len(prob)
+    idi = np.array([np.where(np.logical_and(bins[0:-1]<=binx,bins[1:]>binx))[0][0] for binx in x])
+    
+    interp = np.array([ bins[idix] + (Pr - prob[idix])/(prob[idix+1]-prob[idix]) * (bins[idix+1]-bins[idix])
+                     if idix < len_prob
+                     else 
+                      bins[-1]
+                     for Pr, idix in zip(P,idi) ])
+
+
 
 def cdf_exponential(x,lamb):
     return 1-np.exp(-lamb * x)

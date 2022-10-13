@@ -57,11 +57,14 @@ cpdef DTYPE_t exponential_decay_with_cutoff(DTYPE_t time_in_state,
     This provides an exponential decay of probability of a specific state
     continuing
     
+    TODO - markov processes cutoff in cutoff + 2. Fixing this in cython
+    is finicky so I am delaying fixing for now.
+    
     """
     cdef DTYPE_t val
     cdef DTYPE_t zero = 0.0
     
-    if time_in_state > cutoff:
+    if time_in_state >= cutoff:
         val = zero
     else:
         val = exp(-time_in_state * lamb)
@@ -90,15 +93,17 @@ cpdef DTYPE_t linear_decay_with_cutoff(DTYPE_t time_in_state,
                                 DTYPE_t cutoff):
     """
     This provides a linear decay of probability of a specific state
-    continuing. If the time_in_state exceeds cutoff, then the 
+    continuing. If the time_in_state exceeds cutoff+2, then the 
     probability of continuing is set to zero.
+    
+    TODO - fix this so that it is cutoff rather than cutoff+2
     
     """
     cdef DTYPE_t val
     cdef DTYPE_t one = 1.0
     cdef DTYPE_t zero = 0.0
     
-    if time_in_state > cutoff:
+    if time_in_state >= cutoff:
         val = zero
     else:    
         val = one - slope * time_in_state
@@ -117,7 +122,7 @@ cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
     cdef DTYPE_t one = 1.0
     cdef DTYPE_t func_eval = one
     cdef DTYPE_t P0 = one - cdf0[0]
-    cdef np.ndarray[DTYPE_t, ndim=1] cdf1 = np.zeros(cdf0.shape)
+    cdef np.ndarray[DTYPE_t, ndim=1] cdf1 = np.zeros(len(cdf0))
     cdef np.int_t idym1 = idy - 1
     
     if time_in_state <= 0.0:
@@ -134,17 +139,17 @@ cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
     elif func_type == 3:
         func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idy,1])
     else:
-        return np.zeros(len(cdf0))
+        print("func_type must be 0,1,2,3...upredictable behavior is resulting!")
         
     cdf1[0] = cdf0[0] + P0 * func_eval
     cdf1[idy] = one - P0 * func_eval
     
     return cdf1
 
-cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(double[:,:] cdf, 
-                                               double[:] rand, 
+cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_t, ndim=2] cdf, 
+                                               np.ndarray[DTYPE_t, ndim=1] rand, 
                                                np.int_t state0,
-                                               double[:,:] coef,
+                                               np.ndarray[DTYPE_t, ndim=2] coef,
                                                np.int_t func_type):
     
     """
@@ -194,20 +199,24 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(double[:,:] cdf,
          if the function returns all -999,
          then an incorrect input for the func_type was given.
     
-    """
+    This function is intended to be used inside: 
+        mews.stats.markov_time_dependent.markov_chain_time_dependent_wrapper
+    which thoroughly checks the inputs so that difficult cython type errors
+    do not occur. The function does not protect against bad inputs on its own.
     
+    """
     # yy is the output sample of states.
     # assign initial values
     cdef np.int_t num_step = len(rand)
-    cdef int[:] yy = np.zeros(num_step,dtype=np.int)
+    cdef np.ndarray[np.int_t,ndim=1] yy = np.zeros(num_step,dtype=np.int)
     #cdef np.ndarray[np.int_t, ndim=1] yy = np.zeros(num_step,dtype=np.int)
     
     cdef np.int_t num_state = cdf.shape[0]
     cdef np.int_t idx
     cdef np.int_t idy
+
     cdef np.int_t step_in_cur_state
     cdef double[:] cdf_local
-    cdef np.int_t invalid_input = -999
     
     # assign first value the initial value.
     yy[0] = state0
@@ -242,11 +251,6 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(double[:,:] cdf,
                                                         coef,
                                                         idy,
                                                         step_in_cur_state)
-                    # this is a mechanism for indicating that the 
-                    # function type is invalid. An all -999 response is
-                    # incorrect.
-                    if cdf_local.sum() == 0.0:
-                        return invalid_input*np.ones(num_step,dtype=np.int)
                 else:
                     cdf_local = cdf[state0,:]
                     
@@ -263,5 +267,9 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(double[:,:] cdf,
                 if idy == num_state-1:
                     yy[idx] = idy
                     state0 = idy
+                    if idy != yy[idx-1]:
+                        step_in_cur_state = 0
+                    else:
+                        step_in_cur_state += 1
     
     return yy

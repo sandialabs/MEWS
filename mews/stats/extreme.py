@@ -24,6 +24,8 @@ must be replicated in any derivative works that use the source code.
 from mews.weather import Alter
 from mews.cython.markov import markov_chain
 from mews.stats.markov import MarkovPy
+from mews.stats.markov_time_dependent import (markov_chain_time_dependent_wrapper,
+                                              markov_chain_time_dependent_py)
 from mews.errors.exceptions import ExtremesIntegrationError
 from numpy.random  import default_rng, seed
 from scipy.optimize import curve_fit, minimize
@@ -33,6 +35,7 @@ import os
 import warnings
 from datetime import datetime
 from mews.utilities.utilities import filter_cpu_count
+from mews.utilities.utilities import find_extreme_intervals
 
 class DiscreteMarkov():
     """
@@ -59,15 +62,69 @@ class DiscreteMarkov():
     use_cython : bool : optional : Default = True
         Use cython to calculate markov chain histories (~20x faster). 
         The default is True.
+        
+    decay_func_type: str : optional : Default = None
+        If None - no decay in markov process will be included.
+        
+        Otherwise, this string must be one of the following. 
+        
+        1: "exponential"
+        2: "linear"
+        3: "exponential_cutoff"
+        4: "linear_cutoff"
+        
+        see the "coef" input description to see how each of these
+        options work.
+        
+    coef : np.ndarray : optional : Default = None
+        This controls if a markov process with time dependent decay of the
+        extreme event probability of continuing is used. The form depends on the
+        decay_func_type input.
+        
+        decay_func_type:
+            
+            "exponential" need input like: np.array([[lamb_cs],[lamb_hw]])
+            where lamb_hw is the decay rate for heat waves and lamb_cs
+            is the decay rate for cold snaps.
+            lamb is an exponential decay coefficient. The value must be 
+            positive and smaller values decay slower.
+            
+            Probability decays according to 1 - exp(-lamb*time_in_extreme_wave)
+            
+            "linear" need input like: np.array([[slope_cs],[slope_hw]])
+            
+            Probability decays according to 1 - slope * time_in_extreme_wave
+            and does not go below zero.
+            
+            "exponential_cutoff" need input like np.array([[lamb_cs,delt_cutoff_cs],
+                                                          [lamb_hw,delt_cutoff_hw]])
+            
+            same behavior as exponential but with a cutoff where delt_cutoff_hw is the
+            number of time steps in a heat wave at which the heat wave is forced to end.
+            Currently the algorith allows +2 time steps beyond this cutoff. This is a known
+            issue.
+            
+            "linear_cutoff" needs input like np.array([[slope_cs,delt_cutoff_cs],
+                                                          [slope_hw,delt_cutoff_hw]])
+            
+            ""
 
     Returns
     -------
     None
 
     """
+    # this list must be updated if new function types are added to the markov_time_dependent_wrapper functions
+    _func_types = {"exponential":0,"linear":1,"exponential_cutoff":2,"linear_cutoff":3}
     
-    def __init__(self,rng,transition_matrix,state_names=None,use_cython=True):
-
+    def __init__(self,rng,transition_matrix,state_names=None,use_cython=True,decay_func_type=None, coef=None,):
+        
+        if not decay_func_type is None and not decay_func_type in self._func_types:
+            raise ValueError("The decay_func_type input must be a string equal to one of the following:" + str(self._func_types.keys()))
+        if not decay_func_type is None and coef is None:
+            raise ValueError("If a 'decay_func_type' is provided, then coefficients input 'coef' is needed")
+        
+        
         self.rng = rng
         # special handling
         if state_names is None:
@@ -92,8 +149,10 @@ class DiscreteMarkov():
         self._names = names
         self.use_cython = True
         self.tol = 1e-10
+        self.coef = coef
+        self.decay_func_type = decay_func_type
         
-    def history(self,num_step,state0,min_steps=24,skip_steps=0,count_in_min_steps_intervals=True):
+    def history(self,num_step,state0,min_steps=24,skip_steps=0,count_in_min_steps_intervals=False):
         """
         >>> obj.history(num_step,state0, 
                         min_steps, 
@@ -115,7 +174,7 @@ class DiscreteMarkov():
             state0 (this is used for weather files that may begin in the middle
             of the day to avoid applying heat waves out of sync with
             day-night cycles).
-        count_in_min_steps_intervals : bool : optional : Default = True
+        count_in_min_steps_intervals : bool : optional : Default = False
             True = apply markov transition matrix as a discrete process that 
             is randomly tested every min_steps interval (i.e. min_steps = 24
             means the markov chain state is only tested 1 in 24 steps).
@@ -136,7 +195,7 @@ class DiscreteMarkov():
         None
 
         """
-        
+        # input checks
         if isinstance(state0,str):
             if not state0 in self._names:
                 raise ValueError("The 'state0' input must be a valid state_name={}".format(str(self._names)))
@@ -161,6 +220,8 @@ class DiscreteMarkov():
             raise ValueError("There are no real steps. The weather history"
                              +" provided is too short to sample in min_steps"
                              +"={0:d} size steps!".format(min_steps))
+        
+        
         if count_in_min_steps_intervals:
             remain_steps = num_step - num_real_step * min_steps - skip_steps
         else:
@@ -169,11 +230,29 @@ class DiscreteMarkov():
         prob = self.rng.random(num_real_step)
         
         cdf = self._cdf
-        # The Markov Chain is NOT efficient in Python 
+        
+        # The Markov Chain is about 10x slower in Python
         if self.use_cython:
-            state = markov_chain(cdf,prob,state0)
+            if self.decay_func_type is None:
+                state = markov_chain(cdf,prob,state0)
+            else:
+                state = markov_chain_time_dependent_wrapper(cdf,
+                                                            prob,
+                                                            state0,
+                                                            self.coef,
+                                                            self._func_types[self.decay_func_type],
+                                                            check_inputs=False)
         else:
-            state = MarkovPy.markov_chain_py(cdf,prob,state0)
+            if self.decay_func_type is None:
+                state = MarkovPy.markov_chain_py(cdf,prob,state0)
+            else:
+                state = markov_chain_time_dependent_py(cdf,
+                                                            prob,
+                                                            state0,
+                                                            self.coef,
+                                                            self._func_types[self.decay_func_type],
+                                                            check_inputs=False)
+                
         
         if count_in_min_steps_intervals:
             # translate state into an array of min_step length segments
@@ -220,13 +299,18 @@ class DiscreteMarkov():
         """
         # transpose needed because eig must work with a left hand stochastic
         # matrix
-        val,vec = np.linalg.eig(np.transpose(self._mat))
-        steady = vec[:,0]/vec.sum(axis=0)[0]
-        
-        if np.abs(np.imag(steady).sum() > len(steady) * self.tol):
-            raise UserWarning("The eigenvector has non-zero imaginary parts!")
-        
-        return np.real(steady)
+        if self.decay_func_type is None:
+            val,vec = np.linalg.eig(np.transpose(self._mat))
+            steady = vec[:,0]/vec.sum(axis=0)[0]
+            
+            if np.abs(np.imag(steady).sum() > len(steady) * self.tol):
+                raise UserWarning("The eigenvector has non-zero imaginary parts!")
+            
+            return np.real(steady)
+        else:
+            raise NotImplementedError("The 'steady' method does not handle "+
+                                      "cases where time dependent decay of the"+
+                                      " transition matrix is included!")
             
                 
     def _type_checks(self,transition_matrix,state_names):
@@ -249,6 +333,7 @@ class DiscreteMarkov():
             raise ValueError("The 'transition_matrix' input must be of dimension=2!")
         
         if (transition_matrix < 0.0).any():
+            breakpoint()
             raise ValueError("All entries to the transition matrix are probabilities and must be positive!")
         
         if len(state_names) != transition_matrix.shape[0]:
@@ -753,7 +838,7 @@ class Extremes():
                     # this information is used to properly validate the frequency and duration characteristics of 10 and 50 year events that 
                     # MEWS focuses on.
 
-                    state_intervals = self._find_extreme_intervals(states_arr0, state_int)
+                    state_intervals = find_extreme_intervals(states_arr0, state_int)
                     delt_between_hw = [tup1[0]-tup0[0] for tup1,tup0 in zip(state_intervals[1][1:],state_intervals[1][0:-1]) if tup0[0] <= month_num_steps]
                     delt_in_hw = [tup[1]-tup[0]+1 for tup in state_intervals[1] if tup[0] <= month_num_steps]
                     self._delTmax_verification_data["freq_s"].append({"key_name":key_name,
@@ -792,7 +877,7 @@ class Extremes():
         
 
         # separate history into extreme states.
-        state_intervals = self._find_extreme_intervals(states_arr, state_int)
+        state_intervals = find_extreme_intervals(states_arr, state_int)
         for (junk,state),s_ind in zip(state_intervals.items(),state_int):
 
             if s_ind==1:
@@ -935,44 +1020,7 @@ class Extremes():
         
         return objA
 
-    def _find_extreme_intervals(self,states_arr,states):
-        """
-        This function returns a dictionary whose entry keys are 
-        the "states" input above. Each dictionary element contains 
-        a list of tuples. Each tuple contains the start and end times 
-        of an event where "states_arr" was equal to the corresponding state
 
-        Parameters
-        ----------
-        states_arr : array-like
-            a 1-D array of integers of values that are only in the states input
-        states : array-like,list-like
-            a 1-D array of values to look for in states_arr. 
-
-        Returns
-        -------
-        state_int_dict : TYPE
-            DESCRIPTION.
-
-        """ 
-        
-        diff_states = np.concatenate((np.array([0]),np.diff(states)))
-        state_int_dict = {}
-        for state in states:
-            state_ind = [i for i, val in enumerate(states_arr==state) if val]
-            end_points = [i for i, val in enumerate(np.diff(state_ind)>1) if val]
-            start_point = 0
-            if len(end_points) == 0 and len(state_ind) > 0:
-                ep_list = [(state_ind[0],state_ind[-1])]
-            elif len(end_points) == 0 and len(state_ind) == 0:
-                ep_list = []
-            else:
-                ep_list = []
-                for ep in end_points:
-                    ep_list.append((state_ind[start_point],state_ind[ep]))
-                    start_point = ep+1
-            state_int_dict[state] = ep_list
-        return state_int_dict
 
     @staticmethod
     def double_shape_func(t,A,B,D,min_s):
@@ -1162,11 +1210,6 @@ class Extremes():
             S_E = 0.0
             S_T = 0.0
             abs_maxval_delT = param['normalizing extreme temp']
-            
-            if abs_maxval_delT > 0.0:
-                pass  # place to debug for heat waves
-            else:
-                pass  # place to debug for cold snaps
 
             # introduce a delta if it exists.
             if not integral_delta is None:
@@ -1192,7 +1235,6 @@ class Extremes():
             # is not strictly -1..1)
             iter0 = 0
             max_iter = 20
-            found_physical_solution = False
             
             #TODO - you need more work on the relationship between peak 
             #       temperature and total energy
