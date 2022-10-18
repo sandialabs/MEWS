@@ -100,32 +100,38 @@ class Graphics():
             ylim = (0, ylim[1])
 
             on_first = 0
-            for tstr, ystr, pos, color, linestyle in zip(['actual', 'target', 'actual', 'target'],
-                                                         ['10 year', '10 year',
-                                                             '50 year', '50 year'],
-                                                         [0, 0, 1, 1], ['blue', mcd.CSS4_COLORS['darkblue'], mcd.CSS4_COLORS['salmon'], 'red'], [':', "--", ":", "--"]):
-                thresh = thresh_tup[1][tstr][pos]
-                ax.plot([thresh, thresh], ylim, label=ystr + " " +
-                        tstr, linestyle=linestyle, color=color, linewidth=1)
-                if tstr == 'target':
-                    if on_first == 0:
-                        on_first = 1
-                        color2 = mcd.CSS4_COLORS['turquoise']
-                        arr_post = 1/3
-                        label = "10 year historic"
-                    else:
-                        color2 = mcd.CSS4_COLORS['orangered']
-                        arr_post = 2/3
-                        label = "50 year historic"
-                    hist_thresh = thresh-ipcc_shift['temperature'][ystr]
-                    ax.plot([hist_thresh, hist_thresh], ylim, linestyle=linestyle,
-                            color=color2, linewidth=1., label=label)
-                    ax.arrow(hist_thresh, arr_post * ylim[1],
-                             thresh-hist_thresh-1.0,
-                             0.0,
-                             width=0.0005,
-                             head_width=0.005,
-                             head_length=1.0)
+            
+            if not thresh_tup[1] is None:
+                for tstr, ystr, pos, color, linestyle in zip(['actual', 'target', 'actual', 'target'],
+                                                             ['10 year', '10 year',
+                                                                 '50 year', '50 year'],
+                                                             [0, 0, 1, 1], 
+                                                             ['blue', 
+                                                              mcd.CSS4_COLORS['darkblue'], 
+                                                              mcd.CSS4_COLORS['salmon'], 'red'], 
+                                                             [':', "--", ":", "--"]):
+                    thresh = thresh_tup[1][tstr][pos]
+                    ax.plot([thresh, thresh], ylim, label=ystr + " " +
+                            tstr, linestyle=linestyle, color=color, linewidth=1)
+                    if tstr == 'target':
+                        if on_first == 0:
+                            on_first = 1
+                            color2 = mcd.CSS4_COLORS['turquoise']
+                            arr_post = 1/3
+                            label = "10 year historic"
+                        else:
+                            color2 = mcd.CSS4_COLORS['orangered']
+                            arr_post = 2/3
+                            label = "50 year historic"
+                        hist_thresh = thresh-ipcc_shift['temperature'][ystr]
+                        ax.plot([hist_thresh, hist_thresh], ylim, linestyle=linestyle,
+                                color=color2, linewidth=1., label=label)
+                        ax.arrow(hist_thresh, arr_post * ylim[1],
+                                 thresh-hist_thresh-1.0,
+                                 0.0,
+                                 width=0.0005,
+                                 head_width=0.005,
+                                 head_length=1.0)
 
             ax.grid('on')
             ax.set_ylabel('Probability Density')

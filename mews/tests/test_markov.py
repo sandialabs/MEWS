@@ -180,25 +180,33 @@ class Test_Markov(unittest.TestCase):
         #          equal to the cutoff
         tran_mat = np.array([[0.9,0.1],
                              [0.0,1.0]])
-        cdf = tran_mat.cumsum(axis=1)
+        cdf2 = tran_mat.cumsum(axis=1)
         
         # BE CAREFUL, changing the 0.0 to 0 will give error ValueError: Buffer dtype mismatch, expected 'DTYPE_t' but got 'long'
         # type checking would correct this but slows downs everything.
         coef_cutoff = np.array([[0.0,10.0],[0.0,10.0]])
         for func_type in [2,3]:
-            values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_cutoff, func_type)
+            values = markov_chain_time_dependent_wrapper(cdf2, rand_big, 0, coef_cutoff, func_type)
             # all changes in state will be of duration 10 + 2
             diffvals = np.diff(values)
             # for python implementation, this is diffvals[:,-12],diffvals[11:] that
             # works. I am not going to try and correct this. It probably has to do
             # with an integer comparison technique that is not properly controlled.
             testvals = np.array([val1 == -1
-                                 for idx,(val0,val1) in enumerate(zip(diffvals[:-13],
-                                                                           diffvals[12:])) 
+                                 for idx,(val0,val1) in enumerate(zip(diffvals[:-12],
+                                                                           diffvals[11:])) 
                                  if val0 == 1])
             self.assertTrue(testvals.all())
-
+            
+        # # func_type=4
+        coef_quadratic = np.array([[100,0.999,300],[100,0.999,300]])
         
+        values = {}
+        for idx, markov_func in enumerate([markov_chain_time_dependent_py, 
+                                           markov_chain_time_dependent_wrapper]):    
+            values[idx] = markov_func(cdf, rand_big[0:1000], 1, coef_quadratic, 4)
+
+        self.assertTrue((values[0]==values[1]).all())
     
     def test_MarkovChain(self):
         always0 = np.array([[1,0],[1,0]],dtype=np.float)

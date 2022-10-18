@@ -112,6 +112,38 @@ cpdef DTYPE_t linear_decay_with_cutoff(DTYPE_t time_in_state,
     
     return val
 
+cpdef DTYPE_t quadratic_times_exponential_decay_with_cutoff(DTYPE_t time_in_state,
+                                DTYPE_t time_to_peak,
+                                DTYPE_t Pmax,
+                                DTYPE_t P0,
+                                DTYPE_t cutoff_time):
+    
+    
+    """
+    This function provides a controlled method to increase probability of
+    sustaining a heat wave until 'time_to_peak' after this time, the heat
+    wave sustaining probability drops. Pmax is the maximum <= 1.0 and 
+    P0 is the initial probability. There are therefore 4 parameters 
+    for this fit including a cutoff time at which probability drops to zero.
+    
+    """
+    cdef DTYPE_t val
+    cdef DTYPE_t one = 1.0
+    cdef DTYPE_t two = 2.0
+    cdef DTYPE_t zero = 0.0
+    cdef DTYPE_t t_dimensionless = time_in_state / time_to_peak
+    
+    if time_in_state > cutoff_time:
+        val = zero
+    else:
+        # no multiplication of P0 here because that is done in
+        # evaluate_decay_function
+        val = (one + (t_dimensionless)**two * exp(two) * 
+                    (Pmax/P0 - 1)* exp(-two * t_dimensionless))
+    
+    return val
+    
+    
 
 cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
                                     np.int_t func_type,
@@ -137,9 +169,15 @@ cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
     elif func_type == 2:
         func_eval = exponential_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idym1,1])
     elif func_type == 3:
-        func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idy,1])
+        func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idym1,1])
+    elif func_type == 4:
+        func_eval = quadratic_times_exponential_decay_with_cutoff(time_in_state,
+                                                                  coef[idym1,0],
+                                                                  coef[idym1,1],
+                                                                  P0,
+                                                                  coef[idym1,2])
     else:
-        print("func_type must be 0,1,2,3...upredictable behavior is resulting!")
+        print("func_type must be 0,1,2,3, or 4...upredictable behavior is resulting!")
         
     cdf1[0] = cdf0[0] + P0 * func_eval
     cdf1[idy] = one - P0 * func_eval
@@ -191,6 +229,21 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
            1 - use linear_decay
            2 - use exponential_decay with cut-off point
            3 - use linear_decay with cut-off point
+           4 - use quadratic time exponential that peaks at a specific time and
+               then decays. This function increases probability of sustaining
+               a heat wave and then decays after the peak
+               
+               for func_type 0
+                   coef is 1 element = lambda for exp(-lambda * t)
+                   
+               1: coef has 1 element = slope for slope * t
+               2: coef has 2 elements = lambda and a cutoff time
+               3: coef has 2 elements = slope and a cutoff time
+               4: coef has 4 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
+                                         3) initial probability at time = 0,
+                                         and 4) cutoff time at which probability drops
+                                         to zero.
+                                
     
     
     Returns

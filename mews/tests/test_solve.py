@@ -17,14 +17,12 @@ from mews.stats.solve import SolveDistributionShift
 from mews.stats.extreme import DiscreteMarkov
 from mews.stats.solve import markov_gaussian_model_for_peak_temperature
 from numpy.random import default_rng
+from matplotlib import pyplot as plt
 
 import numpy as np
 import unittest
 import os
 
-
-    
-    
 
 class Test_SolveDistributionShift(unittest.TestCase):
     @classmethod
@@ -33,15 +31,15 @@ class Test_SolveDistributionShift(unittest.TestCase):
         cls.plot_results = False
         cls.write_results = False
         cls.rng = default_rng()
-        
+        plt.close('all')
         if os.path.exists("testing_output"):
             os.removedirs(("testing_output"))
         os.mkdir("testing_output")
         
-
     
     @classmethod
     def tearDownClass(cls):
+        
         if os.path.exists("testing_output"):
             os.removedirs(("testing_output"))
         pass
@@ -49,8 +47,6 @@ class Test_SolveDistributionShift(unittest.TestCase):
     
     def test_decay_func_types(self):
         # keep in mind
-        
-        
         """
         x[0] = del_mu_T
         x[1] = del_sig_T
@@ -62,12 +58,14 @@ class Test_SolveDistributionShift(unittest.TestCase):
         x[7] = lamb_hw or slope_hw 
         x[8] = cutoff_cs
         x[9] = cutoff_hw
+        x[10] = maximum sustained probability for cold snaps
+        x[11] = maximum sustained probability for heat waves
         
         """
-        delT_above_50_year = 5.0 # degrees celcius
+        delT_above_50_year = 20.0 # degrees celcius
         num_step = 1000000  # provides 11 50 year periods
         rng = default_rng(29023430)
-        decay_func_type = [None,"linear","exponential","exponential_cutoff"]  # 8 parameters
+        decay_func_type = [None,"linear","exponential","exponential_cutoff","quadratic_times_exponential_decay_with_cutoff"]  # 8 parameters
         for decay_func in decay_func_type:
             param = {}
             param['hw'] = {}
@@ -114,7 +112,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
                  0.002,
                  0.98,
                  0.985])
-            elif "cutoff" in decay_func:
+            elif "cutoff" in decay_func and not "quadratic" in decay_func:
                 x0 = np.array([0.1,
                      0.05,
                      0.001,
@@ -125,6 +123,19 @@ class Test_SolveDistributionShift(unittest.TestCase):
                      0.02,
                      1000,
                      1000])
+            elif "quadratic" in decay_func:
+                x0 = np.array([0.1,
+                     0.05,
+                     0.001,
+                     0.002,
+                     0.98,
+                     0.985,
+                     0.02,
+                     0.02,
+                     1000,
+                     1000,
+                     0.997,
+                     0.999])
             else:
                 x0 = np.array([0.1,
                      0.05,
@@ -136,6 +147,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                      0.02])
             wave_type = 'hw'
             
+            # run this once so that any obvious bugs will come out 
+            # before it goes into parallel mode in differential_evolution.
             resid = markov_gaussian_model_for_peak_temperature(x0,
                                                        num_step,
                                                        random_seed,
@@ -162,30 +175,36 @@ class Test_SolveDistributionShift(unittest.TestCase):
                                    random_seed,
                                    wave_type,
                                    hist0, 
-                                   fit_hist,
+                                   delT_above_50_year,
                                    ipcc_shift,
                                    decay_func_type=decay_func,
                                    use_cython=True,
                                    plot_results=self.plot_results,
-                                   max_iter=6,
-                                   plot_title="Fit historgram "+decay_func_str)
-            # Just fit the histograms
-            fit_hist = True
+                                   max_iter=1,
+                                   plot_title="Fit histogram "+decay_func_str)
+            # Just fit the histograms - no ipcc_shift factors
+            ipcc_shift = None
             obj2 = SolveDistributionShift(x0,
                                    num_step,  
                                    param,
                                    random_seed,
                                    wave_type,
                                    hist0, 
-                                   fit_hist,
+                                   delT_above_50_year,
                                    ipcc_shift,
-                                   decay_func_type=decay_func_type,
+                                   decay_func_type=decay_func,
                                    use_cython=True,
                                    plot_results=self.plot_results,
-                                   max_iter=6,
+                                   max_iter=1,
                                    plot_title="Shift to future "+decay_func_str)
     
             optimize_result = obj.optimize_result
+
+            
+            for key,val in obj.residuals.items():
+                if val >= 1.0:
+                    breakpoint()
+                self.assertTrue(val < 1.0)
 
 
               

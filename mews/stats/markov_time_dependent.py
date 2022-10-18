@@ -66,7 +66,7 @@ def cython_function_input_checks(cdf,
     array_check(cdf,float,"cdf",2)
     array_check(rand,float,"rand",1)
     state0 = int_check(state0,'state0',[0,cdf.shape[0]-1])
-    func_type = int_check(func_type,'func_type',[0,3])
+    func_type = int_check(func_type,'func_type',[0,4])
 
     if (rand > 1).any() or (rand < 0).any():
         raise ValueError("The rand input vector elements must be a probabilities (i.e. 0<=rand<=1)")
@@ -74,6 +74,22 @@ def cython_function_input_checks(cdf,
         raise ValueError("The cdf input matrix's elements must be probabilities (i.e. 0<=cdf<=1)")
     elif cdf.shape[0] != cdf.shape[1]:
         raise ValueError("The cdf must be a square matrix!")
+        
+    if func_type == 4:
+        #coef - 1) time_to_peak
+        #       2) maximum probability
+        #       3) cutoff time!!
+        for idx,row in enumerate(coef):
+            if row[0] < 0.0:
+                raise ValueError("The peak time must be greater than zero!")
+            elif row[1] < cdf[idx+1,0]-cdf[idx+1,idx+1]:
+                pass
+                # NOT A PROBLEM - THE FUNCTION WORKS UNDER THESE CONDITIONS.
+                #raise ValueError("The maximum probability of sustaining a "+
+                #                 "heat wave must be greater than the initial"+
+                #                 " probability of sustaining a heat wave")
+            elif row[2] < 0.0:
+                raise ValueError("The cutoff time must be greater than zero!")
         
     return state0, func_type
 
@@ -121,6 +137,19 @@ def markov_chain_time_dependent_wrapper(cdf,
            1 - use linear_decay
            2 - use exponential_decay with cut-off point
            3 - use linear_decay with cut-off point
+           4 - use quadratic time exponential that peaks at a specific time and
+               then decays. This function increases probability of sustaining
+               a heat wave and then decays after the peak
+               
+               for func_type 0
+                   coef is 1 element = lambda for exp(-lambda * t)
+                   
+               1: coef has 1 element = slope for slope * t
+               2: coef has 2 elements = lambda and a cutoff time
+               3: coef has 2 elements = slope and a cutoff time
+               4: coef has 4 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
+                                         and 3) cutoff time at which probability drops
+                                         to zero.
            
     check_inputs : bool : optional : Default = True
         Check all of the inputs types to assure that cython
@@ -217,6 +246,34 @@ def linear_decay_with_cutoff(time_in_state,
     
     return val
 
+def quadratic_times_exponential_decay_with_cutoff(time_in_state,
+                                time_to_peak,
+                                Pmax,
+                                P0,
+                                cutoff_time):
+    """
+    This function provides a controlled method to increase probability of
+    sustaining a heat wave until 'time_to_peak' after this time, the heat
+    wave sustaining probability drops. Pmax is the maximum <= 1.0 and 
+    P0 is the initial probability. There are therefore 4 parameters 
+    for this fit including a cutoff time at which probability drops to zero.
+    
+    """
+    one = 1.0
+    two = 2.0
+    zero = 0.0
+    t_dimensionless = time_in_state / time_to_peak
+    
+    if time_in_state > cutoff_time:
+        val = zero
+    else:
+        # no multiplication of P0 here because that is done in
+        # evaluate_decay_function
+        val = (one + (t_dimensionless)**two * exp(two) * 
+                    (Pmax/P0 - 1)* exp(-two * t_dimensionless))
+    
+    return val
+
 
 def evaluate_decay_function(cdf0,
                             func_type,
@@ -241,9 +298,15 @@ def evaluate_decay_function(cdf0,
     elif func_type == 2:
         func_eval = exponential_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idym1,1])
     elif func_type == 3:
-        func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idy,1])
+        func_eval = linear_decay_with_cutoff(time_in_state,coef[idym1,0],coef[idym1,1])
+    elif func_type == 4:
+        func_eval = quadratic_times_exponential_decay_with_cutoff(time_in_state,
+                                                                      coef[idym1,0],
+                                                                      coef[idym1,1],
+                                                                      P0,
+                                                                      coef[idym1,2])
     else:
-        print("func_type must be 0,1,2,3...upredictable behavior is resulting!")
+        raise ValueError("func_type must be 0,1,2,3, or 4...upredictable behavior is resulting!")
         
     cdf1[0] = cdf0[0] + P0 * func_eval
     cdf1[idy] = one - P0 * func_eval
@@ -295,12 +358,27 @@ def markov_chain_time_dependent_py(cdf,
            assumed to be a constant markov process. Only rows 2...m have 
            time decay.
            
+           for func_type 0
+               coef is 1 element = lambda for exp(-lambda * t)
+               
+           1: coef has 1 element = slope for slope * t
+           2: coef has 2 elements = lambda and a cutoff time
+           3: coef has 2 elements = slope and a cutoff time
+           4: coef has 4 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
+                                     3) initial probability at time = 0,
+                                     and 4) cutoff time at which probability drops
+                                     to zero.
+                            
+           
     func_type : an integer that indicates what function type to use. 
            
            0 - use exponential_decay
            1 - use linear_decay
            2 - use exponential_decay with cut-off point
            3 - use linear_decay with cut-off point
+           4 - use quadratic time exponential that peaks at a specific time and
+               then decays. This function increases probability of sustaining
+               a heat wave and then decays after the peak
     
     
     Returns

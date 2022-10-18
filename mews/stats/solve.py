@@ -62,7 +62,7 @@ def ipcc_shift_comparison_residuals(hist0,ipcc_shift,
                                     durations,
                                     num_step,
                                     output_hist,
-                                    delT_above_50_year):
+                                    delT_above_shifted_maximum):
     # get and calculate cdf's for historical (0) and future (_T) distributions
     
     cdf0 = ((hist0[0]/hist0[0].sum()).cumsum(), (hist0[1][1:] + hist0[1][0:-1])/2)
@@ -94,7 +94,7 @@ def ipcc_shift_comparison_residuals(hist0,ipcc_shift,
     
     # penalize temperatures 5 C hotter than 50 year peak temperature
     # The square root amplifies the low probability numbers to create increased residuals
-    positive_penalty = ((histT_tuple[0][0][cdf_T[1] > (T_shifted_target[1] + delT_above_50_year)]).sum())**0.5
+    positive_penalty = ((histT_tuple[0][0][cdf_T[1] > (T_shifted_target[1] + delT_above_shifted_maximum)]).sum())**0.5
     
     
     residuals = ((T_shifted_actual - T_shifted_target)/T_shifted_target)**2
@@ -163,7 +163,7 @@ def markov_gaussian_model_for_peak_temperature(x,
                                                decay_func_type=None,
                                                use_cython=True,
                                                output_hist=False,
-                                               delT_above_50_year=5):
+                                               delT_above_shifted_maximum=5):
     """
     This is an objective function. It finds residuals on one of the following
     criterion
@@ -211,15 +211,25 @@ def markov_gaussian_model_for_peak_temperature(x,
         
         x[5] = Probability of sustaining a heat wave at time in wave = 0
         If not decay_func_type is None:
-            x[6] = slope or exponential parameter (depending on 
+            if decay_func_type == 'quadratic_times_exponential_decay_with_cutoff':
+                x[6] = time to peak probability of sustaining a cold snap
+            else:
+                x[6] = slope or exponential parameter (depending on 
                     'decay_func_type') decay of probability sustaining cold snaps
             
-            x[7] = same as x[6] for heat waves
+            if decay_func_type == 'quadratic_times_exponential_decay_with_cutoff':
+                x[7] = time to peak probability of sustaining a heat wave
+            else:
+                x[7] = same as x[6] for heat waves
             
         If "cutoff" in decay_func_type:
             x[8] = cutoff time at which probability of sustaining a cold snap
                    drops to zero
             x[9] = same as x[8] for heat waves.
+            
+        if "quadratic" in decay func_type:
+            x[10] = Maximum probability of sustaining a cold snap
+            x[11] = Maximum probability of sustaining a heat wave
                
       .... Finish docs later.
     
@@ -261,6 +271,11 @@ def markov_gaussian_model_for_peak_temperature(x,
             slope_cs = x[6]
             slope_hw = x[7]
             coef = np.array([[slope_cs],[slope_hw]])
+        elif decay_func_type == "quadratic_times_exponential_decay_with_cutoff":
+            # remember the order of the coefficient input for this function is
+            # 1) time to maximum 2) maximum prob, 3) cutoff time
+            # the order has to be 6,10,8 as a result instead of 6,8,10
+            coef = np.array([[x[6],x[10],x[8]],[x[7],x[11],x[9]]])
         else:
             coef = np.array([[x[6],x[8]],[x[7],x[9]]])
     else:
@@ -269,7 +284,7 @@ def markov_gaussian_model_for_peak_temperature(x,
     # now run the Markov process
     objDM = DiscreteMarkov(rng, 
                            tran_matrix, 
-                           decay_func_type=None,#decay_func_type,
+                           decay_func_type=decay_func_type,
                            coef=coef,
                            use_cython=use_cython)
     
@@ -297,15 +312,16 @@ def markov_gaussian_model_for_peak_temperature(x,
         
         if ipcc_shift is None:
             residuals = histogram_comparison_residuals(histT_tuple[0],hist0)
+            thresholds = None
         else:
             if output_hist:
                 residuals, thresholds = ipcc_shift_comparison_residuals(hist0,ipcc_shift, 
                                                         histT_tuple, durations, 
-                                                        num_step,output_hist,delT_above_50_year)
+                                                        num_step,output_hist,delT_above_shifted_maximum)
             else:
                 residuals = ipcc_shift_comparison_residuals(hist0,ipcc_shift, 
                                                         histT_tuple, durations, 
-                                                        num_step,output_hist)
+                                                        num_step,output_hist,delT_above_shifted_maximum)
     if print_results:
         print("residuals = {0:10.5f}".format(residuals.sum()))
         
@@ -314,12 +330,6 @@ def markov_gaussian_model_for_peak_temperature(x,
     else:
         return residuals.sum()
     
-
-
-        
-        
-    
-
 
 
 class SolveDistributionShift(object):
@@ -351,8 +361,16 @@ class SolveDistributionShift(object):
                                         x0[6] - slope of 1 - slope*time_in_wave for decaying probability of sustaining a cold snap
                                         x0[7] - same as x0[6] for a heat wave
                                     else
-                                        x0[6:7] - lambda or slope as defined above
+                                        if decay_func_type == 'quadratic_times_exponential_decay_with_cutoff':
+                                            x0[6:7] = time to maximum probability for cold snaps and heat waves 
+                                        else:
+                                            x0[6:7] - lambda or slope as defined above
+                                       
                                         x0[8:9] - cutoff times at which probability is set to zero
+                                        
+                                        if decay_func_type == 'quadratic_times_exponential_decay_with_cutoff':
+                                            x0[10:11] - maximum sustained probability of cold snaps and heat waves.
+                                        
     
                              """
     
@@ -385,14 +403,16 @@ class SolveDistributionShift(object):
                             param0['normalized extreme temp duration fit intercept'] = Linear regression intercept
                             
                         """
+    _decay_func_types = [None,'linear','exponential','linear_cutoff','exponential_cutoff',"quadratic_times_exponential_decay_with_cutoff"]
+    
+    
     
     def __init__(self, x0, num_step,
                             param0,
                             random_seed,
                             wave_type,
                             hist0,
-                            fit_hist,
-                            delT_above_50_year,
+                            delT_above_shifted_maximum,
                             ipcc_shift=None,
                             decay_func_type=None,
                             use_cython=True,
@@ -426,8 +446,7 @@ class SolveDistributionShift(object):
                                 param0,
                                 wave_type,
                                 hist0,
-                                fit_hist,
-                                delT_above_50_year,
+                                delT_above_shifted_maximum,
                                 ipcc_shift,
                                 decay_func_type,
                                 use_cython,
@@ -438,10 +457,10 @@ class SolveDistributionShift(object):
                                 fig_path)
         
         # establish the absolute maximum temperature nonlinear constraint boundary on the optimization
-        if fit_hist:
-            abs_max_temp = delT_above_50_year # this parameter 
+        if ipcc_shift is None:
+            abs_max_temp = param0['hw']['normalizing extreme temp'] + delT_above_shifted_maximum # this parameter 
         else:
-            abs_max_temp = ipcc_shift['temperature']['50 year'] + delT_above_50_year
+            abs_max_temp = param0['hw']['normalizing extreme temp'] + ipcc_shift['temperature']['50 year'] + delT_above_shifted_maximum
         
         # linear constraint - do not allow Pcs and Phw to sum to more than specified amounts
         # nonlinear constraint - do not allow maximum possible sampleable temperature to exceed a bound.
@@ -470,8 +489,8 @@ class SolveDistributionShift(object):
                                                ipcc_shift,
                                                decay_func_type,
                                                use_cython,
-                                               fit_hist,
-                                               delT_above_50_year),
+                                               False,
+                                               delT_above_shifted_maximum),
                                          constraints=constraints,
                                          workers=num_cpu,
                                          maxiter=max_iter,
@@ -498,13 +517,17 @@ class SolveDistributionShift(object):
                   use_cython,
                   output_hist=True)
         
-        res0 = optimize_result.fun
-        plot_result = True
         if plot_results:
             Graphics.plot_sample_dist_shift(hist0,histT_tuple, ipcc_shift, thresholds, plot_title, fig_path)
             
-
+        # repackage everything for use in other parts of MEWS.
         self.optimize_result = optimize_result
+        self.thresholds = thresholds
+        self.residuals = resid
+        self.Tsample = Tsample
+        self.durations = durations
+        self.histT_tuple = histT_tuple
+        
         param_new = deepcopy(param0)
         pval = unpack_params(param0, wave_type)
         param_new[wave_type]['extreme_temp_normal_param']['mu'] = pval["mu_T"] + xf0[0]
@@ -516,15 +539,35 @@ class SolveDistributionShift(object):
         param_new['hw']['hourly prob stay in heat wave'] = xf0[5]
         param_new['cs']['decay function'] = decay_func_type
         param_new['hw']['decay function'] = decay_func_type
-        if decay_func_type == "linear" or decay_func_type == "exponential":    
-            # hw and cold snaps 
-            param_new['cs']['decay func coef'] = xf0[6]
-            param_new['cs']['decay func coef'] = xf0[7]
-        elif "cutoff" in decay_func_type:
-            param_new['cs']['decay func coef'] = xf0[6],xf0[8]
-            param_new['cs']['decay func coef'] = xf0[7],xf0[9]
+        if not decay_func_type is None:
+            if decay_func_type == "linear" or decay_func_type == "exponential":    
+                # hw and cold snaps 
+                param_new['cs']['decay func coef'] = xf0[6]
+                param_new['hw']['decay func coef'] = xf0[7]
+            elif "cutoff" in decay_func_type and not "quadratic" in decay_func_type:
+                param_new['cs']['decay func coef'] = xf0[6],xf0[8]
+                param_new['hw']['decay func coef'] = xf0[7],xf0[9]
+            elif "quadratic" in decay_func_type:
+                param_new['cs']['decay func coef'] = xf0[6],xf0[10],xf0[8]
+                param_new['hw']['decay func coef'] = xf0[7],xf0[11],xf0[9]
         self.param0 = param0
         self.param = param_new
+        
+    def _check_ipcc_shift(self,ipcc_shift,key):
+        if not key in ipcc_shift:
+            raise ValueError("The input 'ipcc_shift' must be a dictionary with key '{}'".format(key))
+        else:
+            for yr_str in ["10 year","50 year"]:
+                if not yr_str in ipcc_shift[key]:
+                    raise ValueError("The input subdictionary 'ipcc_shift[{0}] must have include a key '{1}'".format(key,yr_str))
+                
+                if not isinstance(ipcc_shift[key][yr_str],(int,float)):
+                    raise TypeError("The input subdictionary 'ipcc_shift['{0}']['{1}'] must be a positive number".format(key,yr_str))
+                    
+                if ipcc_shift[key][yr_str] < 0.0 or ipcc_shift[key][yr_str] > 100.0:
+                    raise ValueError("The input subdictionary 'ipcc_shift['{0}']['{1}'] is constrained to the interval 0 - 100".format(key,yr_str))
+                
+        
         
     def _check_inputs(self,x0, 
                            num_step,
@@ -532,8 +575,7 @@ class SolveDistributionShift(object):
                            param0,
                            wave_type,
                            hist0,
-                           fit_hist,
-                           delT_above_50_year,
+                           delT_above_shifted_maximum,
                            ipcc_shift,
                            decay_func_type,
                            use_cython,
@@ -542,7 +584,10 @@ class SolveDistributionShift(object):
                            max_iter,
                            plot_title,
                            fig_path):    
-    
+        """
+        Input checking is very important because this class uses  
+        parallel computing in differential_evolution where debugging bad inputs is much harder!
+        """
         if not isinstance(x0,np.ndarray):
             raise TypeError("The input 'x0' must be a numpy array.")
         elif not isinstance(random_seed,int):
@@ -551,11 +596,39 @@ class SolveDistributionShift(object):
             raise TypeError("The input 'param0' must be a dictionary with specific structure:\n\n"+ self._param0_struct)
         elif not isinstance(hist0, tuple):
             raise TypeError("The histogram input 'hist0' must be tuple of lenght 2 from numpy.histogram")
-        elif not isinstance(ipcc_shift, dict):
+        elif not isinstance(ipcc_shift, (dict,type(None))):
             raise TypeError("The input 'ipcc_shift' must be a dictionary with specific structure:\n\n"+self._ipcc_shift_struct)
+        elif not isinstance(decay_func_type, (type(None),str)):
+            raise TypeError("The input 'decay_func_type' must be a string or None = {0}".format(str(self._decay_func_types)))
+        elif not isinstance(use_cython, bool):
+            raise TypeError("The input 'use_cython' must be a boolean (i.e. True or False)")
+        elif not isinstance(num_cpu, int):
+            raise TypeError("The input 'num_cpu' must be an integer > 0 or give it a value = -1 to use all cpus available.")
+        elif not isinstance(plot_result, bool):
+            raise TypeError("The input 'plot_result' must be a boolean (i.e. True or False)")
+        elif not isinstance(max_iter, int):
+            raise TypeError("The input 'max_iter' must be an integer > 0")
+        elif not isinstance(plot_title, str):
+            raise TypeError("The input 'plot_title' must be a string!")
+        elif not isinstance(fig_path, str):
+            raise TypeError("The input 'fig_path' must be a string that is a valid path to a file that is writeable.")
+        elif not isinstance(delT_above_shifted_maximum, (int,float)):
+            raise TypeError("the input 'delT_above_shifted_maximum' must be a number > 0")
+    
+        if not decay_func_type in self._decay_func_types:
+            raise ValueError("The input 'decay_func_type' must be one of the following " + str(self._decay_func_types))
+            
+        # 20.0 C above the 50 year event is super unlikely physically
+        if delT_above_shifted_maximum < 0 or delT_above_shifted_maximum > 20.0:
+            raise ValueError("The input 'delT_above_shifted_maximum' is in degrees Celcius and must be between 0 and 20.")
+        
+        # test IPCC shift factors.
+        if not ipcc_shift is None:
+            for key in ['temperature','frequency']:
+                self._check_ipcc_shift(ipcc_shift,key)
     
         # ASSURE CORRECT INPUT VECTOR LENGTH    
-        for decay_type,numvar in zip([None,'exponential','linear','exponential_cutoff','linear_cutoff'],[6,8,8,10,10]):
+        for decay_type,numvar in zip(self._decay_func_types,[6,8,8,10,10,12]):
             if decay_func_type == decay_type and len(x0) != numvar:
                 if decay_type is None:
                     func_descr_str = "with no decay function "
@@ -575,37 +648,53 @@ class SolveDistributionShift(object):
         bounds_x0 = [(0.0,0.7),
                      (-0.1*param0[wave_type]['extreme_temp_normal_param']['sig'],
                       2*param0[wave_type]['extreme_temp_normal_param']['sig']),
-                     (0,0.025),
-                     (0,0.025),
+                     (0,0.03),
+                     (0,0.03),
                      (0.9,0.999999),
                      (0.9,0.999999)]
         # establish a constraint such that Phw and Pcs cannot add to more than one.                               
         constrain_matrix = np.array([[0.0,0.0,1.0,1.0,0.0,0.0]])
         
+        
+        
         max_duration = param0[wave_type]['normalizing duration']
         
-        if "exponential" in decay_func_type or "linear" in decay_func_type:
-            # only consider slopes that will cut the probability to 0 by the 
-            # maximum duration of historic heat waves. Larger slopes lead to
-            # too much shift on the mean and averages of the temperature distribution.
-            bounds_x0.append((0,1/max_duration))
-            bounds_x0.append((0,1/max_duration))  # slope and exponents should be very small
-                                     # numbers a value of 1 makes decay fully occur
-                                     # in 1 step.
-            constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
-                                              axis=1)
-        if "cutoff" in decay_func_type:
-            # limiting heat wave lengths to no more than 10 times the historic duration heat wave found.
-            bounds_x0.append((param0[wave_type]['normalizing duration'],param0[wave_type]['normalizing duration']*10)) # cutoff times can be much larger
-            bounds_x0.append((param0[wave_type]['normalizing duration'],param0[wave_type]['normalizing duration']*10)) # more than a year makes no sense in this problem
-                                       # content.
-            constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
-                                              axis=1)
-            
-            nlc_obj = MaxTemperatureNonlinearConstraint(param, wave_type)
-            nlc = NonlinearConstraint(nlc_obj.func, (0.0,0.0), (abs_max_temp,abs_max_temp))
-            # we need a nonlinear constraint that sets a boundary on the absolute maximum temperature a heat wave can 
-            # exhibit. We do this by creating a nonlinear constrain between the cutoff time, and the 
+        if not decay_func_type is None:
+            if "exponential" in decay_func_type or "linear" in decay_func_type:
+                # only consider slopes that will cut the probability to 0 by the 
+                # maximum duration of historic heat waves. Larger slopes lead to
+                # too much shift on the mean and averages of the temperature distribution.
+                bounds_x0.append((0,1/max_duration))
+                bounds_x0.append((0,1/max_duration))  # slope and exponents should be very small
+                                         # numbers a value of 1 makes decay fully occur
+                                         # in 1 step.
+                constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
+                                                  axis=1)
+            if "cutoff" in decay_func_type:
+                # limiting heat wave lengths to no more than 10 times the historic duration heat wave found.
+                bounds_x0.append((max_duration,max_duration*10)) # cutoff times can be much larger
+                bounds_x0.append((max_duration,max_duration*10)) # more than a year makes no sense in this problem
+                                           # content.
+                constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
+                                                  axis=1)
+                nlc_obj = MaxTemperatureNonlinearConstraint(param0, wave_type)
+                nlc = NonlinearConstraint(nlc_obj.func, (0.0,0.0), (abs_max_temp,abs_max_temp))
+                
+                # we need a nonlinear constraint that sets a boundary on the absolute maximum temperature a heat wave can 
+                # exhibit. We do this by creating a nonlinear constrain between the cutoff time, and the 
+                if "quadratic" in decay_func_type:
+                    # replace slope and lamb with cutoff time
+                    bounds_x0[6] = (0, max_duration * 3)
+                    bounds_x0[7] = (0, max_duration * 3)
+                    bounds_x0.append((0.9,1.0))
+                    bounds_x0.append((0.9,1.0))
+                    
+                    # add two more zeros to the 
+                    constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
+                                                      axis=1)
+                    
+            else:
+                nlc = None
         else:
             nlc = None
             
@@ -628,7 +717,7 @@ class MaxTemperatureNonlinearConstraint():
         pval = unpack_params(self.param, wave_type)
         del_mu_T = x[0]
         del_sig_T = x[1]
-        del_a, del_b = shift_a_b_of_trunc_guassian(del_mu_T,
+        del_a, del_b = shift_a_b_of_trunc_gaussian(del_mu_T,
                                                    pval['mu_T'],
                                                    del_sig_T,
                                                    pval['sig_T'])

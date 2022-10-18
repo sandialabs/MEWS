@@ -115,7 +115,9 @@ class DiscreteMarkov():
 
     """
     # this list must be updated if new function types are added to the markov_time_dependent_wrapper functions
-    _func_types = {"exponential":0,"linear":1,"exponential_cutoff":2,"linear_cutoff":3}
+    _func_types = {"exponential":0,"linear":1,"exponential_cutoff":2,
+                   "linear_cutoff":3,
+                   "quadratic_times_exponential_decay_with_cutoff":4}
     
     def __init__(self,rng,transition_matrix,state_names=None,use_cython=True,decay_func_type=None, coef=None,):
         
