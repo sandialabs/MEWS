@@ -47,29 +47,12 @@ class Graphics():
         return fig, ax
 
     @staticmethod
-    def plot_sample_dist_shift(hist0, histT_tuple_dict, ipcc_shift, thresholds_dict, plot_title=None, fig_path=None):
+    def plot_sample_dist_shift(hist0, histT_tuple_dict, ipcc_shift, thresholds_dict, events, plot_title=None, fig_path=None):
         """
 
 
         Parameters
         ----------
-        funcs : list 
-            list of 2-tuples of arrays of equal length representing a function.
-            where tup[0] gives y values and tup[1] gives x values the same 
-            as the np.histogram function. If tup[1] is 1 element longer, the
-            function assumes that bin edges have been given rather than direct 
-            values and the average between edges is used.
-        ipcc_data : dict
-            dictionary with key 'temperature' and 'frequency' subdictionary must
-            contain keys describing what kind of event (ussually '10 year' and 
-                                                        '50 year')
-        thresh : dict
-            dictionary with same structure at the second level as ipcc_data 
-            values represent the actual temperature for '10 year' and '50 year'
-            events.
-            temperature this is the historic 10 or 50 year event. This event
-            is then shifted forward by ipcc_data['temperature']['10 year'] or '
-            50 year' 
 
 
         Returns
@@ -84,62 +67,82 @@ class Graphics():
         if len(histT_tuple_dict) == 1:
             axl = [axl]
         # adjust historical bins if needed.
-        bin0 = bin_avg(hist0)
-        fun0 = hist0[0]
+        
 
-        for histT_tup, thresh_tup, ax in zip(histT_tuple_dict.items(), thresholds_dict.items(), axl):
-            histT = histT_tup[1][0]
-            binT = bin_avg(histT)
-            ax.plot(bin0, fun0/fun0.sum(), label='historic')
-
-            ax.plot(binT, histT[0], label='shifted')
-
-            ylim = ax.get_ylim()
-
-            ax.set_ylim((0, ylim[1]))
-            ylim = (0, ylim[1])
-
-            on_first = 0
             
-            if not thresh_tup[1] is None:
-                for tstr, ystr, pos, color, linestyle in zip(['actual', 'target', 'actual', 'target'],
-                                                             ['10 year', '10 year',
-                                                                 '50 year', '50 year'],
-                                                             [0, 0, 1, 1], 
-                                                             ['blue', 
-                                                              mcd.CSS4_COLORS['darkblue'], 
-                                                              mcd.CSS4_COLORS['salmon'], 'red'], 
-                                                             [':', "--", ":", "--"]):
-                    thresh = thresh_tup[1][tstr][pos]
-                    ax.plot([thresh, thresh], ylim, label=ystr + " " +
-                            tstr, linestyle=linestyle, color=color, linewidth=1)
-                    if tstr == 'target':
-                        if on_first == 0:
-                            on_first = 1
-                            color2 = mcd.CSS4_COLORS['turquoise']
-                            arr_post = 1/3
-                            label = "10 year historic"
-                        else:
-                            color2 = mcd.CSS4_COLORS['orangered']
-                            arr_post = 2/3
-                            label = "50 year historic"
-                        hist_thresh = thresh-ipcc_shift['temperature'][ystr]
-                        ax.plot([hist_thresh, hist_thresh], ylim, linestyle=linestyle,
-                                color=color2, linewidth=1., label=label)
-                        ax.arrow(hist_thresh, arr_post * ylim[1],
-                                 thresh-hist_thresh-1.0,
-                                 0.0,
-                                 width=0.0005,
-                                 head_width=0.005,
-                                 head_length=1.0)
+        for histT_tup, thresh_tup, ax in zip(histT_tuple_dict.items(), thresholds_dict.items(), axl):
+            labels_given = False
+            for wtype in events:
+                
+                if labels_given:
+                    labels = [None,None]
+                else:
+                    labels_given = True
+                    labels = ['historic','future']
+                
+                bin0 = bin_avg(hist0[wtype])
+                fun0 = hist0[wtype][0]
 
-            ax.grid('on')
-            ax.set_ylabel('Probability Density')
-        ax.set_xlabel(
-            "Peak temperature increase from daily climate norms average ($^{\circ}C$)")
-        ax.legend(fontsize=12)
+                histT = histT_tup[1][wtype][0]
+                binT = bin_avg(histT)
+                
+                ax.plot(bin0, fun0/fun0.sum(), label=labels[0], color='blue')
+    
+                ax.plot(binT, histT[0], label=labels[1], color='orange')
+    
+                ylim = ax.get_ylim()
+    
+                ax.set_ylim((0, ylim[1]))
+                ylim = (0, ylim[1])
+                xlim = ax.get_xlim()
+    
+                on_first = 0
+                
+                if not thresh_tup[1][wtype] is None:
+                    for tstr, ystr, pos, color, linestyle in zip(['actual', 'target', 'actual', 'target'],
+                                                                 ['10 year', '10 year',
+                                                                     '50 year', '50 year'],
+                                                                 [0, 0, 1, 1], 
+                                                                 ['blue', 
+                                                                  mcd.CSS4_COLORS['darkblue'], 
+                                                                  mcd.CSS4_COLORS['salmon'], 'red'], 
+                                                                 [':', "--", ":", "--"]):
+                        thresh = thresh_tup[1][wtype][tstr][pos]
+                        ax.plot([thresh, thresh], ylim, label=ystr + " " +
+                                tstr, linestyle=linestyle, color=color, linewidth=1)
+                        if tstr == 'target':
+                            if on_first == 0:
+                                on_first = 1
+                                color2 = mcd.CSS4_COLORS['turquoise']
+                                arr_post = 1/3
+                                if not labels[0] is None:
+                                    label = "10 year historic"
+                                else:
+                                    label = None
+                            else:
+                                color2 = mcd.CSS4_COLORS['orangered']
+                                arr_post = 2/3
+                                if labels[0] is None:
+                                    label = None
+                                else:
+                                    label = "50 year historic"
+                            hist_thresh = thresh-ipcc_shift[wtype]['temperature'][ystr]
+                            ax.plot([hist_thresh, hist_thresh], ylim, linestyle=linestyle,
+                                    color=color2, linewidth=1., label=label)
+                            ax.arrow(hist_thresh, arr_post * ylim[1],
+                                     thresh-hist_thresh-1.0,
+                                     0.0,
+                                     width=ylim[1]/150,
+                                     head_width=ylim[1]/30,
+                                     head_length=xlim[1]/60)
 
-        if not plot_title is None:
-            axl[0].set_title(plot_title)
-        if not fig_path is None:
-            plt.savefig(fig_path, dpi=300)
+                ax.grid('on')
+                ax.set_ylabel('Probability Density')
+            ax.set_xlabel(
+                "Peak temperature increase from daily climate norms average ($^{\circ}C$)")
+            ax.legend(fontsize=12)
+    
+            if not plot_title is None:
+                axl[0].set_title(plot_title)
+            if not fig_path is None:
+                plt.savefig(fig_path, dpi=300)

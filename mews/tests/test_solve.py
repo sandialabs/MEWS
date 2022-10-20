@@ -48,22 +48,30 @@ class Test_SolveDistributionShift(unittest.TestCase):
     def test_decay_func_types(self):
         # keep in mind
         """
-        x[0] = del_mu_T
-        x[1] = del_sig_T
-        x[2] = Pcs 
-        x[3] = Phw
-        x[4] = Pcss - probability cold snap is sustained
-        x[5] = Phws - probability heat wave is sustained
-        x[6] = lamb_cs or slope_cs
-        x[7] = lamb_hw or slope_hw 
-        x[8] = cutoff_cs
-        x[9] = cutoff_hw
-        x[10] = maximum sustained probability for cold snaps
-        x[11] = maximum sustained probability for heat waves
+
         
         """
-        delT_above_50_year = 20.0 # degrees celcius
-        num_step = 1000000  # provides 11 50 year periods
+        
+        default_problem_bounds = {'cs':{'delT_mu': (0.0, 0.7),
+                                         'delT_sig multipliers': (-0.1,2),
+                                         'P_event': (0.00001, 0.03),
+                                         'P_sustain': (0.958, 0.999999),
+                                         'multipliers to max probability time': (0,2),
+                                         'slope or exponent multipliers' : (0,1),
+                                         'cutoff time multipliers':(1,3),
+                                         'max peak prob for quadratic model': (0.97, 1.0)},
+                                   'hw':{'delT_mu': (0.0, 0.7),
+                                         'delT_sig multipliers': (-0.1,2),
+                                         'P_event': (0.00001,0.03),
+                                         'P_sustain': (0.958,0.999999),
+                                         'multipliers to max probability time': (0.1,2),
+                                         'slope or exponent multipliers' : (0,1),
+                                         'cutoff time multipliers':(1,3),
+                                         'max peak prob for quadratic model': (0.97, 1.0)}}
+            
+        resid_vals = []
+        delT_above_50_year = {'hw':20.0,'cs':-20.0} # degrees celcius
+        num_step = 500000  # provides 11 50 year periods
         rng = default_rng(29023430)
         decay_func_type = [None,"linear","exponential","exponential_cutoff","quadratic_times_exponential_decay_with_cutoff"]  # 8 parameters
         for decay_func in decay_func_type:
@@ -89,24 +97,29 @@ class Test_SolveDistributionShift(unittest.TestCase):
             param['cs']['extreme_temp_normal_param']['sig'] = 0.3
             param['cs']['max extreme temp per duration'] = 0.55
             param['cs']['min extreme temp per duration'] = 0.1
-            param['cs']['normalizing extreme temp'] = 18
+            param['cs']['normalizing extreme temp'] = -18
             param['cs']['normalized extreme temp duration fit slope'] = 1.0
             param['cs']['normalized extreme temp duration fit intercept'] = 0.0
             param['cs']['hourly prob stay in heat wave'] = 0.98 
             param['cs']['hourly prob of heat wave'] = 0.002
     
+            # None indicates to just fit the historical pdf
+            ipcc_shift = {'hw':{'frequency':{'10 year':8.5,'50 year':39.5},
+                            'temperature':{'10 year':4.5,'50 year':6.12}},
+                          'cs':None}
             
-            ipcc_shift = {'frequency':{'10 year':8.5,'50 year':39.5},
-                          'temperature':{'10 year':4.5,'50 year':6.12}}
-            
-            
-            hist0 = (np.array([50,65,75,80,90,70,50,25,30,10,6,8,9,5,4,3,2,1,1,1,1,1,1]),
+            hist0 = {}
+            hist0['hw'] = (np.array([50,65,75,80,90,70,50,25,30,10,6,8,9,5,4,3,2,1,1,1,1,1,1]),
                               np.array(np.arange(2.0,14,0.5)))
+            hist0['cs'] = (np.array([1,1,1,1,1,1,2,3,4,5,9,8,6,10,30,25,50,70,90,80,75,65,50]),
+                              np.array(np.arange(-14,-2.0,0.5)))
             
             random_seed = 561854
             
             if decay_func is None:
                 x0 = np.array([0.1,
+                 0.05,
+                 0.1,
                  0.05,
                  0.001,
                  0.002,
@@ -114,6 +127,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                  0.985])
             elif "cutoff" in decay_func and not "quadratic" in decay_func:
                 x0 = np.array([0.1,
+                     0.05,
+                     0.1,
                      0.05,
                      0.001,
                      0.002,
@@ -125,6 +140,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                      1000])
             elif "quadratic" in decay_func:
                 x0 = np.array([0.1,
+                     0.05,
+                     0.1,
                      0.05,
                      0.001,
                      0.002,
@@ -139,13 +156,14 @@ class Test_SolveDistributionShift(unittest.TestCase):
             else:
                 x0 = np.array([0.1,
                      0.05,
+                     0.1,
+                     0.05,
                      0.001,
                      0.002,
                      0.98,
                      0.985,
                      0.02,
                      0.02])
-            wave_type = 'hw'
             
             # run this once so that any obvious bugs will come out 
             # before it goes into parallel mode in differential_evolution.
@@ -153,12 +171,12 @@ class Test_SolveDistributionShift(unittest.TestCase):
                                                        num_step,
                                                        random_seed,
                                                        param,
-                                                       wave_type,
                                                        hist0,
                                                        ipcc_shift,
                                                        decay_func_type=decay_func,
                                                        use_cython=True,
-                                                       output_hist=True)
+                                                       output_hist=True,
+                                                       delT_above_shifted_extreme=delT_above_50_year)
             
             fit_hist = False
             
@@ -173,9 +191,9 @@ class Test_SolveDistributionShift(unittest.TestCase):
                                    num_step,  
                                    param,
                                    random_seed,
-                                   wave_type,
                                    hist0, 
                                    delT_above_50_year,
+                                   default_problem_bounds,
                                    ipcc_shift,
                                    decay_func_type=decay_func,
                                    use_cython=True,
@@ -183,14 +201,14 @@ class Test_SolveDistributionShift(unittest.TestCase):
                                    max_iter=1,
                                    plot_title="Fit histogram "+decay_func_str)
             # Just fit the histograms - no ipcc_shift factors
-            ipcc_shift = None
+            ipcc_shift = {'hw':None, 'cs':None}
             obj2 = SolveDistributionShift(x0,
                                    num_step,  
                                    param,
                                    random_seed,
-                                   wave_type,
                                    hist0, 
                                    delT_above_50_year,
+                                   default_problem_bounds,
                                    ipcc_shift,
                                    decay_func_type=decay_func,
                                    use_cython=True,
@@ -200,11 +218,9 @@ class Test_SolveDistributionShift(unittest.TestCase):
     
             optimize_result = obj.optimize_result
 
-            
-            for key,val in obj.residuals.items():
-                if val >= 1.0:
-                    breakpoint()
-                self.assertTrue(val < 1.0)
+            resid_vals.append([val for key,val in obj.residuals.items()])
+            resid_vals.append([val for key,val in obj2.residuals.items()])
+        self.assertTrue(np.concatenate(resid_vals).max() < 1.0)
 
 
               

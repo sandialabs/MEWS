@@ -1166,6 +1166,8 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['hourly prob stay in heat wave'] = P0 
             temp_dict['hourly prob of heat wave'] = prob_of_wave_in_any_hour
             
+            
+            
             stats[month] = temp_dict
             
             col+=1

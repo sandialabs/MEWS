@@ -22,6 +22,23 @@ import os
 from warnings import warn
 import numpy as np
 
+def dict_key_equal(dict_key,dict_check):
+    # This function is recursive
+    
+    if dict_key.keys() == dict_check.keys():
+        for key,val in dict_key.items():
+            if isinstance(val,dict) and not isinstance(dict_check[key], dict):
+                raise ValueError("The dictionary being checked has a value that should be a dictionary")
+            elif isinstance(val,dict):
+                dict_key_equal(val,dict_check[key])
+                
+    else:
+        raise ValueError("The dictionary being checked does not have"+
+                         " the same keys. It must have the key:\n\n{0}"+
+                         "\n\n".format(str(dict_key.keys())))
+        
+    
+
 def filter_cpu_count(cpu_count):
     """
     Filters the number of cpu's to use for parallel runs such that 
@@ -109,13 +126,18 @@ def create_complementary_histogram(sample, hist0):
         bin_spacing = np.diff(hist0[1])
         
         # assure a constant
-        if (bin_spacing < bin_spacing[0]*(1-0.000001)).any() or (bin_spacing > bin_spacing[0]*1.000001).any():
+        if bin_spacing[0] < 0.0:
+            sign = -1
+        else:
+            sign = 1
+        if ((bin_spacing < bin_spacing[0]*(1-sign*0.000001)).any() or 
+            (bin_spacing > bin_spacing[0]*(1. + sign*0.000001)).any()):
             raise ValueError("The histogram input 'hist0' must have a constant bin spacing")
         
     
     
         # this always comes out to a positive integer under the constraints present 
-        num_bin = int((sample.max() - sample.min())/bin_spacing[0])+2
+        num_bin = np.abs(int((sample.max() - sample.min())/bin_spacing[0])+2)
         
         hist1 = np.histogram(sample,num_bin,range=(np.floor(sample.min()/bin_spacing[0])*bin_spacing[0],
                                                    np.ceil(sample.max()/bin_spacing[0])*bin_spacing[0]))

@@ -72,6 +72,7 @@ class DiscreteMarkov():
         2: "linear"
         3: "exponential_cutoff"
         4: "linear_cutoff"
+        5: "quadratic_times_exponential_decay_with_cutoff"
         
         see the "coef" input description to see how each of these
         options work.
@@ -335,7 +336,7 @@ class DiscreteMarkov():
             raise ValueError("The 'transition_matrix' input must be of dimension=2!")
         
         if (transition_matrix < 0.0).any():
-            breakpoint()
+            print(transition_matrix)
             raise ValueError("All entries to the transition matrix are probabilities and must be positive!")
         
         if len(state_names) != transition_matrix.shape[0]:
