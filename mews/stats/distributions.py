@@ -78,7 +78,7 @@ def trunc_norm_dist(rnd,mu,sig,a,b,minval,maxval):
         raise ValueError("The bisection method failed to converge! Please investigate")
     
 def transform_fit(value,minval,maxval):
-    # this function maps a logarithm from 0 to interval making for a good log-normal fit
+    # this function maps minval to maxval from -1 to 1
     return 2 *  (value - minval)/(maxval - minval) - 1
                  
 # TODO - merge these functions with those in ExtremeTemperatureWaves

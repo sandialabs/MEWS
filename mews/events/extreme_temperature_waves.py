@@ -161,6 +161,13 @@ class ExtremeTemperatureWaves(Extremes):
         between heat waves for a given month and reconstruct if the process
         is working as intended.
         
+    solve_options : dict : Optional, Default = None
+        options to be passed to mews.stats.solve.SolveDistributionShift.
+        There are two levels to this dictionary:
+            ['historical','future'] is the first level key
+        A subdictionary then gives the name of an input parameter as the key and then
+        the value should be the desired input. 
+        
     Returns
     -------
     None
@@ -189,7 +196,8 @@ class ExtremeTemperatureWaves(Extremes):
                  norms_unit_conversion=(5/9,-(5/9)*32),
                  num_cpu=None,
                  write_results=True,
-                 test_markov=False):
+                 test_markov=False,
+                 solve_options=None):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
@@ -214,7 +222,12 @@ class ExtremeTemperatureWaves(Extremes):
         # The year is arbitrary and should simply not be a leap year
         self._read_and_curate_NOAA_data(station,2001,unit_conversion,norms_unit_conversion,use_local)
         
+        # produce the initial values of several parameters. The optimization
+        # will actually produce the statistics needed.
         stats = self._wave_stats(self.NOAA_data,include_plots)
+        if not use_global:
+            self._solve_historic_distribution(stats, solve_options)
+        breakpoint()
         self.stats = stats
         
         if include_plots:
@@ -239,7 +252,7 @@ class ExtremeTemperatureWaves(Extremes):
         self._write_results = write_results
         
         
-        
+
         
     def create_scenario(self,scenario_name,start_year,num_year,climate_temp_func,
                         num_realization=1,obj_clim=None,increase_factor_ci="50%"):
@@ -465,7 +478,14 @@ class ExtremeTemperatureWaves(Extremes):
             raise ValueError(message+"!")
                 
                     
-            
+    def _solve_historic_distributions(self,stats, solve_options):
+        # solve options unpacked
+        
+        # loop over heat waves/ cold snaps
+        breakpoint()
+        
+        
+        pass    
         
     
     def _real_value_stats(self,wave_type,scenario_name,year,ci_interval,stat_name,duration):

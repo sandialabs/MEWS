@@ -47,7 +47,7 @@ class Graphics():
         return fig, ax
 
     @staticmethod
-    def plot_sample_dist_shift(hist0, histT_tuple_dict, ipcc_shift, thresholds_dict, events, plot_title=None, fig_path=None):
+    def plot_sample_dist_shift(hist0, histT_tuple_dict, ipcc_shift, thresholds_dict, events, plot_title=None, fig_path=None, is_temperature=True):
         """
 
 
@@ -69,36 +69,75 @@ class Graphics():
         # adjust historical bins if needed.
         
 
-            
+        
         for histT_tup, thresh_tup, ax in zip(histT_tuple_dict.items(), thresholds_dict.items(), axl):
             labels_given = False
+            bin_prev = None
             for wtype in events:
                 
-                if labels_given:
-                    labels = [None,None]
+                if is_temperature:
+                    if labels_given:
+                        labels = [None,None]
+                    else:
+                        labels_given = True
+                        labels = ['historic','future']
                 else:
-                    labels_given = True
                     labels = ['historic','future']
                 
                 bin0 = bin_avg(hist0[wtype])
                 fun0 = hist0[wtype][0]
-
-                histT = histT_tup[1][wtype][0]
+                
+                # this is needed because durations comes from np.histogram whereas
+                # the histT_tuple comes with a cdf and pdf together.
+                if type(histT_tup[1][wtype][0]) is tuple:
+                    histT = histT_tup[1][wtype][0]
+                    ttup = thresh_tup[1][wtype]
+                else:
+                    histT = histT_tup[1][wtype]
+                    ttup = thresh_tup[1]
+                    
                 binT = bin_avg(histT)
                 
-                ax.plot(bin0, fun0/fun0.sum(), label=labels[0], color='blue')
-    
-                ax.plot(binT, histT[0], label=labels[1], color='orange')
-    
+                if bin_prev is None:
+                    second_condition = False
+                else:
+                    second_condition = bin0.sum() > 0 and bin_prev.sum() < 0
+                
+                if (bin0.sum() < 0 and bin_prev is None) or second_condition:
+                    # cold snap, heat wave plot for temperature does not need
+                    # different colors and labels because cs are negative and
+                    # heat waves are positive.
+                    ax.plot(bin0, fun0/fun0.sum(), label=labels[0], color='blue')
+                    
+                    
+                    ax.plot(binT, histT[0], label=labels[1], color='orange')
+                    bin_prev = bin0
+                elif bin_prev is None:
+                    # duration plotting.
+                    # no normalization because we are duration plotting.
+                    ax.plot(bin0, fun0, label=labels[0] + " " + wtype, color='blue')
+                    
+                    
+                    ax.plot(binT, histT[0], label=labels[1] + " " + wtype, color='orange')
+                    bin_prev = binT
+                    
+                else:
+                    # duration second plot for hw.
+                    ax.plot(bin0, fun0, label=labels[0] + " " + wtype, color='green')
+                    
+                    
+                    ax.plot(binT, histT[0], label=labels[1] + " " + wtype, color='red')
+
+                
                 ylim = ax.get_ylim()
     
-                ax.set_ylim((0, ylim[1]))
+                #ax.set_ylim((0, ylim[1]))
                 ylim = (0, ylim[1])
                 xlim = ax.get_xlim()
     
                 on_first = 0
                 
-                if not thresh_tup[1][wtype] is None:
+                if not ttup is None and is_temperature:
                     for tstr, ystr, pos, color, linestyle in zip(['actual', 'target', 'actual', 'target'],
                                                                  ['10 year', '10 year',
                                                                      '50 year', '50 year'],
@@ -107,7 +146,7 @@ class Graphics():
                                                                   mcd.CSS4_COLORS['darkblue'], 
                                                                   mcd.CSS4_COLORS['salmon'], 'red'], 
                                                                  [':', "--", ":", "--"]):
-                        thresh = thresh_tup[1][wtype][tstr][pos]
+                        thresh = ttup[tstr][pos]
                         ax.plot([thresh, thresh], ylim, label=ystr + " " +
                                 tstr, linestyle=linestyle, color=color, linewidth=1)
                         if tstr == 'target':
@@ -137,12 +176,18 @@ class Graphics():
                                      head_length=xlim[1]/60)
 
                 ax.grid('on')
-                ax.set_ylabel('Probability Density')
-            ax.set_xlabel(
-                "Peak temperature increase from daily climate norms average ($^{\circ}C$)")
+                if is_temperature:
+                    ax.set_ylabel('Probability Density')
+                else:
+                    ax.set_ylabel('Number of waves')
+            if is_temperature:
+                ax.set_xlabel(
+                    "Peak temperature increase from daily climate norms average ($^{\circ}C$)")
+            else:
+                ax.set_xlabel("Duration of wave (hr)")
             ax.legend(fontsize=12)
     
-            if not plot_title is None:
-                axl[0].set_title(plot_title)
-            if not fig_path is None:
-                plt.savefig(fig_path, dpi=300)
+        if not plot_title is None:
+            axl[0].set_title(plot_title)
+        if not fig_path is None:
+            plt.savefig(fig_path, dpi=300)
