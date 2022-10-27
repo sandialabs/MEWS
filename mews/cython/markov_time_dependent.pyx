@@ -188,7 +188,7 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
                                                np.ndarray[DTYPE_t, ndim=1] rand, 
                                                np.int_t state0,
                                                np.ndarray[DTYPE_t, ndim=2] coef,
-                                               np.int_t func_type):
+                                               np.ndarray[np.int_t, ndim=1] func_type):
     
     """
     This function creates a Markov chain whose 2nd ... num row rows
@@ -223,7 +223,7 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
            assumed to be a constant markov process. Only rows 2...m have 
            time decay.
            
-    func_type : an integer that indicates what function type to use. 
+    func_type : an integer array that indicates what function type to use. 
            
            0 - use exponential_decay
            1 - use linear_decay
@@ -262,11 +262,12 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
     # assign initial values
     cdef np.int_t num_step = len(rand)
     cdef np.ndarray[np.int_t,ndim=1] yy = np.zeros(num_step,dtype=np.int)
-    #cdef np.ndarray[np.int_t, ndim=1] yy = np.zeros(num_step,dtype=np.int)
     
+    cdef np.int_t one = 1
     cdef np.int_t num_state = cdf.shape[0]
     cdef np.int_t idx
     cdef np.int_t idy
+    cdef np.int_t idym1 = idy - one
 
     cdef np.int_t step_in_cur_state
     cdef double[:] cdf_local
@@ -275,6 +276,7 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
     yy[0] = state0
     step_in_cur_state = 0
     
+
     for idx in range(1, num_step):
         
         # threshold = 0.005
@@ -300,7 +302,7 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
             else:
                 if state0 > 0:
                     cdf_local = evaluate_decay_function(cdf[state0,:],
-                                                        func_type,
+                                                        func_type[idym1],
                                                         coef,
                                                         idy,
                                                         step_in_cur_state)

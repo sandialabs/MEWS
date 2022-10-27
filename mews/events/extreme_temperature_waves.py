@@ -17,10 +17,11 @@ must be replicated in any derivative works that use the source code.
 @author: dlvilla
 """
 from mews.stats import Extremes
+from mews.stats.solve import SolveDistributionShift 
 from mews.weather.psychrometrics import relative_humidity
 from mews.weather.climate import ClimateScenario
 from mews.utilities.utilities import filter_cpu_count
-from mews.stats.distributions import *
+from mews.stats.distributions import cdf_truncnorm, trunc_norm_dist, inverse_transform_fit
 
 from copy import deepcopy
 from datetime import datetime
@@ -174,6 +175,8 @@ class ExtremeTemperatureWaves(Extremes):
     
     """
     
+    
+    _default_solver_num_steps = 1000000
     #  These url's must end with "/" !
     
     # norms are provided in Fahrenheit!
@@ -209,6 +212,8 @@ class ExtremeTemperatureWaves(Extremes):
         
         self.proxy = proxy
         self.use_global = use_global
+        np.random.seed(random_seed)
+        self._random_seed = random_seed
         
         # consistency checks
         self._check_NOAA_url_validity()
@@ -225,9 +230,9 @@ class ExtremeTemperatureWaves(Extremes):
         # produce the initial values of several parameters. The optimization
         # will actually produce the statistics needed.
         stats = self._wave_stats(self.NOAA_data,include_plots)
-        if not use_global:
-            self._solve_historic_distribution(stats, solve_options)
         breakpoint()
+        if not use_global:
+            self._solve_historic_distributions(stats, solve_options)
         self.stats = stats
         
         if include_plots:
@@ -235,8 +240,6 @@ class ExtremeTemperatureWaves(Extremes):
             self._plot_stats_by_month(stats["cold snap"],"Cold Snaps")
         
         self._results_folder = results_folder
-        np.random.seed(random_seed)
-        self._random_seed = random_seed
         self._run_parallel = run_parallel
         self._doe2_input = doe2_input
         self._weather_files = weather_files
@@ -327,8 +330,7 @@ class ExtremeTemperatureWaves(Extremes):
         for year in np.arange(start_year, start_year + num_year,1):
             
             self.extreme_delstats[scenario_name][increase_factor_ci] = {}
-            
-            year_no = year
+
             
             (transition_matrix, 
              transition_matrix_delta,
@@ -457,7 +459,6 @@ class ExtremeTemperatureWaves(Extremes):
                 scen_results = self.extreme_results[scenario]
                 
                 if confidence_interval in scen_results:
-                    ci_results = scen_results[confidence_interval]
                     
                     if year in scen_results:
                         return scen_results[year]
@@ -469,8 +470,6 @@ class ExtremeTemperatureWaves(Extremes):
                     raise ValueError("The confidence interval position {0} has not yet been run. ".format(confidence_interval) +
                                      + message + " for confidence interval position {0}.".format(confidence_interval))
                 
-
-                    
             else:
                 raise ValueError("The scenario {0} has not yet been analyzed. ".format(scenario)
                                  + message + " for scenario {0}!".format(scenario))
@@ -483,7 +482,81 @@ class ExtremeTemperatureWaves(Extremes):
         
         # loop over heat waves/ cold snaps
         breakpoint()
+        wave_name_map = {'heat wave':'hw','cold snap':'cs'}
         
+        for wname1,w_abrev in wave_name_map.items():
+            wstats = stats[wname1]
+            
+            for month, mstat in wstats.items():
+                
+                # setup required values. Some are optional
+                # but all need to be given the defaults from SolveDistributionShift
+                # so that every option is available through solve_options
+                #1
+                if 'num_step' in solve_options:
+                    num_step = solve_options['num_step']
+                else:
+                    num_step = self._default_solver_num_steps
+                #2
+                param0 = mstat # this uses several (but not all values)
+                #3
+                random_seed = self._random_seed
+                #4
+                hist0 = mstat['historical temperatures (hist0)']
+                #5
+                durations0 = mstat['historical durations (durations0)']
+                #6
+                if 'delT_above_shifted_extreme' in solve_options:
+                    delT_above_shifted_extreme = solve_options['delT_above_shifted_extreme']
+                else:
+                    delT_above_shifted_extreme = {'cs':-20,'hw':20}
+                #7
+                historic_time_interval = mstat['historic time interval']
+                # These defaults do not match all of the defaults in solve.py
+                # there are specific differences that are intentional and they 
+                # should be kept separate.
+                default_vals = {'problem_bounds':None,
+                                'ipcc_shift':None,
+                                'decay_func_type':"quadratic_times_exponential_decay_with_cutoff",
+                                'use_cython':True,
+                                'num_cpu':-1,
+                                'plot_results':False,
+                                'max_iter':20,
+                                'plot_title':'',
+                                'fig_path':"",
+                                'weights':np.array([1.0,1.0,1.0,1.0]),
+                                'limit_temperatures':False}
+                opt_val = {}
+                for key,def_val in default_vals.items():
+                    if key in solve_options:
+                        opt_val[key] = solve_options[key]
+                    else:
+                        opt_val[key] = def_val
+                        
+                obj_solve = SolveDistributionShift(num_step, 
+                                       param0, 
+                                       random_seed, 
+                                       hist0, 
+                                       durations0, 
+                                       delT_above_shifted_extreme, 
+                                       historic_time_interval,
+                                       problem_bounds=opt_val['problem_bounds'],
+                                       ipcc_shift=opt_val['ipcc_shift'],
+                                       decay_func_type=opt_val['decay_func_type'],
+                                       use_cython=opt_val['use_cython'],
+                                       num_cpu=opt_val['num_cpu'],
+                                       plot_results=opt_val['plot_results'],
+                                       max_iter=opt_val['max_iter'],
+                                       plot_title=opt_val['plot_title'],
+                                       fig_path=opt_val['fig_path'],
+                                       weights=opt_val['weights'],
+                                       limit_temperatures=opt_val['limit_temperature'])
+                
+                breakpoint()
+                
+                
+            
+            
         
         pass    
         
@@ -497,8 +570,7 @@ class ExtremeTemperatureWaves(Extremes):
         
         
         stats = self.stats[wave_type]
-        
-        real_val_stats = {}
+
         for month,subdict in stats.items():
             
             if stat_name == "delT":
@@ -569,7 +641,6 @@ class ExtremeTemperatureWaves(Extremes):
         transition_matrix_delta = {}
         del_E_dist = {}
         del_delTmax_dist = {}
-        ipcc_fact = {}
         
         # gather the probability of a heat wave for each month.
         prob_hw = {}
@@ -881,6 +952,12 @@ class ExtremeTemperatureWaves(Extremes):
     
     def _isolate_waves(self,season,extreme_days):
         
+        if self.use_global:
+            num_days_for_hw = 2
+        else:
+            num_days_for_hw = 1 # this used to be 2 but the statistics work out
+                            # much better if we include single hot days.
+                            # or days with single hot nights.
         waves_by_month = {}
         
         taken = []
@@ -908,7 +985,7 @@ class ExtremeTemperatureWaves(Extremes):
             potential_start_days = np.argwhere((prev_date_1_day_ago == False).values)[:,0]
             wave_consecutive_days = np.argwhere(prev_date_1_day_ago.values)[:,0]
             
-            is_start_day = np.concatenate([np.diff(potential_start_days) > 1,np.array([True])])
+            is_start_day = np.concatenate([np.diff(potential_start_days) > num_days_for_hw-1,np.array([True])])
             
             if len(is_start_day) != 1:
                 start_days = potential_start_days[is_start_day]
@@ -989,7 +1066,14 @@ class ExtremeTemperatureWaves(Extremes):
         return (norm_signal + 1)*(signal_max - signal_min)/2.0 + signal_min 
         #(np.exp(norm_signal/interval) - 1.0)/(np.exp(1.0) - 1) * (signal_max - signal_min) + signal_min
     
-    def _calculate_wave_stats(self,waves,waves_other,frac_tot_days,time_hours,is_hw,include_plots=True):
+    def _calculate_wave_stats(self,waves,
+                              waves_other,
+                              frac_tot_days,
+                              time_hours,
+                              is_hw,
+                              hours_with_data,
+                              frac_hours_in_month,
+                              include_plots=True):
         
         # waves_other is for hw if in cs and for cs if in hw.
         
@@ -1003,6 +1087,7 @@ class ExtremeTemperatureWaves(Extremes):
         stats = {}
         row = 0;col=0
         for month,tup_waves_cur in waves.items():
+
             if col == 3:
                 row += 1
                 col = 0
@@ -1026,7 +1111,7 @@ class ExtremeTemperatureWaves(Extremes):
                 max_duration = month_duration.max()
 
                 
-            num_day = np.arange(2,month_duration.max()+1)
+            num_day = np.arange(2,max_duration+1)
             duration_history = np.array([(month_duration == x).sum() for x in num_day])
             temp_dict = {}
             
@@ -1126,7 +1211,8 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['normalizing energy'] = norm_energy
             temp_dict['normalizing extreme temp'] = norm_extreme_temp
             temp_dict['normalizing duration'] = month_duration_hr.max()
-            
+            # historic time interval
+            temp_dict['historic time interval'] = frac_hours_in_month[month] * hours_with_data
             #
             # Markov chain model parameter estimation
             #
@@ -1186,8 +1272,17 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['hourly prob stay in heat wave'] = P0 
             temp_dict['hourly prob of heat wave'] = prob_of_wave_in_any_hour
             
+            # adding duration and temperature histograms
+            hrs_range = np.arange(24,month_duration_hr.max()+24,24)
+            temp_dict['historical durations (durations0)'] = np.histogram(month_duration_hr,
+                                                             range=(12,month_duration_hr.max()+12),
+                                                             bins=len(hrs_range))
+            nbins = int(np.ceil(len(extreme_temp)/10))
+            bin_delT = (extreme_temp.max() - extreme_temp.min())/nbins
             
-            
+            temp_dict['historical temperatures (hist0)'] = np.histogram(extreme_temp,
+                                                             range=(extreme_temp.min()-0.5*bin_delT,extreme_temp.max()+0.5*bin_delT),
+                                                             bins=nbins)
             stats[month] = temp_dict
             
             col+=1
@@ -1219,7 +1314,13 @@ class ExtremeTemperatureWaves(Extremes):
         # total time covered by the dataset
         seconds_in_hour = 3600.0
         months_per_year = 12
-        time_hours = (df_combined.index[-1] - df_combined.index[0]).total_seconds()/seconds_in_hour
+        hours_per_day = 24.0
+        time_hours = (df_combined.index[-1] - df_combined.index[0]).total_seconds()/seconds_in_hour + hours_per_day
+        hours_with_data = hours_per_day * len(df_combined.index)
+        frac_hours_in_month = hours_per_day * np.array([len(df_combined[df_combined.index.month == month]) for month in range(1,13)])/hours_with_data
+        
+        
+        
         stats = {}
         
         is_heat_wave = [True,False]
@@ -1234,7 +1335,7 @@ class ExtremeTemperatureWaves(Extremes):
         # below 10% criterion TMIN or below 10% criterion for the minimum hourly maximum temperature
         extreme_days['cs'] = df_combined[(df_combined["TMIN"] < df_combined["TMIN_B"])|
                                      (df_combined["TMAX"] < df_combined["TMAXMIN_B"])]
-        
+
         # do a different assessment for each month in the heat wave season because 
         # the statistics show a significant peak at the end of summer and we do not
         # want the probability to be smeared out as a result.
@@ -1244,7 +1345,6 @@ class ExtremeTemperatureWaves(Extremes):
         # gets the heat wave and the heat wave is marked as taken so that it is 
         # not double counted
             
-    
         # now the last false before a true is the start of each heat wave 
         # then true until the next false is the duration of the heat wave
         
@@ -1256,7 +1356,6 @@ class ExtremeTemperatureWaves(Extremes):
         num_total_days = df_combined.groupby(df_combined.index.month).count()["TMIN"]
         frac_tot_days = num_total_days/num_total_days.sum()
             
-        
         for is_hw in is_heat_wave:
             if is_hw:
                 waves_all_year_cur = waves_all_year['hw']
@@ -1275,9 +1374,9 @@ class ExtremeTemperatureWaves(Extremes):
                                                             frac_tot_days,
                                                             time_hours,
                                                             is_hw,
+                                                            hours_with_data,
+                                                            frac_hours_in_month,
                                                             include_plots)
-        
-        
         return stats
     
     def _plot_stats_by_month(self,stats,title_string):
@@ -1518,7 +1617,183 @@ class DeltaTransition_IPCC_FigureSPM6():
         f_ipcc_ci_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
 
        
-       
+
+        
+        
+        
+        
+        self.transition_matrix_delta = np.array(
+            [[Phwm + Pcsm - P_prime_hwm - P_prime_csm, P_prime_csm - Pcsm, P_prime_hwm - Phwm],
+             [Pcssm - P_prime_cssm, P_prime_cssm - Pcssm, 0.0],
+             [Phwsm - P_prime_hwsm, 0.0, P_prime_hwsm - Phwsm]])
+        self.del_E_dist = {'del_mu':del_mu_E_hw_m,
+                 'del_sig':del_sig_E_hw_m,
+                 'del_a':del_a_E_hw_m,
+                 'del_b':del_b_E_hw_m}
+        self.del_delTmax_dist = {'del_mu':del_mu_delT_max_hwm,
+                 'del_sig':del_sig_delT_max_hwm,
+                 'del_a':del_a_delT_max_hwm,
+                 'del_b':del_b_delT_max_hwm,
+                 'delT_increase_abs_max':delT_abs_max}
+        #bring the multiplication factors to the surface.
+        dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
+        dfraw.columns = ["10 year event","50 year event"]
+        self.ipcc_fact = dfraw
+        self._durations = [D10,D10_prime,D50,D50_prime]
+        
+        
+    def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
+        
+        # this function is dependent on the format of the table in IPCC_FigureSPM_6.csv
+        if self.use_global:
+            present_tempanomal = ipcc_data['Global Warming Levels (⁰C)'].values[0]
+        else:
+            present_tempanomal = baseline_delT
+
+
+        
+        future_tempanomal = present_tempanomal + delta_TG
+        
+        if self.use_global:
+            if future_tempanomal > 4.0:
+                raise ValueError("The current IPCC data only includes changes in temperature of 4C for global warming!")
+        else:
+            if future_tempanomal > 4.0:
+                warn("The mews analysis allows extrapolation beyond the IPCC info that gives factors to 4.0C. The growth in the "+
+                     "IPCC data is nearly linear. Your temperature anomaly is at {0:5.2f}C".format(future_tempanomal))
+            if future_tempanomal > 6.0:
+                raise ValueError("The current MEWS analysis only allows extrapolation to 6C and the IPCC info only goes to 4C")
+        
+            
+        ipcc_num = ipcc_data.drop(["Event","Units"],axis=1) 
+        
+        def interp_func(ipcc_num,use_global,tempanomal):
+            
+            #global warming delta T
+            gwDT = ipcc_num['Global Warming Levels (⁰C)'].values
+            
+            ind = 0
+            
+            for ind in range(4):
+                if tempanomal <= ipcc_data['Global Warming Levels (⁰C)'].values[ind]:
+                    break
+            
+            if tempanomal > 4.0:
+                # must extrapolate
+                ipcc_val_10_u = (ipcc_num.loc[3,:]-ipcc_num.iloc[2,:])/(gwDT[3] - gwDT[2])*(tempanomal-gwDT[3])+ipcc_num.loc[3,:]
+                ipcc_val_50_u = (ipcc_num.iloc[-1,:]-ipcc_num.iloc[-2,:])/(gwDT[-1] - gwDT[-2])*(tempanomal-gwDT[-1])+ipcc_num.iloc[-1,:]
+            
+            elif ind > 0:
+                interp_fact = (tempanomal - 
+                   ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])/(
+                   ipcc_data['Global Warming Levels (⁰C)'].values[ind] - 
+                   ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])
+                 
+                   
+                     
+                ipcc_val_10_u = (ipcc_num.loc[ind,:] - ipcc_num.loc[ind-1,:]) * interp_fact + ipcc_num.loc[ind-1,:]
+                ipcc_val_50_u = (ipcc_num.loc[ind+4,:] - ipcc_num.loc[ind+3,:]) * interp_fact + ipcc_num.loc[ind+3,:]
+            else:
+                if use_global:
+                    ipcc_val_10_u = ipcc_num.loc[0,:]
+                    ipcc_val_50_u = ipcc_num.loc[4,:]
+                else:
+                    def inte_freq_extrap_zero(tempanomal,gwDT,ipcc_num,zero_freq,zero_inte,ind):
+                        intensity = (tempanomal / gwDT)*(ipcc_num.iloc[ind,1:4]-zero_inte) + zero_inte
+                        frequency = (tempanomal / gwDT)*(ipcc_num.iloc[ind,4:]-zero_freq) + zero_freq
+                        return pd.concat([ipcc_num.iloc[ind,0:1],intensity,frequency])
+                    
+                    freq_zero = 1.0
+                    inte_zero = 0.0
+                    
+                    ipcc_val_10_u = inte_freq_extrap_zero(tempanomal,gwDT[0],ipcc_num,freq_zero,inte_zero,0)
+                    ipcc_val_50_u = inte_freq_extrap_zero(tempanomal,gwDT[4],ipcc_num,freq_zero,inte_zero,4)
+            
+            return ipcc_val_10_u, ipcc_val_50_u
+        
+        ipcc_val_10_u, ipcc_val_50_u = interp_func(ipcc_num,self.use_global, future_tempanomal)
+        
+        if self.use_global == False:
+            # hwd = heat wave data
+            ipcc_val_10_hwd, ipcc_val_50_hwd = interp_func(ipcc_num,self.use_global, hw_delT)
+            
+            
+        
+        # TODO - if less recent data is available, this (Below) assumption
+        # is non-conversative and will underestimate shifts in climate.
+        
+        # 9/9/2022 - with use_global=False, this assumption below no longer applies. The heat wave
+        # data time interval is now considered so that the factor taken away is
+        # an exact interpolation between 0 and the first value in the table.
+        
+        # XXXXXNO LONGER APPLIES EXCEPT FOR use_global=True
+        # Assumption: Because, these values are being based off of data that is more recent,
+        # XXXXXthe amplification/offset has to be based on current 1.0C warming levels.
+        num_std_in_95ci = 1.96
+        def divide_CI(val,val_hw):
+            # divide one confidence interval by another assuming 
+            # two independent random variables.
+            
+            num = np.random.normal(val["50% CI Increase in Frequency"],
+                                   ((val['95% CI Increase in Frequency']-val["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
+                                   100000)
+            num_hw = np.random.normal(val_hw["50% CI Increase in Frequency"],
+                                               ((val_hw['95% CI Increase in Frequency']-val_hw["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
+                                               100000)
+            num_new = num/num_hw
+            
+            mean = num_new.mean()
+            std = num_new.std()
+            return mean,std
+        
+        
+        ipcc_val_10 = deepcopy(ipcc_val_10_u)
+        ipcc_val_50 = deepcopy(ipcc_val_50_u)
+        
+        for lab,val in ipcc_val_10_u.iteritems():
+            if "Intensity" in lab:
+                if self.use_global:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_num.loc[0,lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_num.loc[4,lab]
+                else:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_val_10_hwd[lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_val_50_hwd[lab]
+            #
+            #  DIVIDSION OF CONFIDENCE INTERVALS IS MORE COMPLEX!
+            elif "Frequency" in lab:
+                if self.use_global:
+                    ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_num.loc[0,lab]
+                    ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_num.loc[4,lab]
+            #     else:
+            #         ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_val_10_hwd[lab]
+            #         ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_val_50_hwd[lab]                
+            
+            # We assume independent random variables!
+        if self.use_global == False:
+            mean_ci_10,std_ci_10 = divide_CI(ipcc_val_10,ipcc_val_10_hwd)
+            mean_ci_50,std_ci_50 = divide_CI(ipcc_val_50,ipcc_val_50_hwd)
+        
+            ipcc_val_10["50% CI Increase in Frequency"] = mean_ci_10
+            ipcc_val_50["50% CI Increase in Frequency"] = mean_ci_50
+            
+            ipcc_val_10["5% CI Increase in Frequency"] = mean_ci_10 - std_ci_10 * num_std_in_95ci
+            ipcc_val_50["5% CI Increase in Frequency"] = mean_ci_50 - std_ci_50 * num_std_in_95ci
+            
+            ipcc_val_10["95% CI Increase in Frequency"] = mean_ci_10 + std_ci_10 * num_std_in_95ci
+            ipcc_val_50["95% CI Increase in Frequency"] = mean_ci_50 + std_ci_50 * num_std_in_95ci
+            
+        return ipcc_val_10, ipcc_val_50    
+    
+    
+    def _hw_probability_shape_func(self,hw_prob):
+        #Returns a mapping from probability to fraction of delT ipcc added 
+        # to a given probability hw_maxprob maps to 1.0 and hw_minprob maps to
+        # delT_ipcc_min_frac which is a user input between 0 and 1
+        return (1.0-self._delT_ipcc_min_frac)/(self._hw_maxprob - self._hw_minprob) * (hw_prob-self._hw_minprob) + self._delT_ipcc_min_frac
+    
+    def _old_analysis(self, use_global, f_ipcc_ci_50, N10, f_ipcc_ci_10, N50,
+                      normalized_ext_temp, Phwm):
+               
         
         if use_global:
             P_prime_hwm = Phwm * (f_ipcc_ci_50 * N10 + f_ipcc_ci_10 * N50)/(N10 + N50)
@@ -1758,175 +2033,6 @@ class DeltaTransition_IPCC_FigureSPM6():
         if abs(P_prime_hwm) > 1 or abs(P_prime_hwsm) > 1:
             breakpoint()
             raise ValueError("The adjusted probabilities must be less than one!")
-
-        self.transition_matrix_delta = np.array(
-            [[Phwm + Pcsm - P_prime_hwm - P_prime_csm, P_prime_csm - Pcsm, P_prime_hwm - Phwm],
-             [Pcssm - P_prime_cssm, P_prime_cssm - Pcssm, 0.0],
-             [Phwsm - P_prime_hwsm, 0.0, P_prime_hwsm - Phwsm]])
-        self.del_E_dist = {'del_mu':del_mu_E_hw_m,
-                 'del_sig':del_sig_E_hw_m,
-                 'del_a':del_a_E_hw_m,
-                 'del_b':del_b_E_hw_m}
-        self.del_delTmax_dist = {'del_mu':del_mu_delT_max_hwm,
-                 'del_sig':del_sig_delT_max_hwm,
-                 'del_a':del_a_delT_max_hwm,
-                 'del_b':del_b_delT_max_hwm,
-                 'delT_increase_abs_max':delT_abs_max}
-        #bring the multiplication factors to the surface.
-        dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
-        dfraw.columns = ["10 year event","50 year event"]
-        self.ipcc_fact = dfraw
-        self._durations = [D10,D10_prime,D50,D50_prime]
-        
-        
-    def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
-        
-        # this function is dependent on the format of the table in IPCC_FigureSPM_6.csv
-        if self.use_global:
-            present_tempanomal = ipcc_data['Global Warming Levels (⁰C)'].values[0]
-        else:
-            present_tempanomal = baseline_delT
-
-
-        
-        future_tempanomal = present_tempanomal + delta_TG
-        
-        if self.use_global:
-            if future_tempanomal > 4.0:
-                raise ValueError("The current IPCC data only includes changes in temperature of 4C for global warming!")
-        else:
-            if future_tempanomal > 4.0:
-                warn("The mews analysis allows extrapolation beyond the IPCC info that gives factors to 4.0C. The growth in the "+
-                     "IPCC data is nearly linear. Your temperature anomaly is at {0:5.2f}C".format(future_tempanomal))
-            if future_tempanomal > 6.0:
-                raise ValueError("The current MEWS analysis only allows extrapolation to 6C and the IPCC info only goes to 4C")
-        
-            
-        ipcc_num = ipcc_data.drop(["Event","Units"],axis=1) 
-        
-        def interp_func(ipcc_num,use_global,tempanomal):
-            
-            #global warming delta T
-            gwDT = ipcc_num['Global Warming Levels (⁰C)'].values
-            
-            ind = 0
-            
-            for ind in range(4):
-                if tempanomal <= ipcc_data['Global Warming Levels (⁰C)'].values[ind]:
-                    break
-            
-            if tempanomal > 4.0:
-                # must extrapolate
-                ipcc_val_10_u = (ipcc_num.loc[3,:]-ipcc_num.iloc[2,:])/(gwDT[3] - gwDT[2])*(tempanomal-gwDT[3])+ipcc_num.loc[3,:]
-                ipcc_val_50_u = (ipcc_num.iloc[-1,:]-ipcc_num.iloc[-2,:])/(gwDT[-1] - gwDT[-2])*(tempanomal-gwDT[-1])+ipcc_num.iloc[-1,:]
-            
-            elif ind > 0:
-                interp_fact = (tempanomal - 
-                   ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])/(
-                   ipcc_data['Global Warming Levels (⁰C)'].values[ind] - 
-                   ipcc_data['Global Warming Levels (⁰C)'].values[ind-1])
-                 
-                   
-                     
-                ipcc_val_10_u = (ipcc_num.loc[ind,:] - ipcc_num.loc[ind-1,:]) * interp_fact + ipcc_num.loc[ind-1,:]
-                ipcc_val_50_u = (ipcc_num.loc[ind+4,:] - ipcc_num.loc[ind+3,:]) * interp_fact + ipcc_num.loc[ind+3,:]
-            else:
-                if use_global:
-                    ipcc_val_10_u = ipcc_num.loc[0,:]
-                    ipcc_val_50_u = ipcc_num.loc[4,:]
-                else:
-                    def inte_freq_extrap_zero(tempanomal,gwDT,ipcc_num,zero_freq,zero_inte,ind):
-                        intensity = (tempanomal / gwDT)*(ipcc_num.iloc[ind,1:4]-zero_inte) + zero_inte
-                        frequency = (tempanomal / gwDT)*(ipcc_num.iloc[ind,4:]-zero_freq) + zero_freq
-                        return pd.concat([ipcc_num.iloc[ind,0:1],intensity,frequency])
-                    
-                    freq_zero = 1.0
-                    inte_zero = 0.0
-                    
-                    ipcc_val_10_u = inte_freq_extrap_zero(tempanomal,gwDT[0],ipcc_num,freq_zero,inte_zero,0)
-                    ipcc_val_50_u = inte_freq_extrap_zero(tempanomal,gwDT[4],ipcc_num,freq_zero,inte_zero,4)
-            
-            return ipcc_val_10_u, ipcc_val_50_u
-        
-        ipcc_val_10_u, ipcc_val_50_u = interp_func(ipcc_num,self.use_global, future_tempanomal)
-        
-        if self.use_global == False:
-            # hwd = heat wave data
-            ipcc_val_10_hwd, ipcc_val_50_hwd = interp_func(ipcc_num,self.use_global, hw_delT)
-            
-            
-        
-        # TODO - if less recent data is available, this (Below) assumption
-        # is non-conversative and will underestimate shifts in climate.
-        
-        # 9/9/2022 - with use_global=False, this assumption below no longer applies. The heat wave
-        # data time interval is now considered so that the factor taken away is
-        # an exact interpolation between 0 and the first value in the table.
-        
-        # XXXXXNO LONGER APPLIES EXCEPT FOR use_global=True
-        # Assumption: Because, these values are being based off of data that is more recent,
-        # XXXXXthe amplification/offset has to be based on current 1.0C warming levels.
-        num_std_in_95ci = 1.96
-        def divide_CI(val,val_hw):
-            # divide one confidence interval by another assuming 
-            # two independent random variables.
-            
-            num = np.random.normal(val["50% CI Increase in Frequency"],
-                                   ((val['95% CI Increase in Frequency']-val["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
-                                   100000)
-            num_hw = np.random.normal(val_hw["50% CI Increase in Frequency"],
-                                               ((val_hw['95% CI Increase in Frequency']-val_hw["5% CI Increase in Frequency"])/2)/num_std_in_95ci,
-                                               100000)
-            num_new = num/num_hw
-            
-            mean = num_new.mean()
-            std = num_new.std()
-            return mean,std
-        
-        
-        ipcc_val_10 = deepcopy(ipcc_val_10_u)
-        ipcc_val_50 = deepcopy(ipcc_val_50_u)
-        
-        for lab,val in ipcc_val_10_u.iteritems():
-            if "Intensity" in lab:
-                if self.use_global:
-                    ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_num.loc[0,lab]
-                    ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_num.loc[4,lab]
-                else:
-                    ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_val_10_hwd[lab]
-                    ipcc_val_50[lab] = ipcc_val_50_u[lab] - ipcc_val_50_hwd[lab]
-            #
-            #  DIVIDSION OF CONFIDENCE INTERVALS IS MORE COMPLEX!
-            elif "Frequency" in lab:
-                if self.use_global:
-                    ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_num.loc[0,lab]
-                    ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_num.loc[4,lab]
-            #     else:
-            #         ipcc_val_10[lab] = ipcc_val_10_u[lab] / ipcc_val_10_hwd[lab]
-            #         ipcc_val_50[lab] = ipcc_val_50_u[lab] / ipcc_val_50_hwd[lab]                
-            
-            # We assume independent random variables!
-        if self.use_global == False:
-            mean_ci_10,std_ci_10 = divide_CI(ipcc_val_10,ipcc_val_10_hwd)
-            mean_ci_50,std_ci_50 = divide_CI(ipcc_val_50,ipcc_val_50_hwd)
-        
-            ipcc_val_10["50% CI Increase in Frequency"] = mean_ci_10
-            ipcc_val_50["50% CI Increase in Frequency"] = mean_ci_50
-            
-            ipcc_val_10["5% CI Increase in Frequency"] = mean_ci_10 - std_ci_10 * num_std_in_95ci
-            ipcc_val_50["5% CI Increase in Frequency"] = mean_ci_50 - std_ci_50 * num_std_in_95ci
-            
-            ipcc_val_10["95% CI Increase in Frequency"] = mean_ci_10 + std_ci_10 * num_std_in_95ci
-            ipcc_val_50["95% CI Increase in Frequency"] = mean_ci_50 + std_ci_50 * num_std_in_95ci
-            
-        return ipcc_val_10, ipcc_val_50    
-    
-    
-    def _hw_probability_shape_func(self,hw_prob):
-        #Returns a mapping from probability to fraction of delT ipcc added 
-        # to a given probability hw_maxprob maps to 1.0 and hw_minprob maps to
-        # delT_ipcc_min_frac which is a user input between 0 and 1
-        return (1.0-self._delT_ipcc_min_frac)/(self._hw_maxprob - self._hw_minprob) * (hw_prob-self._hw_minprob) + self._delT_ipcc_min_frac
     
     
 

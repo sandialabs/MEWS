@@ -66,7 +66,9 @@ def cython_function_input_checks(cdf,
     array_check(cdf,float,"cdf",2)
     array_check(rand,float,"rand",1)
     state0 = int_check(state0,'state0',[0,cdf.shape[0]-1])
-    func_type = int_check(func_type,'func_type',[0,4])
+    array_check(func_type,np.integer,'func_type',1)
+    for idx, ifunc in enumerate(func_type):
+        int_check(ifunc, 'func_type[{0:d}]'.format(idx), [0,4])
 
     if (rand > 1).any() or (rand < 0).any():
         raise ValueError("The rand input vector elements must be a probabilities (i.e. 0<=rand<=1)")
@@ -74,23 +76,27 @@ def cython_function_input_checks(cdf,
         raise ValueError("The cdf input matrix's elements must be probabilities (i.e. 0<=cdf<=1)")
     elif cdf.shape[0] != cdf.shape[1]:
         raise ValueError("The cdf must be a square matrix!")
-        
-    if func_type == 4:
-        #coef - 1) time_to_peak
-        #       2) maximum probability
-        #       3) cutoff time!!
-        for idx,row in enumerate(coef):
-            if row[0] < 0.0:
-                raise ValueError("The peak time must be greater than zero!")
-            elif row[1] < cdf[idx+1,0]-cdf[idx+1,idx+1]:
-                pass
-                # NOT A PROBLEM - THE FUNCTION WORKS UNDER THESE CONDITIONS.
-                #raise ValueError("The maximum probability of sustaining a "+
-                #                 "heat wave must be greater than the initial"+
-                #                 " probability of sustaining a heat wave")
-            elif row[2] < 0.0:
-                raise ValueError("The cutoff time must be greater than zero!")
-        
+    
+    for ftype in func_type:
+        for idx, col in enumerate(coef):
+            if ftype == 0 or ftype == 1 or ftype == 2 or ftype == 3:
+                if col[0] > 1.0 or col[0] < 0.0:
+                    raise ValueError("Exponent/slope coefficients must be between 0 and 1 for reasonable decays")
+            if ftype == 2 or ftype == 3:
+                if col[1] < 0.0:
+                    raise ValueError("The cutoff time must be greater than zero.")
+            if ftype == 4:
+                #coef - 1) time_to_peak
+                #       2) maximum probability
+                #       3) cutoff time!!
+
+                if col[0] < 0.0:
+                    raise ValueError("The peak time must be greater than zero!")
+                elif col[2] < 0.0:
+                    raise ValueError("The cutoff time must be greater than zero!")
+                elif col[1] < 0.0 or col[1] > 1.0:
+                    raise ValueError("The maximum probability must be between 0 and 1.")
+            
     return state0, func_type
 
 
@@ -280,6 +286,9 @@ def evaluate_decay_function(cdf0,
                             coef,
                             idy,
                             time_in_state):
+    # !@#$
+    if time_in_state > coef[0,1] or time_in_state > coef[1,1]:
+        breakpoint()
     
     one = 1.0
     P0 = one - cdf0[0]
@@ -364,13 +373,15 @@ def markov_chain_time_dependent_py(cdf,
            1: coef has 1 element = slope for slope * t
            2: coef has 2 elements = lambda and a cutoff time
            3: coef has 2 elements = slope and a cutoff time
-           4: coef has 4 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
-                                     3) initial probability at time = 0,
-                                     and 4) cutoff time at which probability drops
+           4: coef has 3 elelments = 1) time_to_peak, 2) Peak Maximum Probability
+                                     and 3) cutoff time at which probability drops
                                      to zero.
+           different numbers of coefficients are needed if 'func_type' has 
+           different decay functions for heat waves versus cold snaps.
+           
                             
            
-    func_type : an integer that indicates what function type to use. 
+    func_type : np.array of integers that indicate what function type to use. 
            
            0 - use exponential_decay
            1 - use linear_decay
@@ -379,6 +390,10 @@ def markov_chain_time_dependent_py(cdf,
            4 - use quadratic time exponential that peaks at a specific time and
                then decays. This function increases probability of sustaining
                a heat wave and then decays after the peak
+
+          
+               
+    
     
     
     Returns
@@ -435,7 +450,7 @@ def markov_chain_time_dependent_py(cdf,
             else:
                 if state0 > 0:
                     cdf_local = evaluate_decay_function(cdf[state0,:],
-                                                        func_type,
+                                                        func_type[idy-1],
                                                         coef,
                                                         idy,
                                                         step_in_cur_state)

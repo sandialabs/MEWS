@@ -89,14 +89,18 @@ class Graphics():
                 
                 # this is needed because durations comes from np.histogram whereas
                 # the histT_tuple comes with a cdf and pdf together.
-                if type(histT_tup[1][wtype][0]) is tuple:
-                    histT = histT_tup[1][wtype][0]
-                    ttup = thresh_tup[1][wtype]
-                else:
-                    histT = histT_tup[1][wtype]
-                    ttup = thresh_tup[1]
+
+                if not histT_tup[1][wtype] is None:
+                    if type(histT_tup[1][wtype][0]) is tuple:
+                        histT = histT_tup[1][wtype][0]
+                        ttup = thresh_tup[1][wtype]
+                    else:
+                        histT = histT_tup[1][wtype]
+                        ttup = thresh_tup[1]
                     
-                binT = bin_avg(histT)
+                    binT = bin_avg(histT)
+                else:
+                    binT = None
                 
                 if bin_prev is None:
                     second_condition = False
@@ -109,24 +113,27 @@ class Graphics():
                     # heat waves are positive.
                     ax.plot(bin0, fun0/fun0.sum(), label=labels[0], color='blue')
                     
-                    
-                    ax.plot(binT, histT[0], label=labels[1], color='orange')
+                    if not binT is None: 
+                        ax.plot(binT, histT[0], label=labels[1], color='orange')
+                        
                     bin_prev = bin0
                 elif bin_prev is None:
                     # duration plotting.
                     # no normalization because we are duration plotting.
                     ax.plot(bin0, fun0, label=labels[0] + " " + wtype, color='blue')
                     
+                    if not binT is None:
+                        ax.plot(binT, histT[0], label=labels[1] + " " + wtype, color='orange')
                     
-                    ax.plot(binT, histT[0], label=labels[1] + " " + wtype, color='orange')
                     bin_prev = binT
                     
                 else:
                     # duration second plot for hw.
                     ax.plot(bin0, fun0, label=labels[0] + " " + wtype, color='green')
                     
-                    
-                    ax.plot(binT, histT[0], label=labels[1] + " " + wtype, color='red')
+                    if not binT is None:
+                        ax.plot(binT, histT[0], label=labels[1] + " " + wtype, color='red')
+                        
 
                 
                 ylim = ax.get_ylim()

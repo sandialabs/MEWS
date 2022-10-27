@@ -36,6 +36,7 @@ import warnings
 from datetime import datetime
 from mews.utilities.utilities import filter_cpu_count
 from mews.utilities.utilities import find_extreme_intervals
+from copy import deepcopy
 
 class DiscreteMarkov():
     """
@@ -119,13 +120,21 @@ class DiscreteMarkov():
     _func_types = {"exponential":0,"linear":1,"exponential_cutoff":2,
                    "linear_cutoff":3,
                    "quadratic_times_exponential_decay_with_cutoff":4}
+    # DO NOT CHANGE THE ORDER OF THIS LIST! 
+    _events = ['cs','hw']
     
-    def __init__(self,rng,transition_matrix,state_names=None,use_cython=True,decay_func_type=None, coef=None,):
-        
-        if not decay_func_type is None and not decay_func_type in self._func_types:
-            raise ValueError("The decay_func_type input must be a string equal to one of the following:" + str(self._func_types.keys()))
-        if not decay_func_type is None and coef is None:
-            raise ValueError("If a 'decay_func_type' is provided, then coefficients input 'coef' is needed")
+    def __init__(self,rng,
+                      transition_matrix,
+                      state_names=None,
+                      use_cython=True,
+                      decay_func_type={'hw':None,'cs':None},
+                      coef=None):
+        if not decay_func_type is None:
+           for wt in self._events:
+               if not decay_func_type[wt] in self._func_types:
+                   raise ValueError("The decay_func_type['{0}'] input must be a string equal to one of the following: \n\n".format(wt) + str(self._func_types.keys()))
+               if not decay_func_type[wt] is None and coef[wt] is None:
+                    raise ValueError("If a 'decay_func_type' is provided, then coefficients input 'coef' is needed.")
         
         
         self.rng = rng
@@ -150,9 +159,24 @@ class DiscreteMarkov():
         for idx, name in enumerate(state_names):
             names[name] = idx
         self._names = names
-        self.use_cython = True
+        self.use_cython = use_cython
         self.tol = 1e-10
-        self.coef = coef
+        
+        # convert coefficients to a pure array rather than a dictionary
+        # where extra entries are -999 if there is a mismatch in
+        # decay function type.
+        max_len = 0
+        num_event = len(coef)
+        for wt in self._events:
+            cf = coef[wt]
+            max_len = np.max([max_len,len(cf)])
+        coef_arr = -999.0 * np.ones((num_event,max_len),dtype=float)
+
+        for idx, wt in enumerate(self._events):
+            cf = coef[wt]
+            coef_arr[idx,0:len(cf)] = cf
+        
+        self.coef = coef_arr
         self.decay_func_type = decay_func_type
         
     def history(self,num_step,state0,min_steps=24,skip_steps=0,count_in_min_steps_intervals=False):
@@ -234,29 +258,35 @@ class DiscreteMarkov():
         
         cdf = self._cdf
         
+        int_func_list = []
+        for wt in self._events:
+            int_func_list.append(self._func_types[self.decay_func_type[wt]])
+        
         # The Markov Chain is about 10x slower in Python
         if self.use_cython:
             if self.decay_func_type is None:
                 state = markov_chain(cdf,prob,state0)
             else:
+                
+
+                
                 state = markov_chain_time_dependent_wrapper(cdf,
                                                             prob,
                                                             state0,
                                                             self.coef,
-                                                            self._func_types[self.decay_func_type],
+                                                            np.array(int_func_list),
                                                             check_inputs=False)
         else:
             if self.decay_func_type is None:
                 state = MarkovPy.markov_chain_py(cdf,prob,state0)
             else:
                 state = markov_chain_time_dependent_py(cdf,
-                                                            prob,
-                                                            state0,
-                                                            self.coef,
-                                                            self._func_types[self.decay_func_type],
-                                                            check_inputs=False)
-                
-        
+                                                       prob,
+                                                       state0,
+                                                       self.coef,
+                                                       np.array(int_func_list),
+                                                       check_input=False)
+
         if count_in_min_steps_intervals:
             # translate state into an array of min_step length segments
             state_extended = np.repeat(state,min_steps)
@@ -266,21 +296,35 @@ class DiscreteMarkov():
             final_state = np.concatenate((begin_state,state_extended,ending_state))
         else:
             # TODO - this is slow!
-            # move state changes to min_step intervals
+            # move state changes to min_step intervalsstate_count = np.array([(day == state_val).sum() for name,state_val in self._names.items()])
             # for each day, assign the state that has the majority of hours in
-            # the day.
+            # the day, except that there must be a 24 hour pause between
+            # events.
             
 
             big_step = np.int(np.floor(num_step/min_steps))
-
+            prev_state = 0            
+            nstate = deepcopy(state)
             for idx in range(big_step):
-                day = state[min_steps * idx:min_steps*(idx+1)]
+                
+                day = nstate[min_steps * idx:min_steps*(idx+1)]
                 state_count = np.array([(day == state_val).sum() for name,state_val in self._names.items()])
-                state[min_steps * idx:min_steps*(idx+1)] = state_count.argmax()
+                
+                new_state = state_count.argmax()
+                
+                if prev_state != 0 and new_state != 0 and state_count[0] > 0:
+                    # There must be a 24 hour break between events regardless of 
+                    # if there is a majority
+                    nstate[min_steps * idx:min_steps*(idx+1)] = 0
+                elif prev_state == 0 and new_state == 0 and state_count[0] != min_steps:
+                    nstate[min_steps * idx:min_steps*(idx+1)] = state_count[1:].argmax() + 1
+                else:
+                    nstate[min_steps * idx:min_steps*(idx+1)] = state_count.argmax()
+                    
+                prev_state = new_state
 
-            final_state = state
-        
-        return final_state
+
+        return nstate
             
     def steady(self):
         """

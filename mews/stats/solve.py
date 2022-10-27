@@ -21,6 +21,22 @@ from warnings import warn
 
 import numpy as np
 
+def x_offset_for_func_type_combo(decay_func,events):
+    wtoff = []
+    # must use list events so that 'cs' is first.
+    for wtype in events:
+        decfunc = decay_func[wtype]
+        if decfunc is None:
+            wtoff.append(0)
+        elif decfunc == "linear" or decfunc == "exponential":
+            wtoff.append(1)# wave type offset
+        elif decfunc == "linear_cutoff" or decfunc == "exponential_cutoff":
+            wtoff.append(2)
+        elif decfunc == "quadratic_times_exponential_decay_with_cutoff":
+            wtoff.append(3)
+    return wtoff
+
+
 def shift_a_b_of_trunc_gaussian(del_mu_T,mu_T,del_sig_T,sig_T):
     return (del_mu_T - (1 + mu_T)/(sig_T) * del_sig_T, 
            del_mu_T + (1 - mu_T)/(sig_T) * del_sig_T)
@@ -66,6 +82,7 @@ def ipcc_shift_comparison_residuals(hist0,ipcc_shift,
                                     delT_above_shifted_extreme,
                                     num_hist_wave,
                                     historic_time_interval,
+                                    hours_per_year,
                                     wave_type,
                                     weights):
     # get and calculate cdf's for historical (0) and future (_T) distributions
@@ -81,7 +98,7 @@ def ipcc_shift_comparison_residuals(hist0,ipcc_shift,
         negative_penalty = (np.max([float((cdf_T[1] > 0).sum()) - 1.0,0.0]))**2 * weights[2]
     
     # Calculate probabilities
-    P10_given_wave, P50_given_wave = probability_of_extreme_10_50(num_hist_wave, num_step, historic_time_interval)
+    P10_given_wave, P50_given_wave = probability_of_extreme_10_50(num_hist_wave, num_step, historic_time_interval,hours_per_year)
     
     # probabilities a heat wave being less than the 10 and 50 year events
     P0_less_than_extreme = np.array([1.0-P10_given_wave,1.0-P50_given_wave])
@@ -117,17 +134,19 @@ def ipcc_shift_comparison_residuals(hist0,ipcc_shift,
                 positive_penalty)
     return residuals + negative_penalty + positive_penalty
 
-def probability_of_extreme_10_50(num_hist_wave,num_step,historic_time_interval):
+def probability_of_extreme_10_50(num_hist_wave,num_step,historic_time_interval,hours_per_year):
+    
+    num_hour_in_year = 8760
     
     if num_hist_wave == 0:
         return 0.0, 0.0
     else:
-        hour_in_year = 8760
-        N10 = 10 * hour_in_year
-        N50 = 50 * hour_in_year
-
-        P10_given_wave = historic_time_interval / (num_hist_wave * N10)
-        P50_given_wave = historic_time_interval / (num_hist_wave * N50)
+        N10 = 10 * hours_per_year
+        N50 = 50 * hours_per_year
+        
+        # TODO - hours per year is not even needed.
+        P10_given_wave = historic_time_interval * (hours_per_year / num_hour_in_year) / (num_hist_wave * N10)
+        P50_given_wave = historic_time_interval * (hours_per_year / num_hour_in_year) / (num_hist_wave * N50)
         
         return P10_given_wave, P50_given_wave
 
@@ -211,25 +230,52 @@ def histogram_comparison_residuals(histT,hist0,weight,normalize=True):
     
     return residuals * weight
 
+
+def unpack_coef_from_x(x,decay_func_type,events):
+    coef = {}
+    xtoff = x_offset_for_func_type_combo(decay_func_type,events)
+    for eid, wt in enumerate(events):
+        decay_func = decay_func_type[wt]
+                   
+        if not decay_func is None:
+            offset = np.array(xtoff)[:eid].sum()
+            if decay_func == "exponential" or decay_func == "linear":
+                coef[wt] = np.array([x[8+offset]])
+            elif decay_func == "exponential_cutoff" or decay_func == "linear_cutoff":
+                coef[wt] = np.array([x[8+offset],x[9+offset]])
+            elif decay_func == "quadratic_times_exponential_decay_with_cutoff":
+                # remember the order of the coefficient input for this function is
+                # 1) time to maximum 2) maximum prob, 3) cutoff time
+                # the order has to be 6,10,8 as a result instead of 6,8,10
+                coef[wt] = np.array([x[8+offset],x[9+offset],x[10+offset]])
+            else: # should never happen:
+                raise ValueError("Invalid decay_func_type. '{0}' was input, but only valid values are : \n\n{1}".format(
+                    decay_func,str(SolveDistributionShift._decay_func_types_entries.keys())))
+    return coef
+
 class ObjectiveFunction():
     
-    def __init__(self):
+    def __init__(self,events,random_seed):
         self.iterations = 0
+        self._events = events
+        self._rng = default_rng(random_seed)
+        self._hours_in_year = 8760
 
 
     def markov_gaussian_model_for_peak_temperature(self,x,
                                                    num_step,
-                                                   random_seed,
                                                    hist_param,
                                                    hist0,
                                                    durations0,
                                                    historic_time_interval,
-                                                   ipcc_shift=None,
-                                                   decay_func_type=None,
+                                                   hours_per_year,
+                                                   ipcc_shift={'cs':None,'hw':None},
+                                                   decay_func_type={'cs':None,'hw':None},
                                                    use_cython=True,
                                                    output_hist=False,
                                                    delT_above_shifted_extreme={'cs':None,'hw':None},
-                                                   weights=np.array([1.0,1.0,1.0,1.0])):
+                                                   weights=np.array([1.0,1.0,1.0,1.0]),
+                                                   min_num_waves=100):
         """
         This is an objective function. It finds residuals on one of the following
         criterion
@@ -278,34 +324,60 @@ class ObjectiveFunction():
             x[6] = Probability of sustaining a cold snap at time in wave = 0
             
             x[7] = Probability of sustaining a heat wave at time in wave = 0
-            If not decay_func_type is None:
-                if decay_func_type == 'quadratic_times_exponential_decay_with_cutoff':
-                    x[8] = time to peak probability of sustaining a cold snap
-                else:
-                    x[8] = slope or exponential parameter (depending on 
-                        'decay_func_type') decay of probability sustaining cold snaps
+            
+            All other variables depend on the decay_func_type dictionary
+            
+            if decay_func_type['cs'] is None and decay_func_type['hw'] is None:
                 
-                if decay_func_type == 'quadratic_times_exponential_decay_with_cutoff':
-                    x[9] = time to peak probability of sustaining a heat wave
-                else:
-                    x[9] = same as x[8] for heat waves
+                There are no other variables
+            
+            if decay_func_type['cs'] == "exponential" or "linear" and decay_func_type['hw'] is None
+            
+                x[8] = slope or exponential parameter (depending on 
+                    'decay_func_type') decay of probability sustaining cold snaps
                 
-            If "cutoff" in decay_func_type:
-                x[10] = cutoff time at which probability of sustaining a cold snap
+            if decay_func_type['cs'] == "exponential_cutoff" or "linear_cutoff" and decay_func_type['hw'] is None
+            
+                x[8] = slope or exponential parameter (depending on 
+                    'decay_func_type') decay of probability sustaining cold snaps
+                x[9] = cutoff time at which probability of sustaining a cold snap
                        drops to zero
-                x[11] = same as x[8] for heat waves.
                 
-            if "quadratic" in decay func_type:
-                x[12] = Maximum probability of sustaining a cold snap
+            if decay_func_type['cs'] == "quadratic_times_exponential_decay_with_cutoff" and decay_func_type['hw'] is None
+            
+                x[8] = time to peak probability of sustaining a cold snap
+                x[9] = cutoff time at which probability of sustaining a cold snap
+                       drops to zero
+                x[10] = Maximum probability of sustaining a cold snap
+                
+            .
+            .   Not listing all 16 combinations but the idea is that 'cs' comes first then 'hw'
+            .
+            
+            if  decay_func_type['cs'] == "quadratic_times_exponential_decay_with_cutoff" 
+            and decay_func_type['hw'] == "quadratic_times_exponential_decay_with_cutoff"
+
+                x[8] = time to peak probability of sustaining a cold snap
+                x[9] = cutoff time at which probability of sustaining a cold snap
+                       drops to zero
+                x[10] = Maximum probability of sustaining a cold snap
+                
+                x[11] = time to peak probability of sustaining a heat wave
+                x[12] = cutoff time at which probability of sustaining a heat wave
+                       drops to zero
                 x[13] = Maximum probability of sustaining a heat wave
+                                
+
                    
          Other inputs are documented in input to "SolveDistributionShift.__init__"
         
         """
+        #if self.iterations == 10:
+            #breakpoint()
         # We want the same set of random numbers every time so that the
         # Markov process is not causing as much variation
-    
-        rng = default_rng(random_seed)
+        rng = self._rng
+        
     
         # this function is used in optimization routines so it needs to be efficient!
         
@@ -322,6 +394,9 @@ class ObjectiveFunction():
         Phw = x[5]
         Pcss = x[6]
         Phws = x[7]
+
+        #if self.iterations == 10:
+        #    breakpoint()
         
         # next parameters are the probability of sustainting a cold snap and then a 
         # heat wave
@@ -331,25 +406,8 @@ class ObjectiveFunction():
     
         # next parameters depend on the func_type. They do not exist if
         # there is no decay function
-        if not decay_func_type is None:
-            if decay_func_type == "exponential":
-                lamb_cs = x[8]
-                lamb_hw = x[9]
-                coef = np.array([[lamb_cs],[lamb_hw]])
-            elif decay_func_type == "linear":
-                slope_cs = x[8]
-                slope_hw = x[9]
-                coef = np.array([[slope_cs],[slope_hw]])
-            elif decay_func_type == "quadratic_times_exponential_decay_with_cutoff":
-                # remember the order of the coefficient input for this function is
-                # 1) time to maximum 2) maximum prob, 3) cutoff time
-                # the order has to be 6,10,8 as a result instead of 6,8,10
-                coef = np.array([[x[8],x[12],x[10]],[x[9],x[13],x[11]]])
-            else:
-                coef = np.array([[x[8],x[10]],[x[9],x[11]]])
-        else:
-            coef = None
-            
+        coef = unpack_coef_from_x(x, decay_func_type, self._events)
+
         # now run the Markov process
         objDM = DiscreteMarkov(rng, 
                                tran_matrix, 
@@ -367,6 +425,10 @@ class ObjectiveFunction():
         thresholds = {}
         duration_residuals = {}
         duration_histograms = {}
+        unnormalized_duration_histograms = {}
+        temp_resid = {}
+        negative_penalty = {}
+        positive_penalty = {}
         
         for wave_type,state_int in zip(['cs','hw'],[1,2]):
             
@@ -377,21 +439,27 @@ class ObjectiveFunction():
             # in the sense that they displace heat waves.
             
             
-            durations[wave_type] = np.array([tup[1]-tup[0]+1 for tup in state_intervals[state_int]])    
+            durations[wave_type] = np.array([tup[1]-tup[0]+1 for tup in state_intervals[state_int]])   
+            
             
             Tsample[wave_type] = evaluate_temperature(durations[wave_type], hist_param, 
                                            del_mu_T[wave_type], 
                                            del_sig_T[wave_type], rng, wave_type)
         # this returns a tuple the first element is the histogram of temperatures
         # the second element returns the cdf with values mapped to the bin averages.
-            if len(Tsample[wave_type]) == 0:
-                # for cases where Markov process produces no heat waves. return 
-                # 99999 residual recognizable at solution.
+            if len(Tsample[wave_type]) < min_num_waves:
+                # for cases where Markov process produces not enough heat waves. return 
+                # 99999 residual recognizable at solution. We cannot get statistics on
+                # processes that are not creating events.
                 residuals[wave_type] = np.array([44444,55555])
                 thresholds[wave_type] = None
                 histT_tuple[wave_type] = None
                 duration_histograms[wave_type] = None
                 duration_residuals[wave_type] = 0.0
+                negative_penalty[wave_type] = None
+                positive_penalty[wave_type] = None
+                temp_resid[wave_type] = None
+                
             else:
                 
                 # normal evaluation cases.
@@ -400,45 +468,78 @@ class ObjectiveFunction():
                 
                 #convert the durations to duration histograms for plotting later on.
                 
-    
-                duration_histograms[wave_type] = np.histogram(durations[wave_type],bins=np.arange(24,durations[wave_type].max()+24,24))
+                # You must normalize num_step vs. historic_time_interval * hours_per_year/hours_in_year
+                duration_normalizing_factor = (historic_time_interval * hours_per_year / self._hours_in_year) / num_step
                 
-                duration_residuals[wave_type] = duration_residuals_func(duration_histograms[wave_type],durations0[wave_type],ipcc_shift[wave_type],weights)
+                unnormalized_duration_histograms[wave_type] = np.histogram(durations[wave_type],bins=np.arange(24-12,durations[wave_type].max()+12+24,24))
+                
+                duration_histograms[wave_type] = (unnormalized_duration_histograms[wave_type][0]*duration_normalizing_factor,
+                                                  unnormalized_duration_histograms[wave_type][1])
+                
+                if duration_histograms[wave_type][0].sum() > min_num_waves:
+                
+                    duration_residuals[wave_type] = duration_residuals_func(duration_histograms[wave_type],durations0[wave_type],ipcc_shift[wave_type],weights)
+                    
+                else:
+                    # this means very few waves are coming through and a statistical analysis is invalid. Huge Penalty
+                    duration_residuals[wave_type] = 99999
+                    
+                
                 
                 
                 if ipcc_shift[wave_type] is None:
                     
                     residuals[wave_type] = histogram_comparison_residuals(histT_tuple[wave_type][0],hist0[wave_type],weights[0])
                     thresholds[wave_type] = None
+                    negative_penalty[wave_type] = None
+                    positive_penalty[wave_type] = None
+                    temp_resid[wave_type] = None
+                    
                     
                 else:
+                    
+                    residuals, 
+                    negative_penalty, 
+                    positive_penalty
                     if output_hist:
-                        residuals[wave_type], thresholds[wave_type], junk1,junk2,junk3 = ipcc_shift_comparison_residuals(
+                        residuals[wave_type], thresholds[wave_type], temp_resid[wave_type],negative_penalty[wave_type],positive_penalty[wave_type] = ipcc_shift_comparison_residuals(
                                                                 hist0[wave_type],ipcc_shift[wave_type], 
                                                                 histT_tuple[wave_type], durations[wave_type], 
                                                                 num_step,output_hist,delT_above_shifted_extreme[wave_type],
-                                                                num_hist_wave,historic_time_interval,wave_type,weights)
+                                                                num_hist_wave,historic_time_interval,hours_per_year,wave_type,weights)
                     else:
                         residuals[wave_type] = ipcc_shift_comparison_residuals(hist0[wave_type],ipcc_shift[wave_type], 
                                                                 histT_tuple[wave_type], durations[wave_type], 
                                                                 num_step,output_hist,delT_above_shifted_extreme[wave_type],
-                                                                num_hist_wave,historic_time_interval,wave_type,weights)
+                                                                num_hist_wave,historic_time_interval,hours_per_year,wave_type,weights)
+        
+        
         
         sum_resid = 0.0
         for wt, resid in residuals.items():
             sum_resid = sum_resid + resid.sum()
             sum_resid = sum_resid + duration_residuals[wt]
         
-    
-        sum_resid = duration_residuals['cs']
         
         # if you need more output after differential_evolution
         self.iterations += 1
-        if self.iterations == 10:
-            pass
+
         if output_hist:
-    
-            return sum_resid, Tsample, duration_histograms, thresholds, histT_tuple
+            residuals_dict = {}
+            residuals_dict['total temperature'] = {'cs':residuals['cs'].sum(),
+                                                   'hw':residuals['hw'].sum()}
+            residuals_dict['temperature'] = {}
+            for wt in self._events:
+                if not temp_resid[wt] is None:
+                    residuals_dict['temperature'][wt] = temp_resid[wt].sum()
+
+            residuals_dict['temperature negative penalty'] = negative_penalty
+            residuals_dict['temperature positive penalty'] = positive_penalty
+            residuals_dict['durations'] = duration_residuals
+            
+            
+            
+            return sum_resid, Tsample, duration_histograms, thresholds, histT_tuple, residuals_dict
     
         else:
             return sum_resid    
@@ -515,26 +616,49 @@ class SolveDistributionShift(object):
                             param0['normalized extreme temp duration fit intercept'] = Linear regression intercept
                             
                         """
-                        
-    _default_problem_bounds = {'cs':{'delT_mu': (0.0, 2.0),
-                                     'delT_sig multipliers': (-0.1,4),
-                                     'P_event': (0.00001, 0.03),
-                                     'P_sustain': (0.958, 0.999999),
-                                     'multipliers to max probability time': (0,2),
-                                     'slope or exponent multipliers' : (0,1),
-                                     'cutoff time multipliers':(1,3),
-                                     'max peak prob for quadratic model': (0.97, 1.0)},
-                               'hw':{'delT_mu': (0.0, 0.7),
-                                     'delT_sig multipliers': (-0.1,2),
-                                     'P_event': (0.00001,0.03),
-                                     'P_sustain': (0.958,0.999999),
-                                     'multipliers to max probability time': (0.1,2),
-                                     'slope or exponent multipliers' : (0,1),
-                                     'cutoff time multipliers':(1,3),
-                                     'max peak prob for quadratic model': (0.97, 1.0)}}
     
-    _decay_func_types = [None,'linear','exponential','linear_cutoff','exponential_cutoff',"quadratic_times_exponential_decay_with_cutoff"]
+    _bound_desc = ['delT_mu',
+                           'delT_sig multipliers',
+                           'P_event','P_sustain',
+                           'multipliers to max probability time',
+                           'slope or exponent multipliers',
+                           'cutoff time multipliers',
+                           'max peak prob for quadratic model']
+    
+    _default_problem_bounds = {'cs':{_bound_desc[0]: (0.0, 2.0),
+                                     _bound_desc[1]: (-0.1,4),
+                                     _bound_desc[2]: (0.00001, 0.0125),
+                                     _bound_desc[3]: (0.958, 0.999999),
+                                     _bound_desc[4]: (0,2),
+                                     _bound_desc[5]: (0,1),
+                                     _bound_desc[6]: (1,3),
+                                     _bound_desc[7]: (0.97, 1.0)},
+                               'hw':{_bound_desc[0]: (0.0, 2.0),
+                                     _bound_desc[1]: (-0.1,2),
+                                     _bound_desc[2]: (0.00001,0.0125),
+                                     _bound_desc[3]: (0.958,0.999999),
+                                     _bound_desc[4]: (0.1,2),
+                                     _bound_desc[5]: (0,1),
+                                     _bound_desc[6]: (1,3),
+                                     _bound_desc[7]: (0.97, 1.0)}}
+    _lin_exp_list = _bound_desc[0:4]
+    _lin_exp_list.append(_bound_desc[5])
+    _lin_exp_cutoff_list = _lin_exp_list
+    _lin_exp_cutoff_list.append(_bound_desc[6])
+    _quad_list = [_bound_desc[0],_bound_desc[1],_bound_desc[2],_bound_desc[3],_bound_desc[4],_bound_desc[6],_bound_desc[7]]
+    
+    # this provides a basis for evaluating if problem_bounds has all the entries needed.
+    _decay_func_types_entries = {None:_bound_desc[0:4],
+                                 'linear':_bound_desc[0:4],
+                                 'exponential':_lin_exp_list,
+                                 'linear_cutoff':_lin_exp_cutoff_list,
+                                 'exponential_cutoff':_lin_exp_cutoff_list,
+                                 "quadratic_times_exponential_decay_with_cutoff":_quad_list}
+    
+    
     # cs = cold snap, hw = heat wave.
+    # THE ORDER OF THIS LIST MUST NOT BE CHANGED!!! IT WILL SCRAMBLE THE ORDER
+    # OF VARIABLES X FOR THE OBJECTIVE FUNCTION 
     _events = ['cs','hw']
     
     def __init__(self,num_step,
@@ -544,9 +668,10 @@ class SolveDistributionShift(object):
                       durations0,
                       delT_above_shifted_extreme,
                       historic_time_interval,
+                      hours_per_year,
                       problem_bounds=None,
-                      ipcc_shift=None,
-                      decay_func_type=None,
+                      ipcc_shift={'cs':None,'hw':None},
+                      decay_func_type={'cs':None,'hw':None},
                       use_cython=True,
                       num_cpu=-1,
                       plot_results=True,
@@ -554,7 +679,8 @@ class SolveDistributionShift(object):
                       plot_title="",
                       fig_path="",
                       weights=np.array([1.0,1.0,1.0,1.0]),
-                      limit_temperatures=True):
+                      limit_temperatures=True,
+                      min_num_waves=100):
         """
         This class solves one of two problems. 
         
@@ -610,10 +736,38 @@ class SolveDistributionShift(object):
             The number of hours included in the historic (hist0, durations0) data
             analyzed. This is the length of the daily summaries file times 24.
             
+        hours_per_year : int 
+            For a full year analysis, this should be 8760 or 8784 on a leap year
+            For the mews monthly analysis, it is the number of hours in the 
+            current month being analyzed.
+            
         problem_bounds : dict : Optional: Default value = None
-            list of tuples of length 8, 10, 12, or 14 depending on input 'decay_func_type'
+            list of tuples of length 8 for both heat waves 'hw' and cold snaps 'cs'
+            depending on input 'decay_func_type'
             A special form of dictionary that contains bounds on the parameters 
-            for the variable vector 'x'. If None, values from self._default_problem_bounds are used.
+            for the variable vector 'x'. If None, values from 
+            self._default_problem_bounds are used.
+            which contains all options regardless of whether they are needed for a 
+            specific decay_func_type. All entries are needed regardless of 
+            the function type
+            
+            _default_problem_bounds = {'cs':{'delT_mu': (0.0, 2.0),
+                                 'delT_sig multipliers': (-0.1,4),
+                                 'P_event': (0.00001, 0.03),
+                                 'P_sustain': (0.958, 0.999999),
+                                 'multipliers to max probability time': (0,2),
+                                 'slope or exponent multipliers' : (0,1),
+                                 'cutoff time multipliers':(1,3),
+                                 'max peak prob for quadratic model': (0.97, 1.0)},
+                           'hw':{'delT_mu': (0.0, 0.7),
+                                 'delT_sig multipliers': (-0.1,2),
+                                 'P_event': (0.00001,0.03),
+                                 'P_sustain': (0.958,0.999999),
+                                 'multipliers to max probability time': (0.1,2),
+                                 'slope or exponent multipliers' : (0,1),
+                                 'cutoff time multipliers':(1,3),
+                                 'max peak prob for quadratic model': (0.97, 1.0)}}
+            
             
         ipcc_shift : dict : optional : default value = None
             A special form of dictionary which contains shifts in frequency
@@ -698,6 +852,13 @@ class SolveDistributionShift(object):
             limit via a nonlinear constraint on cutoff time, and others. 
             This only has an effect on models that have a cutoff time.
             
+        min_num_waves : int : optional : Default = 100
+            The minimum number of waves (both heat wave and cold snap) 
+            that must be achieved by 'num_steps' in the sample space for the 
+            analysis to not send back a high penalty in the residuals. 
+            The analysis being done is statistical and a good sample of
+            heat waves is needed for the analysis to be meaningful.
+        
         
         Raises
         ------
@@ -720,6 +881,7 @@ class SolveDistributionShift(object):
                            durations0,
                            delT_above_shifted_extreme,
                            historic_time_interval,
+                           hours_per_year,
                            problem_bounds,
                            ipcc_shift,
                            decay_func_type,
@@ -730,7 +892,8 @@ class SolveDistributionShift(object):
                            plot_title,
                            fig_path,
                            weights,
-                           limit_temperatures)
+                           limit_temperatures,
+                           min_num_waves)
         
         if problem_bounds is None:
             self._prob_bounds = self._default_problem_bounds
@@ -757,33 +920,35 @@ class SolveDistributionShift(object):
                                                                                   abs_max_temp,
                                                                                   limit_temperatures)
         
+        constraints = [linear_constraint]
         # the nonlinear constrain is only enforceable when cutoff parameters are present
-        if nonlinear_constraint is None:
-            constraints = (linear_constraint,)
-        else:
-            constraints = (linear_constraint, nonlinear_constraint)
+        for wt, nlc in nonlinear_constraint.items():
+            if not nlc is None:
+                constraints.append(nlc)
         
-        obj_func = ObjectiveFunction()
+        obj_func = ObjectiveFunction(self._events,random_seed)
         
         # this optimization is not expected to converge. The objective function is stochastic. The
         # optimization still finds a solution but the population does not tend to stabilize because
         # of the stochastic objective function.
+
         iterations=0
         optimize_result = differential_evolution(obj_func.markov_gaussian_model_for_peak_temperature,
                                          bounds_x0,
                                          args=(num_step,
-                                               random_seed,
                                                param0,
                                                hist0,
                                                durations0,
                                                historic_time_interval,
+                                               hours_per_year,
                                                ipcc_shift,
                                                decay_func_type,
                                                use_cython,
                                                False,
                                                delT_above_shifted_extreme,
-                                               weights),
-                                         constraints=constraints,
+                                               weights,
+                                               min_num_waves),
+                                         constraints=tuple(constraints),
                                          workers=num_cpu,
                                          maxiter=max_iter,
                                          seed=random_seed,
@@ -800,22 +965,23 @@ class SolveDistributionShift(object):
         resid = {}
         thresholds = {}
         histT_tuple = {}
+        residuals_dict = {}
         for rand_adj in [1253, 9098, 3562]:
             (resid[rand_adj], Tsample[rand_adj], durations[rand_adj], 
-             thresholds[rand_adj], histT_tuple[rand_adj]) = obj_func.markov_gaussian_model_for_peak_temperature(
+             thresholds[rand_adj], histT_tuple[rand_adj], residuals_dict[rand_adj]) = obj_func.markov_gaussian_model_for_peak_temperature(
                   xf0,
                   num_step,
-                  random_seed-rand_adj,
                   param0,
                   hist0,
                   durations0,
                   historic_time_interval,
+                  hours_per_year,
                   ipcc_shift,
                   decay_func_type,
                   use_cython,
                   output_hist=True,
                   delT_above_shifted_extreme=delT_above_shifted_extreme)
-        
+
         if plot_results:
             Graphics.plot_sample_dist_shift(hist0,histT_tuple, ipcc_shift, thresholds, self._events, plot_title, fig_path)
 
@@ -836,10 +1002,13 @@ class SolveDistributionShift(object):
         self.Tsample = Tsample
         self.durations = durations
         self.histT_tuple = histT_tuple
+        self.residuals_breakdown = residuals_dict
         
         param_new = deepcopy(param0)
         
-        for wave_type,eid in zip(['cs','hw'],[[0,1,4,6,8,10,12],[2,3,5,7,9,11,13]]):
+        coef = unpack_coef_from_x(xf0, decay_func_type, self._events)
+        
+        for wave_type,eid,idx in zip(self._events,[[0,1,4,6],[2,3,5,7]],[0,1]):
             # eid - extreme event index - these indicate what indices apply to heat waves and cold snaps
             
             pval = unpack_params(param0, wave_type)
@@ -849,7 +1018,7 @@ class SolveDistributionShift(object):
             param_new[wave_type]['extreme_temp_normal_param']['sig'] = pval["sig_T"] + del_sig_T
             param_new[wave_type]['hourly prob of heat wave'] = xf0[eid[2]]
             param_new[wave_type]['hourly prob stay in heat wave'] = xf0[eid[3]]
-            param_new[wave_type]['decay function'] = decay_func_type
+            param_new[wave_type]['decay function'] = decay_func_type[wave_type]
             
             # shift the absolute extremes of the truncated gaussian distributions!
             (del_a,del_b) = shift_a_b_of_trunc_gaussian(del_mu_T,pval["mu_T"],del_sig_T,pval["sig_T"])
@@ -861,15 +1030,7 @@ class SolveDistributionShift(object):
             param_new[wave_type]['max extreme temp per duration'] = inverse_transform_fit(1+del_b, 
                                                                                           pval['maxval_T'],
                                                                                           pval['minval_T'])
-
-            if not decay_func_type is None:
-                if decay_func_type == "linear" or decay_func_type == "exponential":    
-                    # hw and cold snaps 
-                    param_new[wave_type]['decay func coef'] = xf0[eid[4]]
-                elif "cutoff" in decay_func_type and not "quadratic" in decay_func_type:
-                    param_new[wave_type]['decay func coef'] = xf0[eid[4]],xf0[eid[5]]
-                elif "quadratic" in decay_func_type:
-                    param_new[wave_type]['decay func coef'] = xf0[eid[4]],xf0[eid[6]],xf0[eid[5]]
+            param_new[wave_type]['decay function coef'] = coef[wave_type]
                     
         self.param0 = param0
         self.param = param_new
@@ -898,6 +1059,7 @@ class SolveDistributionShift(object):
                       durations0,
                       delT_above_shifted_extreme,
                       historic_time_interval,
+                      hours_per_year,
                       problem_bounds,
                       ipcc_shift,
                       decay_func_type,
@@ -908,7 +1070,8 @@ class SolveDistributionShift(object):
                       plot_title,
                       fig_path,
                       weights,
-                      limit_temperatures):    
+                      limit_temperatures,
+                      min_num_waves):    
         """
         Input checking is very important because this class uses  
         parallel computing in differential_evolution where debugging bad inputs is much harder!
@@ -923,8 +1086,8 @@ class SolveDistributionShift(object):
             raise TypeError("The input 'durations0' must be dict with key {0}.".format(str(self._events)))
         elif not isinstance(ipcc_shift, dict):
             raise TypeError("The ipcc_shift input must be a dictionary with key {0}.".format(str(self._events)))
-        elif not isinstance(decay_func_type, (type(None),str)):
-            raise TypeError("The input 'decay_func_type' must be a string or None = {0}".format(str(self._decay_func_types)))
+        elif not isinstance(decay_func_type, dict):
+            raise TypeError("The input 'decay_func_type' must be a dictionary with keys = {0} and values from the list = {1}".format(str(self._events),str(self._decay_func_types)))
         elif not isinstance(use_cython, bool):
             raise TypeError("The input 'use_cython' must be a boolean (i.e. True or False)")
         elif not isinstance(num_cpu, (int)):
@@ -940,14 +1103,28 @@ class SolveDistributionShift(object):
         elif not isinstance(delT_above_shifted_extreme,dict):
             raise TypeError("the input 'delT_above_shifted_extreme' must be a dictionary with key = {0}.".format(str(self._events)))
         elif not isinstance(historic_time_interval, int):
-            raise TypeError("The input 'historic_time_interval' must be an integer equal to 24 * the number of days in the NOAA daily summaries.")
+            raise TypeError("The input 'historic_time_interval' must be an integer equal to 24 * the number of days in the NOAA daily summaries for the month being analyzed (or all days if entire year is being lumped).")
+        elif not isinstance(hours_per_year, int):
+            raise TypeError("The input 'hours_per_year' must be an integer < 8684 and ussually ~ 8760/12 equal to the number of hours in the current month being analyzed in the historic record.")
         elif not isinstance(problem_bounds,(type(None),dict)):
             raise TypeError("The input 'problem_bounds' must be None or a dictionary!")
         elif not isinstance(weights,np.ndarray):
             raise TypeError("The input 'weights' must be a numpy array!")
         elif not isinstance(limit_temperatures,bool):
             raise TypeError("The input 'limit_temperatures' must be a boolean!")
+        elif not isinstance(min_num_waves,int):
+            raise TypeError("The input 'min_num_waves' must be an integer!")
             
+        if min_num_waves < 10:
+            raise ValueError("The analysis being done is statistical. The minimum"+
+                             " number of waves is not allowed to be below a 10! "+
+                             "{0:d} has been input.".format(min_num_waves))
+        
+        if hours_per_year > 8784 or hours_per_year < 0:
+            raise ValueError("The input 'hours_per_year' must be between 0 to"+
+                             " 8784 and is ususally the number of hours in the"+
+                             " current month being analyzed in the historic record.")
+        
         for wt in weights:
             if wt < 0.0:
                 raise ValueError("The elements of input 'weights' must be positive")
@@ -984,8 +1161,12 @@ class SolveDistributionShift(object):
                 raise ValueError("The input 'delT_above_shifted_extreme['{0}'] is in degrees Celcius and must be between 0 and 20.".format(wt))
             elif wt == 'cs' and (delT_ > 0 or delT_ < -20.0):
                 raise ValueError("The input 'delT_above_shifted_extreme['{0}'] is in degrees Celcius and must be between -20 and 0.".format(wt))
-        if not decay_func_type in self._decay_func_types:
-            raise ValueError("The input 'decay_func_type' must be one of the following " + str(self._decay_func_types))
+        
+        for wt, decay_func in decay_func_type.items():
+            if not wt in self._events:
+                raise ValueError("The only valid keys for 'decay_func_type' are {0}.".format(str(self._events)))
+            if not decay_func in self._decay_func_types_entries:
+                raise ValueError("The input 'decay_func_type' must be one of the following " + str(self._decay_func_types))
         
         # test IPCC shift factors.
         for wt, ipcc_shift_subdict in ipcc_shift.items():
@@ -993,15 +1174,21 @@ class SolveDistributionShift(object):
                 for key in ['temperature','frequency']:
                     self._check_ipcc_shift(ipcc_shift_subdict,key)
     
-        # ASSURE CORRECT INPUT VECTOR LENGTH    
-        for decay_type,numvar in zip(self._decay_func_types,[8,10,10,12,12,14]):
-            if decay_func_type == decay_type and len(problem_bounds) != numvar:
-                if decay_type is None:
-                    func_descr_str = "with no decay function "
-                else:
-                    func_descr_str = "with a" + decay_type + "function "
-                raise ValueError("The problem formulation "+func_descr_str+" must have {0:d} variables.".format(numvar) + 
-                                 "\nThe formaulation for each variable is:\n\n" + self._variable_order_string)
+        # ASSURE CORRECT INPUT VECTOR LENGTH
+        
+        for wt,pb in problem_bounds.items():
+            if not wt in self._events:
+                raise ValueError("The problem bounds must have entries for both heat waves and cold snaps ({0})".format(str(self._events)))
+            else:                
+                for decay_type, entries_needed in self._decay_func_types_entries.items():
+                    for entry in entries_needed:
+                        if not entry in pb:
+                            if decay_type is None:
+                                func_descr_str = "with no decay function "
+                            else:
+                                func_descr_str = "with a " + decay_type + " function "
+                            raise ValueError("The problem formulation "+func_descr_str+" must have {0:d} variables.".format(numvar) + 
+                                             "\nThe formaulation for each variable is:\n\n" + self._variable_order_string)
                 
         if num_step < 8760*50:
             raise ValueError("The input 'num_step' needs to be a large value > 8760*50 since a Markov process statistics must be characterized for 50 year events.")
@@ -1053,57 +1240,54 @@ class SolveDistributionShift(object):
         # establish a constraint such that Phw and Pcs cannot add to more than one.                               
         constrain_matrix = np.array([[0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0]])
 
+        # this is awkward but we need the bounds to be added in 'cs', 'hw' order
+        # eventually the order of the variable vector x may need to be reordered
         
-        if not decay_func_type is None:
-            max_duration_hw = param0['hw']['normalizing duration']
-            max_duration_cs = param0['cs']['normalizing duration']
-            if "exponential" in decay_func_type or "linear" in decay_func_type:
+        nlc = {}
+        
+        # must do by list to keep 'cs' first!
+        for wt in self._events:
+            decay_func = decay_func_type[wt]
+            if not decay_func is None:
+                max_duration = param0[wt]['normalizing duration']
                 
-                if "quadratic" in decay_func_type:
-                    bounds_x0.append(tuple(max_duration_cs * np.array(dpb['cs']['multipliers to max probability time'])))
-                    bounds_x0.append(tuple(max_duration_hw * np.array(dpb['hw']['multipliers to max probability time'])))
-                else:
-                    # only consider slopes that will cut the probability to 0 by the 
-                    # maximum duration of historic heat waves. Larger slopes lead to
-                    # too much shift on the mean and averages of the temperature distribution.
-                    bounds_x0.append(tuple(np.array(dpb['cs']['slope or exponent multipliers'])/max_duration_cs))
-                    bounds_x0.append(tuple(np.array(dpb['hw']['slope or exponent multipliers'])/max_duration_hw))  # slope and exponents should be very small
-                                             # numbers a value of 1 makes decay fully occur
-                                             # in 1 step.
-                constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
-                                                  axis=1)
-            if "cutoff" in decay_func_type:
-                # limiting heat wave lengths to no more than 3 times the historic duration heat wave found.
-                bounds_x0.append(tuple(max_duration_cs*np.array(dpb['cs']['cutoff time multipliers']))) # cutoff times can be much larger
-                bounds_x0.append(tuple(max_duration_hw*np.array(dpb['hw']['cutoff time multipliers']))) # more than a year makes no sense in this problem
-                                           # content.
-                constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
-                                                  axis=1)
-                
-                
-                
-                if limit_temperatures:
-                    nlc_obj = MaxTemperatureNonlinearConstraint(param0,self._events)
-                    nlc = NonlinearConstraint(nlc_obj.func, (abs_max_temp['cs'],abs_max_temp['cs'],0.0,0.0), 
-                                              (0.0,0.0,abs_max_temp['hw'],abs_max_temp['hw']))
-                else:
-                    nlc = None
-                
-                # we need a nonlinear constraint that sets a boundary on the absolute maximum temperature a heat wave can 
-                # exhibit. We do this by creating a nonlinear constrain between the cutoff time, and the 
-                if "quadratic" in decay_func_type:
-                    # replace slope and lamb with cutoff time
-                    bounds_x0.append(dpb['cs']['max peak prob for quadratic model'])
-                    bounds_x0.append(dpb['hw']['max peak prob for quadratic model'])
+                if decay_func == "exponential" or decay_func == "linear":
+                    bounds_x0.append(tuple(np.array(dpb[wt]['slope or exponent multipliers'])/max_duration))
+                    num_added = 1
                     
-                    # add two more zeros to the 
-                    constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,2))],
+                elif decay_func == "exponential_cutoff" or decay_func == "linear_cutoff":
+                    bounds_x0.append(tuple(np.array(dpb[wt]['slope or exponent multipliers'])/max_duration))
+                    bounds_x0.append(tuple(max_duration*np.array(dpb[wt]['cutoff time multipliers']))) # cutoff times can be much larger   
+                    num_added = 2
+                elif decay_func == "quadratic_times_exponential_decay_with_cutoff":
+                    bounds_x0.append(tuple(max_duration * np.array(dpb['cs']['multipliers to max probability time'])))
+                    bounds_x0.append(tuple(max_duration * np.array(dpb['cs']['cutoff time multipliers']))) # cutoff times can be much larger
+                    bounds_x0.append(tuple(dpb[wt]['max peak prob for quadratic model']))
+                    num_added = 3
+                else:
+                    raise ValueError("Invalid decay function type '{0}': only valid values are: \n\n{1}".format(decay_func,str(self._decay_func_types_entries.keys())))
+                
+                constrain_matrix = np.concatenate([constrain_matrix, np.zeros((1,num_added))],
                                                       axis=1)
-                    
-            else:
-                nlc = None
-        else:
-            nlc = None
+                
+                # these nonlinear constraints on temperature are dependent on having a hard cutoff temperature 
+                # this is highly dependent on the number of variables added. and the cutoff times are always the second for a given event type.
+                if "cutoff" in decay_func:
+                    if limit_temperatures:
+                        if wt == "cs":
+                            lower_bound = (abs_max_temp[wt], abs_max_temp[wt])
+                            upper_bound = (0.0,0.0)
+                        else:
+                            lower_bound = (0.0,0.0)
+                            upper_bound = (abs_max_temp[wt], abs_max_temp[wt])                            
+                        
+                        
+                        nlc_obj = MaxTemperatureNonlinearConstraint(param0,decay_func_type,wt, self._events)
+                        nlc[wt] = NonlinearConstraint(nlc_obj.func, lower_bound, upper_bound)
+                    else:
+                        nlc[wt] = None
+                else:
+                    nlc[wt] = None
             
         # do not allow zero probability of heat or cold snap solutions or all 
         # heat wave and cold snap solution.
@@ -1113,31 +1297,43 @@ class SolveDistributionShift(object):
     
 class MaxTemperatureNonlinearConstraint():
     
-    def __init__(self,param,events):
+    def __init__(self,param, decay_func, wtype, events):
         self.param = param
-        self._events = events
+        
+        wtoff = x_offset_for_func_type_combo(decay_func, events)
+        
+        # this offset allows navigation of the 
+        self._wtoff = wtoff
+        self._decay_func = decay_func
+        self._wtype = wtype
         
         
     def func(self,x):
         temp_list = []
-        for wtype,eid in zip(self._events,[[0,1],[2,3]]):
-            pval = unpack_params(self.param, wtype)
-            del_mu_T = x[eid[0]]
-            del_sig_T = x[eid[1]]
-            del_a, del_b = shift_a_b_of_trunc_gaussian(del_mu_T,
-                                                       pval['mu_T'],
-                                                       del_sig_T,
-                                                       pval['sig_T'])
-            Xb = inverse_transform_fit(1+del_b, pval['maxval_T'], pval['minval_T'])
-            Xa = inverse_transform_fit(-1+del_a, pval['maxval_T'], pval['minval_T'])
+
+        if self._wtype == "cs":
+            eid = [0,1]
+        else:
+            eid = [2,3]
         
-            if wtype == "cs":
-                cutoff = x[8]
-            else:
-                cutoff = x[9]
-                
-            temp_list.append(temperature(Xb, cutoff, pval))
-            temp_list.append(temperature(Xa, cutoff, pval))
+        pval = unpack_params(self.param, self._wtype)
+        del_mu_T = x[eid[0]]
+        del_sig_T = x[eid[1]]
+        del_a, del_b = shift_a_b_of_trunc_gaussian(del_mu_T,
+                                                   pval['mu_T'],
+                                                   del_sig_T,
+                                                   pval['sig_T'])
+        
+        Xb = inverse_transform_fit(1+del_b, pval['maxval_T'], pval['minval_T'])
+        Xa = inverse_transform_fit(-1+del_a, pval['maxval_T'], pval['minval_T'])
+    
+        if self._wtype == 'cs':
+            cutoff = x[9]
+        else:
+            cutoff = x[8+self._wtoff[0]+1]
+            
+        temp_list.append(temperature(Xb, cutoff, pval))
+        temp_list.append(temperature(Xa, cutoff, pval))
             
         return tuple(temp_list)  
         

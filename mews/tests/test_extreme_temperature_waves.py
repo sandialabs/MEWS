@@ -294,12 +294,12 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         solve_options = {'historic': {'random_seed': random_seed,
                                       'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
                                       'decay_func_type': 'exponential_cutoff',
-                                      'max_iter': 5,
+                                      'max_iter': 2,
                                       'limit_temperature': True},
                          'future': {'random_seed': random_seed,
                                     'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
                                     'decay_func_type': 'exponential_cutoff',
-                                    'max_iter': 5,
+                                    'max_iter': 2,
                                     'limit_temperature': True}}
 
         num_realizations = 10
@@ -336,7 +336,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             station,
             run_parallel=run_parallel,
             use_breakpoint=False,
-            solver_options)
+            solve_options=solve_options)
 
         self.assertGreater(meanval["50%"], meanval["5%"])
         self.assertGreater(meanval["95%"], meanval["50%"])
@@ -367,7 +367,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             self.model_guide,
             self.data_folder,
             weather_files,
-            station,solver_options)
+            station,
+            solver_options=solver_options)
 
         metric_dict_try2, meanval, obj1, clim_scen, scen_dict = self._run_verification_study_of_use_global_False(
             1,
@@ -379,7 +380,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             self.data_folder,
             weather_files,
             station,
-            solver_options)
+            solver_options=solver_options)
 
         self.assertEqual(metric_dict_try1, metric_dict_try2)
 
@@ -390,7 +391,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     def _run_verification_study_of_use_global_False(num_realizations, future_year, random_seed, plot_results, scenario,
                                                     model_guide, data_folder, weather_files, station, print_progress=False, run_parallel=True,
                                                     number_cores=20, write_results=False, scen_dict=None, clim_scen=None, obj=None,
-                                                    ci_interval=["5%", "50%", "95%"], use_breakpoint=False, solver_options=None):
+                                                    ci_interval=["5%", "50%", "95%"], use_breakpoint=False, solve_options=None):
 
         # this provides a template for the new use case where use_global = False. # target albuquerque, NM
 
@@ -432,7 +433,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                           include_plots=plot_results,
                                           run_parallel=run_parallel, use_global=False, delT_ipcc_min_frac=1.0,
                                           num_cpu=number_cores, write_results=write_results, test_markov=True,
-                                          solver_options)
+                                          solve_options=solve_options)
 
         ipcc = {}
         real_stats = {}

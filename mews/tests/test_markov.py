@@ -100,6 +100,7 @@ class Test_Markov(unittest.TestCase):
         for idx, markov_func in enumerate([markov_chain_time_dependent_py, markov_chain_time_dependent_wrapper]):
             
             for func_type in range(4):
+                ftype = np.array([func_type,func_type],dtype=int)
                 if func_type < 2:
                     coef_neg = coef_negligible_1term
                     coef = coef_1term
@@ -108,10 +109,10 @@ class Test_Markov(unittest.TestCase):
                     coef = coef_2terms
                     
                 # a non_constant time decay that is negligible
-                yy_negligible = markov_func(cdf, rand_big[0:1000], np.int32(0), coef_neg, np.int32(func_type))
+                yy_negligible = markov_func(cdf, rand_big[0:1000], 0, coef_neg, ftype)
                 
                 # a time decay that makes a difference
-                yy = markov_func(cdf, rand_big[0:1000], 0, coef, func_type)
+                yy = markov_func(cdf, rand_big[0:1000], 0, coef, ftype)
                 
                 if idx == 0 and func_type == 0:
                     yy_timedecay_py = yy
@@ -146,11 +147,11 @@ class Test_Markov(unittest.TestCase):
         # The input checks take up a LOT of time. making the wrapper 2-3 times faster
         # with input checking off, the implementation is about 10x faster.
         tic_c = perf_counter_ns()
-        value = markov_chain_time_dependent_wrapper(cdf, rand_big[0:8760], 0, coef_1term, 0,check_inputs=False)
+        value = markov_chain_time_dependent_wrapper(cdf, rand_big[0:8760], 0, coef_1term, np.array([0,0]),check_inputs=False)
         toc_c = perf_counter_ns()
         
         tic_py = perf_counter_ns()
-        value_py = markov_chain_time_dependent_py(cdf, rand_big[0:8760], 0, coef_1term, 0)
+        value_py = markov_chain_time_dependent_py(cdf, rand_big[0:8760], 0, coef_1term, np.array([0,0]))
         toc_py = perf_counter_ns()
         
 
@@ -162,8 +163,8 @@ class Test_Markov(unittest.TestCase):
         self.assertTrue(ctime < pytime)
         
         # TEST 6 - very fast decay only allows up to a single time step in different states
-        coef_fast_decay = np.array([[100.0],[100.0]])
-        values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_fast_decay, 0,check_inputs=False)
+        coef_fast_decay = np.array([[100.0, -999],[100.0,1e7]])  # just checking if different kinds of function types being requested works.
+        values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_fast_decay, np.array([0,2]),check_inputs=False)
         # If np.diff(values) is state, the next value will be either 0 or -state and the one after it will be -2
         # such a pattern indicates that only 1 hour events are occuring.
         # and then the next values 0
@@ -186,7 +187,8 @@ class Test_Markov(unittest.TestCase):
         # type checking would correct this but slows downs everything.
         coef_cutoff = np.array([[0.0,10.0],[0.0,10.0]])
         for func_type in [2,3]:
-            values = markov_chain_time_dependent_wrapper(cdf2, rand_big, 0, coef_cutoff, func_type)
+            ftype = np.array([func_type,func_type])
+            values = markov_chain_time_dependent_wrapper(cdf2, rand_big, 0, coef_cutoff, ftype)
             # all changes in state will be of duration 10 + 2
             diffvals = np.diff(values)
             # for python implementation, this is diffvals[:,-12],diffvals[11:] that
@@ -204,13 +206,13 @@ class Test_Markov(unittest.TestCase):
         values = {}
         for idx, markov_func in enumerate([markov_chain_time_dependent_py, 
                                            markov_chain_time_dependent_wrapper]):    
-            values[idx] = markov_func(cdf, rand_big[0:1000], 1, coef_quadratic, 4)
+            values[idx] = markov_func(cdf, rand_big[0:1000], 1, coef_quadratic, np.array([4,4]))
 
         self.assertTrue((values[0]==values[1]).all())
     
     def test_MarkovChain(self):
         always0 = np.array([[1,0],[1,0]],dtype=np.float)
-        state0 = np.int32(0)
+        state0 = 0
         rand = self.rng.random(10000)
 
         value = markov_chain(always0,rand,state0)
