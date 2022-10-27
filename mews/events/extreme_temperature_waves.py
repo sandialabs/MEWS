@@ -22,11 +22,12 @@ from mews.weather.psychrometrics import relative_humidity
 from mews.weather.climate import ClimateScenario
 from mews.utilities.utilities import filter_cpu_count
 from mews.stats.distributions import cdf_truncnorm, trunc_norm_dist, inverse_transform_fit
+from mews.constants.data_format import WAVE_MAP
 
 from copy import deepcopy
 from datetime import datetime
 from scipy.optimize import bisect, fsolve
-
+from mews.constants.physical import HOURS_IN_YEAR
 
 import io
 import pandas as pd
@@ -229,10 +230,13 @@ class ExtremeTemperatureWaves(Extremes):
         
         # produce the initial values of several parameters. The optimization
         # will actually produce the statistics needed.
-        stats = self._wave_stats(self.NOAA_data,include_plots)
-        breakpoint()
+        stats, hours_per_year = self._wave_stats(self.NOAA_data,include_plots)
+
         if not use_global:
-            self._solve_historic_distributions(stats, solve_options)
+            new_stats = self._solve_historic_distributions(stats, solve_options, hours_per_year)
+        else:
+            new_stats = stats
+            
         self.stats = stats
         
         if include_plots:
@@ -253,8 +257,6 @@ class ExtremeTemperatureWaves(Extremes):
         self.ipcc_results = {"ipcc_fact":{},'durations':{}}
         self._create_scenario_has_been_run = False
         self._write_results = write_results
-        
-        
 
         
     def create_scenario(self,scenario_name,start_year,num_year,climate_temp_func,
@@ -477,71 +479,67 @@ class ExtremeTemperatureWaves(Extremes):
             raise ValueError(message+"!")
                 
                     
-    def _solve_historic_distributions(self,stats, solve_options):
+    def _solve_historic_distributions(self,stats, solve_options, frac_hours_per_year):
         # solve options unpacked
         
         # loop over heat waves/ cold snaps
-        breakpoint()
-        wave_name_map = {'heat wave':'hw','cold snap':'cs'}
+        new_stats = {}
+        for wt1,wt2 in WAVE_MAP.items():
+            new_stats[wt1] = {}
         
-        for wname1,w_abrev in wave_name_map.items():
-            wstats = stats[wname1]
+        random_seed = self._random_seed
+        
+        # These defaults do not match all of the defaults in solve.py
+        # there are specific differences that are intentional and they 
+        # should be kept separate.
+        default_vals = {'problem_bounds':None,
+                        'decay_func_type':"quadratic_times_exponential_decay_with_cutoff",
+                        'use_cython':True,
+                        'num_cpu':-1,
+                        'plot_results':False,
+                        'max_iter':20,
+                        'plot_title':'',
+                        'fig_path':"",
+                        'weights':np.array([1.0,1.0,1.0,1.0]),
+                        'limit_temperatures':False,
+                        'delT_above_shifted_extreme':{'cs':-20,'hw':20},
+                        'num_step':self._default_solver_num_steps,
+                        'min_num_waves':25,
+                        'x_solution':None,
+                        'test_mode':False}
+        
+        historic_time_interval = int(stats['heat wave'][1]['historic time interval'])
+        
+        # bring in values assigned by the user. Use defaults for unassigned values.
+        opt_val = {}
+        for key,def_val in default_vals.items():
+            if key in solve_options['historic']:
+                opt_val[key] = solve_options['historic'][key]
+            else:
+                opt_val[key] = def_val
+        
+        obj_solve = None
+        for month in range(1,13):
             
-            for month, mstat in wstats.items():
-                
-                # setup required values. Some are optional
-                # but all need to be given the defaults from SolveDistributionShift
-                # so that every option is available through solve_options
-                #1
-                if 'num_step' in solve_options:
-                    num_step = solve_options['num_step']
-                else:
-                    num_step = self._default_solver_num_steps
-                #2
-                param0 = mstat # this uses several (but not all values)
-                #3
-                random_seed = self._random_seed
-                #4
-                hist0 = mstat['historical temperatures (hist0)']
-                #5
-                durations0 = mstat['historical durations (durations0)']
-                #6
-                if 'delT_above_shifted_extreme' in solve_options:
-                    delT_above_shifted_extreme = solve_options['delT_above_shifted_extreme']
-                else:
-                    delT_above_shifted_extreme = {'cs':-20,'hw':20}
-                #7
-                historic_time_interval = mstat['historic time interval']
-                # These defaults do not match all of the defaults in solve.py
-                # there are specific differences that are intentional and they 
-                # should be kept separate.
-                default_vals = {'problem_bounds':None,
-                                'ipcc_shift':None,
-                                'decay_func_type':"quadratic_times_exponential_decay_with_cutoff",
-                                'use_cython':True,
-                                'num_cpu':-1,
-                                'plot_results':False,
-                                'max_iter':20,
-                                'plot_title':'',
-                                'fig_path':"",
-                                'weights':np.array([1.0,1.0,1.0,1.0]),
-                                'limit_temperatures':False}
-                opt_val = {}
-                for key,def_val in default_vals.items():
-                    if key in solve_options:
-                        opt_val[key] = solve_options[key]
-                    else:
-                        opt_val[key] = def_val
-                        
-                obj_solve = SolveDistributionShift(num_step, 
+            hist0 = {}
+            durations0 = {}
+            param0 = {}
+            for wname1,wname2 in WAVE_MAP.items():
+                hist0[wname2] = stats[wname1][month]['historical temperatures (hist0)'] 
+                durations0[wname2] = stats[wname1][month]['historical durations (durations0)']
+                param0[wname2] = stats[wname1][month]
+            
+            if obj_solve is None:
+                obj_solve = SolveDistributionShift(opt_val['num_step'], 
                                        param0, 
                                        random_seed, 
                                        hist0, 
                                        durations0, 
-                                       delT_above_shifted_extreme, 
+                                       opt_val['delT_above_shifted_extreme'], 
                                        historic_time_interval,
+                                       int(frac_hours_per_year[month-1] * HOURS_IN_YEAR),
                                        problem_bounds=opt_val['problem_bounds'],
-                                       ipcc_shift=opt_val['ipcc_shift'],
+                                       ipcc_shift={'cs':None,'hw':None},
                                        decay_func_type=opt_val['decay_func_type'],
                                        use_cython=opt_val['use_cython'],
                                        num_cpu=opt_val['num_cpu'],
@@ -550,15 +548,38 @@ class ExtremeTemperatureWaves(Extremes):
                                        plot_title=opt_val['plot_title'],
                                        fig_path=opt_val['fig_path'],
                                        weights=opt_val['weights'],
-                                       limit_temperatures=opt_val['limit_temperature'])
+                                       limit_temperatures=opt_val['limit_temperatures'],
+                                       min_num_waves=opt_val['min_num_waves'],
+                                       x_solution=opt_val['x_solution'],
+                                       test_mode=opt_val['test_mode'])
+
+                if opt_val['test_mode']:
+                    # this makes all other runs just be evaluations when 
+                    # we just want to run quick tests.
+                    x_solution = obj_solve.optimize_result.x
+                else:
+                    x_solution = None
                 
-                breakpoint()
-                
+                param = obj_solve.param
+            else:
+                # only reassign values that change by month (and x_solution for testing purposes
+                # to reduce run time)
+                inputs = {"param0":param0,
+                          "hist0":hist0,
+                          "durations0":durations0,
+                          "hours_per_year":int(frac_hours_per_year[month-1] * HOURS_IN_YEAR),
+                          "x_solution":x_solution}
+                param = obj_solve.reanalyze(inputs)
+            
+            for wt1, wt2 in WAVE_MAP.items():
+                new_stats[wt1][month] = param[wt2]
+
+            pass
                 
             
             
-        
-        pass    
+            
+        return new_stats
         
     
     def _real_value_stats(self,wave_type,scenario_name,year,ci_interval,stat_name,duration):
@@ -1072,7 +1093,6 @@ class ExtremeTemperatureWaves(Extremes):
                               time_hours,
                               is_hw,
                               hours_with_data,
-                              frac_hours_in_month,
                               include_plots=True):
         
         # waves_other is for hw if in cs and for cs if in hw.
@@ -1212,7 +1232,7 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['normalizing extreme temp'] = norm_extreme_temp
             temp_dict['normalizing duration'] = month_duration_hr.max()
             # historic time interval
-            temp_dict['historic time interval'] = frac_hours_in_month[month] * hours_with_data
+            temp_dict['historic time interval'] =  hours_with_data
             #
             # Markov chain model parameter estimation
             #
@@ -1375,9 +1395,8 @@ class ExtremeTemperatureWaves(Extremes):
                                                             time_hours,
                                                             is_hw,
                                                             hours_with_data,
-                                                            frac_hours_in_month,
                                                             include_plots)
-        return stats
+        return stats, frac_hours_in_month
     
     def _plot_stats_by_month(self,stats,title_string):
         

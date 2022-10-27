@@ -661,6 +661,29 @@ class SolveDistributionShift(object):
     # OF VARIABLES X FOR THE OBJECTIVE FUNCTION 
     _events = ['cs','hw']
     
+    _valid_inputs = ['num_step',
+                'param0',
+                'random_seed',
+                'hist0',
+                'durations0',
+                'delT_above_shifted_extreme',
+                'historic_time_interval',
+                'hours_per_year',
+                'problem_bounds',
+                'ipcc_shift',
+                'decay_func_type',
+                'use_cython',
+                'num_cpu',
+                'plot_results',
+                'max_iter',
+                'plot_title',
+                'fig_path',
+                'weights',
+                'limit_temperatures',
+                'min_num_waves',
+                'x_solution',
+                'test_mode']
+    
     def __init__(self,num_step,
                       param0,
                       random_seed,
@@ -680,7 +703,9 @@ class SolveDistributionShift(object):
                       fig_path="",
                       weights=np.array([1.0,1.0,1.0,1.0]),
                       limit_temperatures=True,
-                      min_num_waves=100):
+                      min_num_waves=100,
+                      x_solution=None,
+                      test_mode=False):
         """
         This class solves one of two problems. 
         
@@ -698,11 +723,6 @@ class SolveDistributionShift(object):
         Parameters
         ----------
 
-        x0 : np.array - length 8, 10, 12, or 14 depending on input 'decay_func_type'
-            initial guess of input vector (see docs for markov_gaussian_model_for_peak_temperature)
-            for what each element of this vector represents. see the 'x' input to the 
-            function 'markov_gaussian_model_for_peak_temperature'
-            
         num_step : int : 
             number of hourly steps to run the MTG model. Must be at least be
             10 50 year periods or > 50*8760*10 more steps smooths out the 
@@ -858,6 +878,15 @@ class SolveDistributionShift(object):
             analysis to not send back a high penalty in the residuals. 
             The analysis being done is statistical and a good sample of
             heat waves is needed for the analysis to be meaningful.
+            
+        x_solution : np.array : optional : Default = None
+            If not None, A solution x_solution, is immediately applied rather 
+            than running the differential_evolution optimization.
+            
+        test_mode : bool : optional : Default = False
+            Enter into a test mode that overrides some check_inputs
+            so that faster evaluations of the functionality of this
+            class can be accomplished.
         
         
         Raises
@@ -873,7 +902,7 @@ class SolveDistributionShift(object):
         
         
         """
-
+        self._test_mode = test_mode
         self._check_inputs(num_step,
                            random_seed,
                            param0,
@@ -893,70 +922,78 @@ class SolveDistributionShift(object):
                            fig_path,
                            weights,
                            limit_temperatures,
-                           min_num_waves)
+                           min_num_waves,
+                           x_solution,
+                           test_mode)
         
-        if problem_bounds is None:
-            self._prob_bounds = self._default_problem_bounds
-        else:
-            self._prob_bounds = problem_bounds
+        if x_solution is None:
         
-        
-        abs_max_temp = {}
-        # establish the absolute maximum temperature nonlinear constraint boundary on the optimization
-        for wtype in self._events:
-            if ipcc_shift[wtype] is None:
-                abs_max_temp[wtype] = param0[wtype]['normalizing extreme temp'] + delT_above_shifted_extreme[wtype] # this parameter 
+            if problem_bounds is None:
+                self._prob_bounds = self._default_problem_bounds
             else:
-                abs_max_temp[wtype] = (param0[wtype]['normalizing extreme temp'] + ipcc_shift[wtype]['temperature']['50 year'] + 
-                                delT_above_shifted_extreme[wtype])
+                self._prob_bounds = problem_bounds
             
             
-        
-        # linear constraint - do not allow Pcs and Phw to sum to more than specified amounts
-        # nonlinear constraint - do not allow maximum possible sampleable temperature to exceed a bound.
-        bounds_x0, linear_constraint, nonlinear_constraint = self._problem_bounds(decay_func_type,
-                                                                                  num_step,
-                                                                                  param0,
-                                                                                  abs_max_temp,
-                                                                                  limit_temperatures)
-        
-        constraints = [linear_constraint]
-        # the nonlinear constrain is only enforceable when cutoff parameters are present
-        for wt, nlc in nonlinear_constraint.items():
-            if not nlc is None:
-                constraints.append(nlc)
-        
-        obj_func = ObjectiveFunction(self._events,random_seed)
-        
-        # this optimization is not expected to converge. The objective function is stochastic. The
-        # optimization still finds a solution but the population does not tend to stabilize because
-        # of the stochastic objective function.
-
-        iterations=0
-        optimize_result = differential_evolution(obj_func.markov_gaussian_model_for_peak_temperature,
-                                         bounds_x0,
-                                         args=(num_step,
-                                               param0,
-                                               hist0,
-                                               durations0,
-                                               historic_time_interval,
-                                               hours_per_year,
-                                               ipcc_shift,
-                                               decay_func_type,
-                                               use_cython,
-                                               False,
-                                               delT_above_shifted_extreme,
-                                               weights,
-                                               min_num_waves),
-                                         constraints=tuple(constraints),
-                                         workers=num_cpu,
-                                         maxiter=max_iter,
-                                         seed=random_seed,
-                                         disp=False,
-                                         polish=False) # polishing is a waste of time on a stochastic function.
-
-
-        xf0 = optimize_result.x 
+            abs_max_temp = {}
+            # establish the absolute maximum temperature nonlinear constraint boundary on the optimization
+            for wtype in self._events:
+                if ipcc_shift[wtype] is None:
+                    abs_max_temp[wtype] = param0[wtype]['normalizing extreme temp'] + delT_above_shifted_extreme[wtype] # this parameter 
+                else:
+                    abs_max_temp[wtype] = (param0[wtype]['normalizing extreme temp'] + ipcc_shift[wtype]['temperature']['50 year'] + 
+                                    delT_above_shifted_extreme[wtype])
+                
+                
+            
+            # linear constraint - do not allow Pcs and Phw to sum to more than specified amounts
+            # nonlinear constraint - do not allow maximum possible sampleable temperature to exceed a bound.
+            bounds_x0, linear_constraint, nonlinear_constraint = self._problem_bounds(decay_func_type,
+                                                                                      num_step,
+                                                                                      param0,
+                                                                                      abs_max_temp,
+                                                                                      limit_temperatures)
+            
+            constraints = [linear_constraint]
+            # the nonlinear constrain is only enforceable when cutoff parameters are present
+            for wt, nlc in nonlinear_constraint.items():
+                if not nlc is None:
+                    constraints.append(nlc)
+            
+            obj_func = ObjectiveFunction(self._events,random_seed)
+            
+            # this optimization is not expected to converge. The objective function is stochastic. The
+            # optimization still finds a solution but the population does not tend to stabilize because
+            # of the stochastic objective function.
+    
+            iterations=0
+            optimize_result = differential_evolution(obj_func.markov_gaussian_model_for_peak_temperature,
+                                             bounds_x0,
+                                             args=(num_step,
+                                                   param0,
+                                                   hist0,
+                                                   durations0,
+                                                   historic_time_interval,
+                                                   hours_per_year,
+                                                   ipcc_shift,
+                                                   decay_func_type,
+                                                   use_cython,
+                                                   False,
+                                                   delT_above_shifted_extreme,
+                                                   weights,
+                                                   min_num_waves),
+                                             constraints=tuple(constraints),
+                                             workers=num_cpu,
+                                             maxiter=max_iter,
+                                             seed=random_seed,
+                                             disp=False,
+                                             polish=False) # polishing is a waste of time on a stochastic function.
+    
+    
+            xf0 = optimize_result.x 
+        else:
+            xf0 = x_solution
+            obj_func = ObjectiveFunction(self._events,random_seed)
+            optimize_result = self.optimize_result
         
         # TODO - establish level of convergence.
         
@@ -1003,6 +1040,7 @@ class SolveDistributionShift(object):
         self.durations = durations
         self.histT_tuple = histT_tuple
         self.residuals_breakdown = residuals_dict
+
         
         param_new = deepcopy(param0)
         
@@ -1034,6 +1072,117 @@ class SolveDistributionShift(object):
                     
         self.param0 = param0
         self.param = param_new
+        
+        self.inputs = {}
+        self.inputs['num_step'] = num_step
+        self.inputs['param0']=param0,
+        self.inputs['random_seed']=random_seed
+        self.inputs['hist0']=hist0
+        self.inputs['durations0']=durations0
+        self.inputs['delT_above_shifted_extreme']=delT_above_shifted_extreme
+        self.inputs['historic_time_interval']=historic_time_interval
+        self.inputs['hours_per_year']=hours_per_year
+        self.inputs['problem_bounds']=problem_bounds
+        self.inputs['ipcc_shift']=ipcc_shift
+        self.inputs['decay_func_type']=decay_func_type
+        self.inputs['use_cython']=use_cython
+        self.inputs['num_cpu']=num_cpu
+        self.inputs['plot_results']=plot_results
+        self.inputs['max_iter']=max_iter
+        self.inputs['plot_title']=plot_title
+        self.inputs['fig_path']=fig_path
+        self.inputs['weights']=weights
+        self.inputs['limit_temperatures']=limit_temperatures
+        self.inputs['min_num_waves']=min_num_waves
+        self.inputs['x_solution']=x_solution
+        self.inputs['test_mode']=test_mode
+        
+    def reanalyze(self,inputs):
+        if not isinstance(inputs, dict):
+            raise TypeError("The input 'inputs' must be a dictionary!")
+        
+        for key, val in inputs.items():
+            if key in self.inputs:
+                self.inputs[key] = val
+            else:
+                # no extraneous values allowed. 
+                raise ValueError("SolveDistributionShift.reanalyze: An input option {0} was given but that is not a valid input. \n".format(key) +
+                      " valid inputs are: \n\n {0}".format(str(self._valid_inputs)))
+        
+        tup = tuple([self.inputs[inp] for inp in self._valid_inputs])
+        
+        (num_step,
+        random_seed,
+        param0,
+        hist0,
+        durations0,
+        delT_above_shifted_extreme,
+        historic_time_interval,
+        hours_per_year,
+        problem_bounds,
+        ipcc_shift,
+        decay_func_type,
+        use_cython,
+        num_cpu,
+        plot_results,
+        max_iter,
+        plot_title,
+        fig_path,
+        weights,
+        limit_temperatures,
+        min_num_waves,
+        x_solution,
+        test_mode) = tup
+        
+        self.__init__(num_step,
+                    random_seed,
+                    param0,
+                    hist0,
+                    durations0,
+                    delT_above_shifted_extreme,
+                    historic_time_interval,
+                    hours_per_year,
+                    problem_bounds,
+                    ipcc_shift,
+                    decay_func_type,
+                    use_cython,
+                    num_cpu,
+                    plot_results,
+                    max_iter,
+                    plot_title,
+                    fig_path,
+                    weights,
+                    limit_temperatures,
+                    min_num_waves,
+                    x_solution,
+                    test_mode)
+            
+            
+            # num_step,
+            #             random_seed,
+            #             param0,
+            #             hist0,
+            #             durations0,
+            #             delT_above_shifted_extreme,
+            #             historic_time_interval,
+            #             hours_per_year,
+            #             problem_bounds,
+            #             ipcc_shift,
+            #             decay_func_type,
+            #             use_cython,
+            #             num_cpu,
+            #             plot_results,
+            #             max_iter,
+            #             plot_title,
+            #             fig_path,
+            #             weights,
+            #             limit_temperatures,
+            #             min_num_waves,
+            #             x_solution,
+            #             test_mode)
+        
+        return self.param
+                
         
     def _check_ipcc_shift(self,ipcc_shift,key):
         if not key in ipcc_shift:
@@ -1071,11 +1220,17 @@ class SolveDistributionShift(object):
                       fig_path,
                       weights,
                       limit_temperatures,
-                      min_num_waves):    
+                      min_num_waves,
+                      x_solution,
+                      test_mode):    
         """
         Input checking is very important because this class uses  
         parallel computing in differential_evolution where debugging bad inputs is much harder!
         """
+        if not isinstance(x_solution,(type(None),np.ndarray)):
+            raise TypeError("The input 'x_solution' must be None or an np.array of correct size for the decay_func_types requested.")
+        if not isinstance(test_mode,bool):
+            raise TypeError("The input 'test_mode' must be a boolean (True/False)!")
         if not isinstance(random_seed,int):
             raise TypeError("The input 'random_seed' must be a 32 bit integer (i.e. any integer < 2**32-1 works)")
         elif not isinstance(param0,dict):
@@ -1166,7 +1321,7 @@ class SolveDistributionShift(object):
             if not wt in self._events:
                 raise ValueError("The only valid keys for 'decay_func_type' are {0}.".format(str(self._events)))
             if not decay_func in self._decay_func_types_entries:
-                raise ValueError("The input 'decay_func_type' must be one of the following " + str(self._decay_func_types))
+                raise ValueError("The input 'decay_func_type' must be one of the following " + str(self._decay_func_types_entries))
         
         # test IPCC shift factors.
         for wt, ipcc_shift_subdict in ipcc_shift.items():
@@ -1175,12 +1330,14 @@ class SolveDistributionShift(object):
                     self._check_ipcc_shift(ipcc_shift_subdict,key)
     
         # ASSURE CORRECT INPUT VECTOR LENGTH
-        
+        if problem_bounds is None:
+            problem_bounds = self._default_problem_bounds
         for wt,pb in problem_bounds.items():
             if not wt in self._events:
                 raise ValueError("The problem bounds must have entries for both heat waves and cold snaps ({0})".format(str(self._events)))
             else:                
                 for decay_type, entries_needed in self._decay_func_types_entries.items():
+                    numvar = len(entries_needed)
                     for entry in entries_needed:
                         if not entry in pb:
                             if decay_type is None:
@@ -1189,9 +1346,9 @@ class SolveDistributionShift(object):
                                 func_descr_str = "with a " + decay_type + " function "
                             raise ValueError("The problem formulation "+func_descr_str+" must have {0:d} variables.".format(numvar) + 
                                              "\nThe formaulation for each variable is:\n\n" + self._variable_order_string)
-                
-        if num_step < 8760*50:
-            raise ValueError("The input 'num_step' needs to be a large value > 8760*50 since a Markov process statistics must be characterized for 50 year events.")
+        if not self._test_mode:
+            if num_step < 8760*50:
+                raise ValueError("The input 'num_step' needs to be a large value > 8760*50 since a Markov process statistics must be characterized for 50 year events.")
         
         if historic_time_interval < 0:
             raise ValueError("The historic time interval must be greater than zero!")

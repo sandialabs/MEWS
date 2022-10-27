@@ -19,7 +19,7 @@ import warnings
 
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
-from mews.events.extreme_temperature_waves import fit_exponential_distribution
+from mews.stats.distributions import fit_exponential_distribution
 from mews.graphics.plotting2D import Graphics
 import matplotlib.pyplot as plt
 import os
@@ -291,16 +291,22 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         """
         random_seed = 1455992
 
-        solve_options = {'historic': {'random_seed': random_seed,
-                                      'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
-                                      'decay_func_type': 'exponential_cutoff',
-                                      'max_iter': 2,
-                                      'limit_temperature': True},
+        solve_options = {'historic': {'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
+                                      'decay_func_type': {'cs':'exponential_cutoff','hw':'exponential_cutoff'},
+                                      'max_iter': 1,
+                                      'limit_temperature': True,
+                                      'num_cpu':-1,
+                                      'plot_results':False,
+                                      'num_step':100000,
+                                      'test_mode':True},
                          'future': {'random_seed': random_seed,
                                     'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
                                     'decay_func_type': 'exponential_cutoff',
-                                    'max_iter': 2,
-                                    'limit_temperature': True}}
+                                    'max_iter': 1,
+                                    'limit_temperature': True,
+                                    'num_cpu':-1,
+                                    'num_step':100000},
+}
 
         num_realizations = 10
 
