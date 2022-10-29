@@ -16,10 +16,18 @@ Created on Wed Jun 20 13:00:31 2022
 
 import openpyxl
 import os
-import warnings
 import urllib.request
-import time
+import warnings
+warnings.filterwarnings(action='ignore',category=UserWarning)
+# Ignore this warning. The code works anyway and cfgrib is not needed for the cases
+# use by MEWS
+#/home/dlvilla/python/miniconda38_10/lib/python3.8/site-packages/xarray/backends/cfgrib_.py:29: 
+# UserWarning: Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. 
+# Try `import cfgrib` to get the full error message
+#  warnings.warn(
+
 import xarray as xr
+warnings.filterwarnings(action='default',category=UserWarning)
 import numpy as np
 import math
 import matplotlib.pyplot as plt

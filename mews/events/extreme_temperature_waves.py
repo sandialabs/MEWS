@@ -21,13 +21,18 @@ from mews.stats.solve import SolveDistributionShift
 from mews.weather.psychrometrics import relative_humidity
 from mews.weather.climate import ClimateScenario
 from mews.utilities.utilities import filter_cpu_count
-from mews.stats.distributions import cdf_truncnorm, trunc_norm_dist, inverse_transform_fit
-from mews.constants.data_format import WAVE_MAP
+from mews.stats.distributions import (cdf_truncnorm, trunc_norm_dist, 
+                                      inverse_transform_fit, transform_fit)
+from mews.constants.data_format import (WAVE_MAP, VALID_SOLVE_OPTIONS, DEFAULT_SOLVE_OPTIONS,
+                                        VALID_SOLVE_OPTION_TIMES)
 
 from copy import deepcopy
 from datetime import datetime
 from scipy.optimize import bisect, fsolve
-from mews.constants.physical import HOURS_IN_YEAR
+from mews.constants.physical import (HOURS_IN_YEAR, DAYS_IN_YEAR, HOURS_IN_DAY,
+    )
+from mews.constants.analysis import (DEFAULT_SOLVER_NUMBER_STEPS, 
+                                     DEFAULT_RANDOM_SEED)
 
 import io
 import pandas as pd
@@ -41,6 +46,15 @@ from warnings import warn
 
 import matplotlib.pyplot as plt
 
+
+def _mix_user_and_default(default_vals,solve_type,solve_options):
+    opt_val = {}
+    for key,def_val in default_vals.items():
+        if key in solve_options[solve_type]:
+            opt_val[key] = solve_options[solve_type][key]
+        else:
+            opt_val[key] = def_val
+    return opt_val
 
 class ExtremeTemperatureWaves(Extremes):
     
@@ -147,7 +161,7 @@ class ExtremeTemperatureWaves(Extremes):
         
     num_cpu : int or None : optional : Default = None
         None : use the maximum number of cpu available minus 1
-        int : use num_cpu cpu's. MEWS will select the max available -1 if this 
+        int : use num_cpu cpu's. MEWS will select the max available minus one if this 
               is too large.
               
     write_results : Bool : optional : Default = True
@@ -166,18 +180,34 @@ class ExtremeTemperatureWaves(Extremes):
     solve_options : dict : Optional, Default = None
         options to be passed to mews.stats.solve.SolveDistributionShift.
         There are two levels to this dictionary:
-            ['historical','future'] is the first level key
+            ['historic','future'] is the first level key
         A subdictionary then gives the name of an input parameter as the key and then
-        the value should be the desired input. 
+        the value should be the desired input. Valid input parameters are: 
+            
+            ['problem_bounds',
+             'decay_func_type',
+             'use_cython',
+             'num_cpu',
+             'plot_results',
+             'max_iter',
+             'plot_title',
+             'fig_path',
+             'weights',
+             'limit_temperatures',
+             'delT_above_shifted_extreme',
+             'num_step',
+             'min_num_waves',
+             'x_solution',
+             'test_mode']
+            
+        See the documentation for mews.stats.solve.SolveDistributionShift 
+        to understand these parameters.
         
     Returns
     -------
     None
     
     """
-    
-    
-    _default_solver_num_steps = 1000000
     #  These url's must end with "/" !
     
     # norms are provided in Fahrenheit!
@@ -205,6 +235,8 @@ class ExtremeTemperatureWaves(Extremes):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
+        solve_options = self._check_solve_options(solve_options)
+        
         self._num_cpu = filter_cpu_count(num_cpu)
         self._test_markov = test_markov
         
@@ -237,7 +269,9 @@ class ExtremeTemperatureWaves(Extremes):
         else:
             new_stats = stats
             
-        self.stats = stats
+        self._hours_per_year = hours_per_year
+            
+        self.stats = new_stats
         
         if include_plots:
             self._plot_stats_by_month(stats["heat wave"],"Heat Waves")
@@ -257,10 +291,12 @@ class ExtremeTemperatureWaves(Extremes):
         self.ipcc_results = {"ipcc_fact":{},'durations':{}}
         self._create_scenario_has_been_run = False
         self._write_results = write_results
+        self.solve_options = solve_options
 
         
     def create_scenario(self,scenario_name,start_year,num_year,climate_temp_func,
-                        num_realization=1,obj_clim=None,increase_factor_ci="50%"):
+                        num_realization=1,obj_clim=None,increase_factor_ci="50%",
+                        cold_snap_shift=None):
         
         """
         >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func,
@@ -313,17 +349,35 @@ class ExtremeTemperatureWaves(Extremes):
                    95% is the upper bound of the 95% CI
             all other strings will raise a ValueError
             
+        cold_snap_shift : dict : optional : Default = None
+            MEWS does not include a shift in statistics for cold snaps due to
+            lack of information. This feature allows the user to enter a dictionary 
+            of the required form:
+            
+            cold_snap_shift = {'temperature':{'10 year': <10 year event 
+                                                          shift in degC + means 
+                                                          less severe cold snaps>,
+                                              '50 year': <50 year event...},
+                               'frequency':{'10 year': <10 year multiplication
+                                                        factor on frequency of 
+                                                        events < 1 decreases 
+                                                        frequency of events>,
+                                            '50 year': <50 year ...}}
+            
         Returns
         -------    
-        None
+        resulsts_dict : dict : 
+            A dictionary whose key is the year analyzed
+            
+        self.extreme_results is better suited.
         
         """
         self.extreme_results[scenario_name] = {}
         self.extreme_delstats[scenario_name] = {}
         
-        if not increase_factor_ci in DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
+        if not increase_factor_ci in _DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
             raise ValueError("The input 'increase_factor_ci' must be a string with one of the following three values: \n\n{0}".format(
-                str(DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
+                str(_DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
         
         
         ext_obj_dict = {}
@@ -338,7 +392,7 @@ class ExtremeTemperatureWaves(Extremes):
              transition_matrix_delta,
              del_E_dist,
              del_delTmax_dist) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
-                                                     obj_clim,scenario_name,increase_factor_ci)
+                                                     obj_clim,scenario_name,increase_factor_ci, cold_snap_shift)
             
             if self.use_global == False:
                 base_year = obj_clim.baseline_year
@@ -363,7 +417,7 @@ class ExtremeTemperatureWaves(Extremes):
                      results_folder=self._results_folder,
                      results_append_to_name=scenario_name,
                      run_parallel=self._run_parallel,
-                     min_steps=24,
+                     min_steps=HOURS_IN_DAY,
                      test_shape_func=False,
                      doe2_input=self._doe2_input,
                      random_seed=self._random_seed,
@@ -373,7 +427,7 @@ class ExtremeTemperatureWaves(Extremes):
                      del_min_E_dist=None,
                      current_year=int(year),
                      climate_temp_func=climate_temp_func,
-                     averaging_steps=24,
+                     averaging_steps=HOURS_IN_DAY,
                      use_global=self.use_global,
                      baseline_year=base_year,
                      norms_hourly=self.df_norms_hourly,
@@ -430,8 +484,8 @@ class ExtremeTemperatureWaves(Extremes):
         
         ValueError - One of the inputs is an invalid value
         
-        """.format(str(DeltaTransition_IPCC_FigureSPM6._valid_scenario_names),
-        DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks)
+        """.format(str(_DeltaTransition_IPCC_FigureSPM6._valid_scenario_names),
+        _DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks)
                                                                      
         if not isinstance(scenario,str):
             raise TypeError("The 'scenario' input must be a string.")
@@ -439,9 +493,9 @@ class ExtremeTemperatureWaves(Extremes):
         if not isinstance(confidence_interval,str):
             raise TypeError("The 'confidence_interval' input must be a string.")
         
-        if not scenario in DeltaTransition_IPCC_FigureSPM6._valid_scenario_names:
+        if not scenario in _DeltaTransition_IPCC_FigureSPM6._valid_scenario_names:
             raise ValueError("The scenario {0} is not a valid scenario name. The only values permitted are: ".format(scenario) +
-                             + str(DeltaTransition_IPCC_FigureSPM6._valid_scenario_names))
+                             + str(_DeltaTransition_IPCC_FigureSPM6._valid_scenario_names))
             
         if not isinstance(year,(int)):
             raise TypeError("The 'year' input must be an integer!")
@@ -449,9 +503,9 @@ class ExtremeTemperatureWaves(Extremes):
         if (year < 1900 or year > 2100):
             raise ValueError("The 'year' input is invalid. MEWS only can analyze 1900 to 2100!")
         
-        if not confidence_interval in DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
+        if not confidence_interval in _DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
             raise ValueError("The input 'confidence_interval' must be a string with one of the following three values: \n\n{0}".format(
-                str(DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
+                str(_DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks.keys())))
         
         
         message = "You must run the 'create_scenario' to generate results"
@@ -477,7 +531,26 @@ class ExtremeTemperatureWaves(Extremes):
                                  + message + " for scenario {0}!".format(scenario))
         else:
             raise ValueError(message+"!")
-                
+    
+    def _check_solve_options(self,solve_options):
+        
+        if solve_options is None:
+            solve_options = DEFAULT_SOLVE_OPTIONS
+        
+        if not isinstance(solve_options, dict):
+            raise TypeError("The input 'solve_options' must be a dictionary of a specific type")
+            
+        for tim, subdict in solve_options.items():
+            if not tim in VALID_SOLVE_OPTION_TIMES:
+                raise ValueError("The input 'solve_options' must be a dictionary"+
+                                 " with specific keys. An entry "+
+                                 "'{0}' is not part of the valid entries list = \n\n{1}".format(tim, str(VALID_SOLVE_OPTION_TIMES)))
+            for opt, val in subdict.items():
+                if not opt in VALID_SOLVE_OPTIONS:
+                    raise ValueError("The input 'solve_options['{0}'] has an invalid solve option = '{1}'".format(tim,opt) +
+                                     "\n\nValid options are:\n\n{0}".format(",\n".join(VALID_SOLVE_OPTIONS)))
+        return solve_options
+            
                     
     def _solve_historic_distributions(self,stats, solve_options, frac_hours_per_year):
         # solve options unpacked
@@ -492,31 +565,12 @@ class ExtremeTemperatureWaves(Extremes):
         # These defaults do not match all of the defaults in solve.py
         # there are specific differences that are intentional and they 
         # should be kept separate.
-        default_vals = {'problem_bounds':None,
-                        'decay_func_type':"quadratic_times_exponential_decay_with_cutoff",
-                        'use_cython':True,
-                        'num_cpu':-1,
-                        'plot_results':False,
-                        'max_iter':20,
-                        'plot_title':'',
-                        'fig_path':"",
-                        'weights':np.array([1.0,1.0,1.0,1.0]),
-                        'limit_temperatures':False,
-                        'delT_above_shifted_extreme':{'cs':-20,'hw':20},
-                        'num_step':self._default_solver_num_steps,
-                        'min_num_waves':25,
-                        'x_solution':None,
-                        'test_mode':False}
+        default_vals = DEFAULT_SOLVE_OPTIONS['historic']
         
         historic_time_interval = int(stats['heat wave'][1]['historic time interval'])
         
         # bring in values assigned by the user. Use defaults for unassigned values.
-        opt_val = {}
-        for key,def_val in default_vals.items():
-            if key in solve_options['historic']:
-                opt_val[key] = solve_options['historic'][key]
-            else:
-                opt_val[key] = def_val
+        opt_val = _mix_user_and_default(default_vals, 'historic', solve_options)
         
         obj_solve = None
         for month in range(1,13):
@@ -573,11 +627,6 @@ class ExtremeTemperatureWaves(Extremes):
             
             for wt1, wt2 in WAVE_MAP.items():
                 new_stats[wt1][month] = param[wt2]
-
-            pass
-                
-            
-            
             
         return new_stats
         
@@ -650,11 +699,13 @@ class ExtremeTemperatureWaves(Extremes):
             
         
     
-    def _create_transition_matrix_dict(self,stats,climate_temp_func,year,obj_clim,scenario,increase_factor_ci):
+    def _create_transition_matrix_dict(self,stats,climate_temp_func,year,
+                                       obj_clim,scenario,increase_factor_ci,
+                                       cold_snap_shift):
         
         """
         Here is where the delta T, delta E and delta Markov matrix values are calculated
-        using class DeltaTransition_IPCC_FigureSPM6
+        using class _DeltaTransition_IPCC_FigureSPM6
         
         """
         
@@ -668,7 +719,9 @@ class ExtremeTemperatureWaves(Extremes):
         for month,stat in stats['heat wave'].items():
             prob_hw[month] = stat['hourly prob of heat wave']
             
-
+        solution_obtained = False
+        solve_options = self.solve_options
+        obj = None
         # Form the parameters needed by Extremes but on a monthly basis.
         for hot_tup,cold_tup in zip(stats['heat wave'].items(), stats['cold snap'].items()):
             
@@ -683,24 +736,38 @@ class ExtremeTemperatureWaves(Extremes):
             transition_matrix[month] = np.array([[1-Pwh-Pwc,Pwc,Pwh],
                                                  [1-Pwsc, Pwsc, 0.0],
                                                  [1-Pwsh, 0.0, Pwsh]])
+            # just to speed up testing! This makes everything after month 1
+            # just an evaluation of month 1 instead of an optimization for a
+            # new month.
+            if solution_obtained:
+                if 'future' in solve_options:
+                    if 'test_mode' in solve_options['future']:
+                        if solve_options['future']['test_mode']:
+                            solve_options['x_solution'] = obj.obj_solve.optimize_result.x
             # Due to not finding information in IPCC yet, we assume that cold events
             # do not increase in magnitude or frequency.
-            obj = DeltaTransition_IPCC_FigureSPM6(hot_param,
+            obj = _DeltaTransition_IPCC_FigureSPM6(hot_param,
                                                cold_param,
                                                climate_temp_func,
-                                               year,self.use_global,
+                                               year,
+                                               self._hours_per_year[month-1],
+                                               self.use_global,
                                                obj_clim,scenario,
                                                self,
                                                increase_factor_ci,
                                                prob_hw,
                                                self._delT_ipcc_min_frac,
-                                               month)
+                                               month,
+                                               self._random_seed,
+                                               solve_options,
+                                               cold_snap_shift)
+            solution_obtained = True
 
             transition_matrix_delta[month] = obj.transition_matrix_delta
             del_E_dist[month] = obj.del_E_dist
             del_delTmax_dist[month] = obj.del_delTmax_dist
             self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
-            self.ipcc_results['durations'][month] = obj._durations
+
 
         return (transition_matrix,
                 transition_matrix_delta,
@@ -845,7 +912,7 @@ class ExtremeTemperatureWaves(Extremes):
                 
                 
                 # Calculate the middle date in a decimal form for years
-                # for interpolation in DeltaTransition_IPCC_FigureSPM6
+                # for interpolation in _DeltaTransition_IPCC_FigureSPM6
                 mid_timestamp = pd.to_datetime(df.index[0].to_datetime64() + 
                                     (df.index[-1].to_datetime64()-
                                      df.index[0].to_datetime64())/2.0)
@@ -1498,12 +1565,13 @@ class ExtremeTemperatureWaves(Extremes):
     
         return cur_month_heat_waves
             
-class DeltaTransition_IPCC_FigureSPM6():
+class _DeltaTransition_IPCC_FigureSPM6():
     """
-    >>> obj = DeltaTransition_IPCC_FigureSPM6(hot_param,
+    >>> obj = _DeltaTransition_IPCC_FigureSPM6(hot_param,
                                               cold_param,
                                               climate_temp_func,
                                               year,
+                                              month_hours_per_year
                                               use_global,
                                               obj_clim=None,
                                               scenario=None,
@@ -1537,7 +1605,7 @@ class DeltaTransition_IPCC_FigureSPM6():
                                      "95%":['95% CI Increase in Intensity','95% CI Increase in Frequency']}
     _valid_scenario_names = ClimateScenario._valid_scenario_names
     
-    def __init__(self,hot_param,cold_param,climate_temp_func,year,
+    def __init__(self,hot_param,cold_param,climate_temp_func,year,month_hours_per_year,
                  use_global=False,
                  obj_clim=None,
                  scenario=None,
@@ -1545,7 +1613,10 @@ class DeltaTransition_IPCC_FigureSPM6():
                  increase_factor_ci="50%",
                  prob_hw=None,
                  delT_ipcc_min_frac=1.0,
-                 month=None):
+                 month=None,
+                 random_seed=None,
+                 solve_options=None,
+                 cold_snap_shift=None):
         
         #input validation
         if use_global==False:
@@ -1588,37 +1659,13 @@ class DeltaTransition_IPCC_FigureSPM6():
         else:
             hw_delT = None 
             baseline_delT = None
+            delT_ipcc_frac_month = None
             
         self.use_global = use_global
         # bring in the ipcc data and process it.
         ipcc_data =  pd.read_csv(os.path.join(os.path.dirname(__file__),"data","IPCC_FigureSPM_6.csv"))
         
-        # neglect leap years
-        hours_in_10_years = 10 * 365 * 24  # hours in 10 years
-        hours_in_50_years = 5 * hours_in_10_years
-        
-        # switch to the paper notation
-        N10 = hours_in_10_years
-        N50 = hours_in_50_years
-        # probability a heat wave begins
-        Phwm = hot_param["hourly prob of heat wave"]
-        # probability a heat wave is sustainted
-        Phwsm = hot_param["hourly prob stay in heat wave"]
-        # probability of a cold snap
-        Pcsm = cold_param["hourly prob of heat wave"]
-        # probability of sustaining a cold snap
-        Pcssm = cold_param["hourly prob stay in heat wave"]
-        # unpack gaussian distribution parameters
-        normalized_ext_temp = hot_param['extreme_temp_normal_param']
-        normalized_energy = hot_param['energy_normal_param']
-        maxtemp = hot_param['max extreme temp per duration']
-        mintemp = hot_param['min extreme temp per duration']
-        
-        norm_energy = hot_param['normalizing energy']
-        norm_temp = hot_param['normalizing extreme temp']
-        norm_duration = hot_param['normalizing duration']
-        alphaT = hot_param['normalized extreme temp duration fit slope']
-        betaT = hot_param['normalized extreme temp duration fit intercept']
+
 
         if use_global:
             # This is change in global temperature from 2020!
@@ -1635,11 +1682,30 @@ class DeltaTransition_IPCC_FigureSPM6():
         f_ipcc_ci_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]] 
         f_ipcc_ci_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
 
-       
+        #bring the multiplication factors to the surface.
+        dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
+        dfraw.columns = ["10 year event","50 year event"]
+        self.ipcc_fact = dfraw
 
+       
+        if use_global:
+            tup = self._old_analysis(use_global,f_ipcc_ci_50,f_ipcc_ci_10,
+                               hot_param,cold_param,delT_ipcc_frac_month,
+                               ipcc_val_10,ipcc_val_50,increase_factor_ci,
+                               delta_TG)
         
+        else:
+            tup = self._new_analysis(hot_param,cold_param,delT_ipcc_frac_month,
+                               ipcc_val_10,ipcc_val_50,increase_factor_ci,
+                               delta_TG, solve_options,random_seed, 
+                               month_hours_per_year,cold_snap_shift)
+            
         
-        
+        (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
+           P_prime_hwsm, del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
+           del_b_E_hw_m, del_mu_delT_max_hwm, del_sig_delT_max_hwm,
+           del_a_delT_max_hwm, del_b_delT_max_hwm, delT_abs_max 
+         ) = tup
         
         self.transition_matrix_delta = np.array(
             [[Phwm + Pcsm - P_prime_hwm - P_prime_csm, P_prime_csm - Pcsm, P_prime_hwm - Phwm],
@@ -1654,13 +1720,8 @@ class DeltaTransition_IPCC_FigureSPM6():
                  'del_a':del_a_delT_max_hwm,
                  'del_b':del_b_delT_max_hwm,
                  'delT_increase_abs_max':delT_abs_max}
-        #bring the multiplication factors to the surface.
-        dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
-        dfraw.columns = ["10 year event","50 year event"]
-        self.ipcc_fact = dfraw
-        self._durations = [D10,D10_prime,D50,D50_prime]
-        
-        
+
+
     def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
         
         # this function is dependent on the format of the table in IPCC_FigureSPM_6.csv
@@ -1669,8 +1730,6 @@ class DeltaTransition_IPCC_FigureSPM6():
         else:
             present_tempanomal = baseline_delT
 
-
-        
         future_tempanomal = present_tempanomal + delta_TG
         
         if self.use_global:
@@ -1810,14 +1869,140 @@ class DeltaTransition_IPCC_FigureSPM6():
         # delT_ipcc_min_frac which is a user input between 0 and 1
         return (1.0-self._delT_ipcc_min_frac)/(self._hw_maxprob - self._hw_minprob) * (hw_prob-self._hw_minprob) + self._delT_ipcc_min_frac
     
-    def _old_analysis(self, use_global, f_ipcc_ci_50, N10, f_ipcc_ci_10, N50,
-                      normalized_ext_temp, Phwm):
+    def _new_analysis(self, hot_param, cold_param, delT_ipcc_frac_month, 
+                      ipcc_val_10, ipcc_val_50,
+                      increase_factor_ci, delta_TG, solve_options, random_seed,
+                      frac_month_hours_per_year,cold_snap_shift):
+
+        # 1. arrange inputs
+        if random_seed is None:
+            random_seed = DEFAULT_RANDOM_SEED
+        
+        ipcc_shift = {}
+        ipcc_shift['hw'] = {}
+        ipcc_shift['hw']['temperature'] = {'10 year':ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][0]],
+                                     '50 year':ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][0]]
+                                     }
+        ipcc_shift['hw']['frequency']   = {'10 year':ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]],
+                                     '50 year':ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
+                                     }
+        # allow manually input cold snap shift.
+        ipcc_shift['cs'] = cold_snap_shift
+        
+        
+        historic_time_interval = int(hot_param['historic time interval'])
+        
+        # These defaults do not match all of the defaults in solve.py
+        # there are specific differences that are intentional and they 
+        # should be kept separate.
+        default_vals = DEFAULT_SOLVE_OPTIONS['future']
+        
+        opt_val = _mix_user_and_default(default_vals,'future',solve_options)
+        
+        # already at the monthly level
+        mstats = {'heat wave': hot_param, 'cold snap': cold_param}
+        hist0 = {}
+        durations0 = {}
+        param0 = {}
+        for wn1,wn2 in WAVE_MAP.items():
+            hist0[wn2] = mstats[wn1]['historical temperatures (hist0)'] 
+            durations0[wn2] = mstats[wn1]['historical durations (durations0)']
+            param0[wn2] = mstats[wn1]
+        
+        # END OF ARRANGING INPUTS
+        
+        obj_solve = SolveDistributionShift(opt_val['num_step'], 
+                               param0, 
+                               random_seed, 
+                               hist0, 
+                               durations0, 
+                               opt_val['delT_above_shifted_extreme'], 
+                               historic_time_interval, 
+                               int(frac_month_hours_per_year*HOURS_IN_YEAR),
+                               problem_bounds=opt_val['problem_bounds'],
+                               ipcc_shift=ipcc_shift,
+                               decay_func_type=opt_val['decay_func_type'],
+                               use_cython=opt_val['use_cython'],
+                               num_cpu=opt_val['num_cpu'],
+                               plot_results=opt_val['plot_results'],
+                               max_iter=opt_val['max_iter'],
+                               plot_title=opt_val['plot_title'],
+                               fig_path=opt_val['fig_path'],
+                               weights=opt_val['weights'],
+                               limit_temperatures=opt_val['limit_temperatures'],
+                               min_num_waves=opt_val['min_num_waves'],
+                               x_solution=opt_val['x_solution'],
+                               test_mode=opt_val['test_mode'])
+        self.obj_solve = obj_solve
+
+        
+        par = obj_solve.param
+        des = obj_solve.del_shifts
+        
+        Phwm = hot_param["hourly prob of heat wave"]
+        # probability a heat wave is sustainted
+        Phwsm = hot_param["hourly prob stay in heat wave"]
+        # probability of a cold snap
+        Pcsm = cold_param["hourly prob of heat wave"]
+        # probability of sustaining a cold snap
+        Pcssm = cold_param["hourly prob stay in heat wave"]
+        
+        P_prime_hwm = par['hw']['hourly prob of heat wave']
+        P_prime_csm = par['cs']['hourly prob of heat wave']
+        P_prime_hwsm = par['hw']['hourly prob stay in heat wave']
+        P_prime_cssm = par['cs']['hourly prob stay in heat wave']
+        
+        # no change to the duration normalized energy distributions.
+        (del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
+        del_b_E_hw_m) = (0,0,0,0)
+
+        del_mu_delT_max_hwm = des['hw']["del_mu_T"] 
+        del_sig_delT_max_hwm = des['hw']["del_sig_T"]
+        del_a_delT_max_hwm = des['hw']['del_a']
+        del_b_delT_max_hwm = des['hw']['del_b']
+        
+        delT_abs_max = obj_solve.abs_max_temp  # this is a dictionary which is new
+
+        return (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
+           P_prime_hwsm, del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
+           del_b_E_hw_m, del_mu_delT_max_hwm, del_sig_delT_max_hwm,
+           del_a_delT_max_hwm, del_b_delT_max_hwm, delT_abs_max
+         ) 
+
+    def _old_analysis(self, use_global, f_ipcc_ci_50, f_ipcc_ci_10, hot_param,
+                      cold_param, delT_ipcc_frac_month, ipcc_val_10, ipcc_val_50,
+                      increase_factor_ci, delta_TG):
                
+        # neglect leap years
+        hours_in_10_years = 10 * DAYS_IN_YEAR * HOURS_IN_DAY  # hours in 10 years
+        hours_in_50_years = 5 * hours_in_10_years
+        
+        # switch to the paper notation
+        N10 = hours_in_10_years
+        N50 = hours_in_50_years
+        # probability a heat wave begins
+        Phwm = hot_param["hourly prob of heat wave"]
+        # probability a heat wave is sustainted
+        Phwsm = hot_param["hourly prob stay in heat wave"]
+        # probability of a cold snap
+        Pcsm = cold_param["hourly prob of heat wave"]
+        # probability of sustaining a cold snap
+        Pcssm = cold_param["hourly prob stay in heat wave"]
+        # unpack gaussian distribution parameters
+        normalized_ext_temp = hot_param['extreme_temp_normal_param']
+        normalized_energy = hot_param['energy_normal_param']
+        maxtemp = hot_param['max extreme temp per duration']
+        mintemp = hot_param['min extreme temp per duration']
+        
+        #norm_energy = hot_param['normalizing energy']
+        norm_temp = hot_param['normalizing extreme temp']
+        norm_duration = hot_param['normalizing duration']
+        alphaT = hot_param['normalized extreme temp duration fit slope']
+        betaT = hot_param['normalized extreme temp duration fit intercept']
+        
         
         if use_global:
             P_prime_hwm = Phwm * (f_ipcc_ci_50 * N10 + f_ipcc_ci_10 * N50)/(N10 + N50)
-            
-            
             
             # Estimate the interval positions of the 10 year and 50 year changes
             # in temperature.
@@ -1863,7 +2048,7 @@ class DeltaTransition_IPCC_FigureSPM6():
             # this funciton is used by fsolve below
             
             # must normalize by duration
-            # TODO - differentiate between the different months!!!!
+            # differentiate between the different months!!!!
             D10 = np.log((1/(Phwm * N10)))/np.log(Phwsm)  # in hours - expected value
             D50 = np.log((1/(Phwm * N50)))/np.log(Phwsm)  # in hours - expected value
         else:
@@ -2053,7 +2238,10 @@ class DeltaTransition_IPCC_FigureSPM6():
             breakpoint()
             raise ValueError("The adjusted probabilities must be less than one!")
     
-    
+        return (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
+         P_prime_hwsm, del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
+         del_b_E_hw_m, del_mu_delT_max_hwm, del_sig_delT_max_hwm,
+         del_a_delT_max_hwm, del_b_delT_max_hwm, delT_abs_max)
 
 
         

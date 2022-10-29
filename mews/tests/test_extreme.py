@@ -116,7 +116,7 @@ class Test_Extreme(unittest.TestCase):
             
         # non-sum to 1 rows in transition matrix
         with self.assertRaises(ValueError):
-            obj = DiscreteMarkov(rng,np.array([[1,2,3],[1,2,3],[1,2,3]],dtype=np.float),["A","B","C","D"],True)
+            obj = DiscreteMarkov(rng,np.array([[1,2,3],[1,2,3],[1,2,3]],dtype=float),["A","B","C","D"],True)
         
         with self.assertRaises(TypeError):
             obj = DiscreteMarkov(rng,self.tran_mat,["A","B","C","D"],"Not True")

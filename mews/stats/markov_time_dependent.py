@@ -286,10 +286,6 @@ def evaluate_decay_function(cdf0,
                             coef,
                             idy,
                             time_in_state):
-    # !@#$
-    if time_in_state > coef[0,1] or time_in_state > coef[1,1]:
-        breakpoint()
-    
     one = 1.0
     P0 = one - cdf0[0]
     cdf1 = np.zeros(cdf0.shape)

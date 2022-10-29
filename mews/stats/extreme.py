@@ -26,6 +26,7 @@ from mews.cython.markov import markov_chain
 from mews.stats.markov import MarkovPy
 from mews.stats.markov_time_dependent import (markov_chain_time_dependent_wrapper,
                                               markov_chain_time_dependent_py)
+from mews.constants.data_format import INVALID_VALUE, WAVE_MAP, DEFAULT_NONE_DECAY_FUNC
 from mews.errors.exceptions import ExtremesIntegrationError
 from numpy.random  import default_rng, seed
 from scipy.optimize import curve_fit, minimize
@@ -109,6 +110,11 @@ class DiscreteMarkov():
             "linear_cutoff" needs input like np.array([[slope_cs,delt_cutoff_cs],
                                                           [slope_hw,delt_cutoff_hw]])
             
+            ""quadratic_times_exponential_decay_with_cutoff"" needs input like
+            
+            np.array([[time_to_max_prob_cs,delt_cutoff_cs,max_probability_cs],
+                      [time_to_max_prob_hw,delt_cutoff_hw,max_probability_hw]])
+            
             ""
 
     Returns
@@ -128,10 +134,10 @@ class DiscreteMarkov():
                       state_names=None,
                       use_cython=True,
                       decay_func_type={'hw':None,'cs':None},
-                      coef=None):
+                      coef={'hw':None,'cs':None}):
         if not decay_func_type is None:
            for wt in self._events:
-               if not decay_func_type[wt] in self._func_types:
+               if not decay_func_type[wt] is None and not decay_func_type[wt] in self._func_types:
                    raise ValueError("The decay_func_type['{0}'] input must be a string equal to one of the following: \n\n".format(wt) + str(self._func_types.keys()))
                if not decay_func_type[wt] is None and coef[wt] is None:
                     raise ValueError("If a 'decay_func_type' is provided, then coefficients input 'coef' is needed.")
@@ -169,12 +175,17 @@ class DiscreteMarkov():
         num_event = len(coef)
         for wt in self._events:
             cf = coef[wt]
-            max_len = np.max([max_len,len(cf)])
-        coef_arr = -999.0 * np.ones((num_event,max_len),dtype=float)
+            if cf is None:
+                len_cf = 0
+            else:
+                len_cf = len(cf)
+            max_len = np.max([max_len,len_cf])
+        coef_arr = INVALID_VALUE * np.ones((num_event,max_len),dtype=float)
 
         for idx, wt in enumerate(self._events):
             cf = coef[wt]
-            coef_arr[idx,0:len(cf)] = cf
+            if not cf is None:
+                coef_arr[idx,0:len(cf)] = cf
         
         self.coef = coef_arr
         self.decay_func_type = decay_func_type
@@ -237,7 +248,7 @@ class DiscreteMarkov():
                 raise ValueError("The transition_matrix is {0:d}x{1:d} ".format(nxn,nxn)
                                  +"but a state = {2:d} was entered")
         if count_in_min_steps_intervals: 
-            num_real_step = np.int(np.floor((num_step - skip_steps)/min_steps))
+            num_real_step = int(np.floor((num_step - skip_steps)/min_steps))
         else:
             num_real_step = num_step
         
@@ -260,11 +271,16 @@ class DiscreteMarkov():
         
         int_func_list = []
         for wt in self._events:
-            int_func_list.append(self._func_types[self.decay_func_type[wt]])
+            if self.decay_func_type[wt] is None:
+                int_func_list.append(None)
+            else:
+                int_func_list.append(self._func_types[self.decay_func_type[wt]])
         
         # The Markov Chain is about 10x slower in Python
         if self.use_cython:
-            if self.decay_func_type is None:
+            if self.decay_func_type is None or (
+                    self.decay_func_type['cs'] is None 
+                    and self.decay_func_type['hw'] is None):
                 state = markov_chain(cdf,prob,state0)
             else:
                 
@@ -302,7 +318,7 @@ class DiscreteMarkov():
             # events.
             
 
-            big_step = np.int(np.floor(num_step/min_steps))
+            big_step = int(np.floor(num_step/min_steps))
             prev_state = 0            
             nstate = deepcopy(state)
             for idx in range(big_step):
@@ -346,7 +362,7 @@ class DiscreteMarkov():
         """
         # transpose needed because eig must work with a left hand stochastic
         # matrix
-        if self.decay_func_type is None:
+        if self.decay_func_type is None or self.decay_func_type == DEFAULT_NONE_DECAY_FUNC:
             val,vec = np.linalg.eig(np.transpose(self._mat))
             steady = vec[:,0]/vec.sum(axis=0)[0]
             
@@ -867,8 +883,15 @@ class Extremes():
                 
                 modified_trans_matrix = trans_matrix + transition_matrix_delta[month]
                 
+                if not self.use_global:
+                    coef, decay_func_type = self._coef_form(max_avg_dist['param'][month], min_avg_dist['param'][month])
+                else:
+                    coef = {'cs':None,'hw':None}
+                    decay_func_type = {'cs':None,'hw':None}
+                
                 objDM = DiscreteMarkov(rng, modified_trans_matrix, 
-                                       state_name, use_cython)
+                                       state_name, use_cython, decay_func_type=decay_func_type,
+                                       coef=coef)
                 
                 if test_markov:
                     # adjust to a longer time period so that it is nearly
@@ -901,8 +924,6 @@ class Extremes():
                 objDM_dict[month] = objDM 
                 state0 = state_name[states_arr[-1]]
             
-            #import matplotlib.pyplot as plt
-            #plt.plot(states_arr)
         else:
 
             
@@ -1234,7 +1255,12 @@ class Extremes():
             s_month = org_dates.month.unique()[np.array([(org_dates.month == 
                         month).sum() for month in org_dates.month.unique()]
                                                         ).argmax()]
-
+            
+            if is_hw:
+                wstr = 'hw'
+            else:
+                wstr = 'cs'
+            
             param = integral_dist['param'][s_month]
             
             # trunc_norm_dist(rnd,mu,sig,a,b,minval,maxval)
@@ -1272,11 +1298,12 @@ class Extremes():
                 Sm1_T += peak_param_delta['del_a']
                 S_T += peak_param_delta['del_b']   
                 # Temperature increase limit.
-                abs_maxval_delT += peak_param_delta['delT_increase_abs_max']
+                # this is a use_global issue.
+                if isinstance(peak_param_delta['delT_increase_abs_max'],float):
+                    abs_maxval_delT += peak_param_delta['delT_increase_abs_max']
+                else:
+                    abs_maxval_delT += peak_param_delta['delT_increase_abs_max'][wstr]
 
-                        
-                
-                
             # integral_dist - includes the inverse transform back to 
             # energy per duration from the -1..1 space (-1..1 gets shifted so it
             # is not strictly -1..1)
@@ -1421,6 +1448,23 @@ class Extremes():
 
         
         return new_vals, heat_added_0, delT_max_0, norm_temperature, norm_duration
+    
+    
+    def _coef_form(self,hw_param,cs_param):
+        """
+        Form coefficients array and decay_func_type dictionary for input to
+        DiscreteMarkov class
+        
+        """
+        hwcoef = hw_param['decay function coef']
+        cscoef = cs_param['decay function coef']
+        
+        coef = {'cs':cscoef, 'hw':hwcoef}
+        
+        decay_func_type = {'cs':cs_param['decay function'],
+                           'hw':hw_param['decay function']}
+        
+        return coef, decay_func_type
         
         
         

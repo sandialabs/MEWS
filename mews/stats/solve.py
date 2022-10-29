@@ -445,6 +445,9 @@ class ObjectiveFunction():
             Tsample[wave_type] = evaluate_temperature(durations[wave_type], hist_param, 
                                            del_mu_T[wave_type], 
                                            del_sig_T[wave_type], rng, wave_type)
+            
+            if Tsample[wave_type].max() > 60:
+                breakpoint()
         # this returns a tuple the first element is the histogram of temperatures
         # the second element returns the cdf with values mapped to the bin averages.
             if len(Tsample[wave_type]) < min_num_waves:
@@ -926,24 +929,24 @@ class SolveDistributionShift(object):
                            x_solution,
                            test_mode)
         
+        # determine limits on temperature
+        abs_max_temp = {}
+        # establish the absolute maximum temperature nonlinear constraint boundary on the optimization
+        for wtype in self._events:
+            if ipcc_shift[wtype] is None:
+                abs_max_temp[wtype] = param0[wtype]['normalizing extreme temp'] + delT_above_shifted_extreme[wtype] # this parameter 
+            else:
+                abs_max_temp[wtype] = (param0[wtype]['normalizing extreme temp'] + ipcc_shift[wtype]['temperature']['50 year'] + 
+                                delT_above_shifted_extreme[wtype])
+        
+        # x_solution is a way to bypass optimization and to just evaluate the model on
+        # a specific x_solution.
         if x_solution is None:
         
             if problem_bounds is None:
                 self._prob_bounds = self._default_problem_bounds
             else:
                 self._prob_bounds = problem_bounds
-            
-            
-            abs_max_temp = {}
-            # establish the absolute maximum temperature nonlinear constraint boundary on the optimization
-            for wtype in self._events:
-                if ipcc_shift[wtype] is None:
-                    abs_max_temp[wtype] = param0[wtype]['normalizing extreme temp'] + delT_above_shifted_extreme[wtype] # this parameter 
-                else:
-                    abs_max_temp[wtype] = (param0[wtype]['normalizing extreme temp'] + ipcc_shift[wtype]['temperature']['50 year'] + 
-                                    delT_above_shifted_extreme[wtype])
-                
-                
             
             # linear constraint - do not allow Pcs and Phw to sum to more than specified amounts
             # nonlinear constraint - do not allow maximum possible sampleable temperature to exceed a bound.
@@ -1046,9 +1049,12 @@ class SolveDistributionShift(object):
         
         coef = unpack_coef_from_x(xf0, decay_func_type, self._events)
         
+        # this is just another way of storing the results in the old "delta"
+        # form.
+        del_shifts = {}
+        
         for wave_type,eid,idx in zip(self._events,[[0,1,4,6],[2,3,5,7]],[0,1]):
-            # eid - extreme event index - these indicate what indices apply to heat waves and cold snaps
-            
+            # eid - extreme event index - these indicate what indices apply to heat waves and cold snaps            
             pval = unpack_params(param0, wave_type)
             del_mu_T = xf0[eid[0]]
             del_sig_T = xf0[eid[1]]
@@ -1069,11 +1075,21 @@ class SolveDistributionShift(object):
                                                                                           pval['maxval_T'],
                                                                                           pval['minval_T'])
             param_new[wave_type]['decay function coef'] = coef[wave_type]
+            
+            del_shifts[wave_type] = {"del_mu_T":del_mu_T,
+                                     "del_sig_T":del_sig_T,
+                                     "del_a":del_a,
+                                     "del_b":del_b}
                     
         self.param0 = param0
         self.param = param_new
-        
+        self.del_shifts = del_shifts
+        self.abs_max_temp = abs_max_temp
         self.inputs = {}
+        
+        # this enables the "reanalyze" function so that incremental 
+        # changes can be made to just this dictionary after the intitial call 
+        # to the class.
         self.inputs['num_step'] = num_step
         self.inputs['param0']=param0,
         self.inputs['random_seed']=random_seed
@@ -1156,37 +1172,13 @@ class SolveDistributionShift(object):
                     min_num_waves,
                     x_solution,
                     test_mode)
-            
-            
-            # num_step,
-            #             random_seed,
-            #             param0,
-            #             hist0,
-            #             durations0,
-            #             delT_above_shifted_extreme,
-            #             historic_time_interval,
-            #             hours_per_year,
-            #             problem_bounds,
-            #             ipcc_shift,
-            #             decay_func_type,
-            #             use_cython,
-            #             num_cpu,
-            #             plot_results,
-            #             max_iter,
-            #             plot_title,
-            #             fig_path,
-            #             weights,
-            #             limit_temperatures,
-            #             min_num_waves,
-            #             x_solution,
-            #             test_mode)
         
         return self.param
                 
         
-    def _check_ipcc_shift(self,ipcc_shift,key):
+    def _check_ipcc_shift(self,ipcc_shift,key,ukey):
         if not key in ipcc_shift:
-            raise ValueError("The input 'ipcc_shift' must be a dictionary with key '{}'".format(key))
+            raise ValueError("The input 'ipcc_shift['{0}']' must be a dictionary with key '{1}'".format(ukey,key))
         else:
             for yr_str in ["10 year","50 year"]:
                 if not yr_str in ipcc_shift[key]:
@@ -1327,7 +1319,7 @@ class SolveDistributionShift(object):
         for wt, ipcc_shift_subdict in ipcc_shift.items():
             if not ipcc_shift_subdict is None:
                 for key in ['temperature','frequency']:
-                    self._check_ipcc_shift(ipcc_shift_subdict,key)
+                    self._check_ipcc_shift(ipcc_shift_subdict,key,wt)
     
         # ASSURE CORRECT INPUT VECTOR LENGTH
         if problem_bounds is None:

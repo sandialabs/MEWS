@@ -36,7 +36,6 @@ class ClimateScenario(object):
     def __init__(self,use_global=True, 
                       lat=None,
                       lon=None,
-                      baseline_year=2020,
                       end_year=2060,
                       model_guide="Models_Used_alpha.xlsx",
                       data_folder="data",
@@ -112,11 +111,9 @@ class ClimateScenario(object):
         if use_global:
             self._load_old_global_temps()
         else:
-            
             self.lat = lat
             self.lon = lon
             self.end_year = end_year
-            warn("The baseline year input has no affect when use_global=False")
             self.baseline_year = self._required_baseline_year_for_cmip6
         self.table = [] # last column is the R2 value
         self.scenarios = []

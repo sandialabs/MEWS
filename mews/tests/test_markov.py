@@ -158,8 +158,9 @@ class Test_Markov(unittest.TestCase):
         ctime = toc_c - tic_c
         pytime = toc_py - tic_py
         
-        warn("WARNING! The cython implementation of 'markov_chain_time_dependent'"+
-             "is running slower thant the same python implementation.")
+        if ctime > pytime:
+            warn("WARNING! The cython implementation of 'markov_chain_time_dependent'"+
+                 "is running slower thant the same python implementation.")
         self.assertTrue(ctime < pytime)
         
         # TEST 6 - very fast decay only allows up to a single time step in different states
@@ -211,7 +212,7 @@ class Test_Markov(unittest.TestCase):
         self.assertTrue((values[0]==values[1]).all())
     
     def test_MarkovChain(self):
-        always0 = np.array([[1,0],[1,0]],dtype=np.float)
+        always0 = np.array([[1,0],[1,0]],dtype=float)
         state0 = 0
         rand = self.rng.random(10000)
 
@@ -228,7 +229,7 @@ class Test_Markov(unittest.TestCase):
         # in the limit, the average value should approach 0.5.
         self.assertTrue(np.abs(value.sum()/100000 - 0.5) < 0.01)
         
-        always1 = np.array([[0,1],[0,1]],dtype=np.float)
+        always1 = np.array([[0,1],[0,1]],dtype=float)
         state0 = 1
         rand = self.rng.random(10000)
         
@@ -239,7 +240,7 @@ class Test_Markov(unittest.TestCase):
         # now do a real calculation
         three_state = np.array([[0.9,0.04,0.06],[0.5,0.495,0.005],[0.5,0.005,0.495]])
         val,vec = np.linalg.eig(np.transpose(three_state))
-        rand = self.rng.random(np.int(1e6))
+        rand = self.rng.random(int(1e6))
         
         tic_c = perf_counter_ns()
         value = markov_chain(three_state.cumsum(axis=1),rand,state0)
@@ -289,7 +290,7 @@ class Test_Markov(unittest.TestCase):
                                   [0,0,1,0,0],
                                   [0.25,0.25,0,0.25,0.25],
                                   [0,0,0.5,0,0.5],
-                                  [0,0,0,0,1.0]],dtype=np.float)                  
+                                  [0,0,0,0,1.0]],dtype=float)                  
         rand = self.rng.random(1000)
         
         # this is a markov process which must reach a stationary state of 4 

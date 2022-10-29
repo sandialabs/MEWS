@@ -97,7 +97,7 @@ class Test_ClimateScenario(unittest.TestCase):
         os.remove(self.path_to_file)
         clim_scen_low = ClimateScenario(use_global=False,lat=0.0,lon=0.0,
                                     data_folder=self.data_folder,
-                                    run_parallel=False,proxy=self.proxy,gcm_to_skip=["NorESM2-MM"],baseline_year=2014,
+                                    run_parallel=False,proxy=self.proxy,gcm_to_skip=["NorESM2-MM"],
                                     write_graphics_path=None,
                                     align_gcm_to_historical=True,model_guide =self.model_guide) 
         
