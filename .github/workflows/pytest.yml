@@ -1,30 +1,32 @@
-name: Unit tests by pytest
+name: Unit tests of MEWS by pytest on several platforms
 on: [push]
-jobs:
-  Explore-GitHub-Actions:
-    runs-on: ubuntu-latest
+jobs:  
+  RunMEWSpytest:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        pyversion: [3.8, 3.9]
+  
+    runs-on: ${{ matrix.os }}
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with: 
+          ref: develop 
       - name: Install Python3
         uses: actions/setup-python@v1
         with:
-           python-version: 3.8
+           python-version: ${{ matrix.pyversion }}
       - name: Install dependencies
         run: |
            python -m pip install --upgrade pip
            pip install -r requirements.txt
-           python setup.py install
+           python setup.py develop
       - name: run tests with pytest
         run: |
-           # copy needed to get local data to the library copy.
-           # cp -r /home/runner/work/MEWS/MEWS/mews/events/data /opt/hostedtoolcache/Python/3.8.12/x64/lib/python3.8/site-packages/mews-0.0.1-py3.8-linux-x86_64.egg/mews/events
-           # Still don't know why this comamnd is needed. If test fails with "events folder not found, then you can comment this command
-           # out and the tests will fail with a new path that you need to copy.
-           cp -r /home/runner/work/MEWS/MEWS/mews/events/data /opt/hostedtoolcache/Python/3.8.13/x64/lib/python3.8/site-packages/mews-0.0.2b0-py3.8-linux-x86_64.egg/mews/events/
            pytest
       - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
       - name: List files in the repository
