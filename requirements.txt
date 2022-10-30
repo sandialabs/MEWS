@@ -17,3 +17,4 @@ xarray>=0.11.0
 netCDF4>=1.6.0
 sphinx>=5.1.1
 sphinx_rtd_theme>=1.0.0
+seaborn>=0.12.1
