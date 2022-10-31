@@ -6,7 +6,7 @@ from mews import data_requests
 from mews import events
 
 
-__version__ = '0.0.2 beta'
+__version__ = '0.1.0'
 
 __copyright__ = """Copyright 2019 National Technology & Engineering 
 Solutions of Sandia, LLC (NTESS). Under the terms of Contract DE-NA0003525 
