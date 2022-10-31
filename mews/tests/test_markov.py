@@ -262,13 +262,14 @@ class Test_Markov(unittest.TestCase):
         # is needed.
         val,vec = np.linalg.eig(np.transpose(three_state))
         steady = vec[:,0]/vec.sum(axis=0)[0]
+        nn = np.histogram(value,bins=[-0.5,0.5,1.5,2.5])
+        nn = (nn[0]/nn[0].sum(), nn[1]) # normalize to probability density
         
-        fig,axl = plt.subplots(1,2,figsize=(20,10))
-        nn = axl[1].hist(value,bins=[-0.5,0.5,1.5,2.5],density=True)
-        axl[1].set_ylabel("Fraction of time in state")
-        axl[0].plot(value[0:1000])
-        if not self.plot_results:
-            plt.close(fig=fig)
+        if self.plot_results:
+            fig,axl = plt.subplots(1,2,figsize=(20,10))
+            nn2 = axl[1].hist(value,bins=[-0.5,0.5,1.5,2.5],density=True)
+            axl[1].set_ylabel("Fraction of time in state")
+            axl[0].plot(value[0:1000])
         
         # verify loose convergence.
         self.assertTrue(np.linalg.norm(nn[0] - steady) < 0.01)

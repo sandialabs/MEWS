@@ -301,6 +301,9 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
                 break 
             else:
                 if state0 > 0:
+                    # func_type is mapped at a lag of 1 from num_state
+                    # since state=0 does not have a decay function.
+                    idym1 = idy - 1 
                     cdf_local = evaluate_decay_function(cdf[state0,:],
                                                         func_type[idym1],
                                                         coef,
