@@ -4,8 +4,9 @@ jobs:
   RunMEWSpytest:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        pyversion: [3.8, 3.9]
+        # removed windows-latest, macos-latest to see if things would work out.
+        os: [ubuntu-latest]
+        pyversion: [3.8, 3.9, 3.10]
   
     runs-on: ${{ matrix.os }}
     steps:
@@ -24,12 +25,23 @@ jobs:
         run: |
            python -m pip install --upgrade pip
            pip install -r requirements.txt
+           pip install pytest
+           pip install pytest-cov
            python setup.py develop
       - name: run tests with pytest
         run: |
-           pytest
-      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "This job's status is ${{ job.status }}."
+           pytest 
+           #--doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+      #- run: echo "The ${{ github.repository }} repository has been cloned to the runner."
+      #- name: List files in the repository
+      #  run: |
+      #    ls ${{ github.workspace }}
+      #- run: echo "This job's status is ${{ job.status }}."
+      #- name: Upload pytest test results
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: pytest-results-${{ matrix.python-version }}
+      #    path: junit/test-results-${{ matrix.python-version }}.xml
+      #  # Use always() to always run this step to publish test results when there are test failures
+      #  if: ${{ always() }}
+      
