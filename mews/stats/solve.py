@@ -221,7 +221,9 @@ def histogram_comparison_residuals(histT,hist0,weight,normalize=True):
         normT = histT[0]
         norm0 = hist0[0]
     
-    # setup a way to evaluate if two values are close.
+    # setup a way to evaluate if two values are close. 
+    # TODO - speed this up. Either move it to cython or a massive list
+    #        comprehension.
     avg_step = np.diff(avg_bin0).mean()
     err = 1.0e-4 * avg_step
     residuals_list = []
@@ -243,15 +245,15 @@ def histogram_comparison_residuals(histT,hist0,weight,normalize=True):
     
     
     # a rather tedious list comprehension. Saves computation time though.
-    residuals = np.array(
-    [(normT[np.where(avg_binT==abi)[0][0]] - norm0[np.where(avg_bin0==abi)[0][0]])**2 
-        if ((abi in avg_bin0) and (abi in avg_binT)) 
-        else
-    normT[np.where(avg_binT==abi)[0][0]]**2 
-        if (abi in avg_binT) 
-        else
-    norm0[np.where(avg_bin0==abi)[0][0]]**2 
-        for abi in all_bin])
+    # residuals = np.array(
+    # [(normT[np.where(avg_binT==abi)[0][0]] - norm0[np.where(avg_bin0==abi)[0][0]])**2 
+    #     if ((abi in avg_bin0) and (abi in avg_binT)) 
+    #     else
+    # normT[np.where(avg_binT==abi)[0][0]]**2 
+    #     if (abi in avg_binT) 
+    #     else
+    # norm0[np.where(avg_bin0==abi)[0][0]]**2 
+    #     for abi in all_bin])
     
     return residuals * weight
 

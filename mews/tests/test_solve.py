@@ -76,7 +76,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
         #     if durations[wave_type].max() > coef[wave_type][1]:
         #         print("violation!\n\n")
         #         breakpoint()
-        run_test = False
+        run_test = True
         if run_test:
             default_problem_bounds = {'cs':{'delT_mu': (0.0, 2.0),
                                              'delT_sig multipliers': (-0.1,4),
@@ -244,7 +244,20 @@ class Test_SolveDistributionShift(unittest.TestCase):
         random_seed = 7293821
         
         
-        opt_val = {'problem_bounds': None, 'decay_func_type': {'cs': 'exponential_cutoff', 'hw': 'exponential_cutoff'}, 'use_cython': True, 'num_cpu': -1, 'plot_results': False, 'max_iter': 25, 'plot_title': '', 'fig_path': '', 'weights': np.array([1., 1., 1., 1.]), 'limit_temperatures': False, 'delT_above_shifted_extreme': {'cs': -10, 'hw': 10}, 'num_step': 2000000, 'min_num_waves': 10, 'x_solution': None, 'test_mode': False}
+        opt_val = {'problem_bounds': None, 
+                   'decay_func_type': {'cs': 'exponential_cutoff', 'hw': 'exponential_cutoff'}, 
+                   'use_cython': True, 
+                   'num_cpu': -1, 
+                   'plot_results': self.plot_results, 
+                   'max_iter': 25, 
+                   'plot_title': '', 'fig_path': '', 
+                   'weights': np.array([1., 1., 1., 1.]), 
+                   'limit_temperatures': False, 
+                   'delT_above_shifted_extreme': {'cs': -10, 'hw': 10}, 
+                   'num_step': 2000000, 
+                   'min_num_waves': 10, 
+                   'x_solution': None, 
+                   'test_mode': False}
         
         inputs = {'param0': {'cs': {'help': 'These statistics are already mapped from -1 ... 1 and'+
                                     '_inverse_transform_fit is needed to return to actual degC and'+
@@ -277,7 +290,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
                2.60122650e-03, 5.65243511e+02, 1.74433104e-04, 3.01323399e+02])}
         
         opt_val["x_solution"] = inputs['x_solution']
-        opt_val["plot_results"] = False
+        opt_val["plot_results"] = self.plot_results
         param0 = inputs['param0']
         hist0 = inputs['hist0']
         durations0 = inputs['durations0']
@@ -316,11 +329,10 @@ class Test_SolveDistributionShift(unittest.TestCase):
         inputs["x_solution"] = np.array([0.37869749e-01, 0.15605901e+00, 0.01737277e+00, 0.04912986e-01,
                5.39332295e-03, 5.34034912e-03, 9.89053004e-01, 9.60857492e-01,
                2.60122650e-03, 5.65243511e+02, 1.74433104e-04, 3.01323399e+02])
-        breakpoint()
+        
         obj_solve.reanalyze(inputs)
         
         resid2 = obj_solve.residuals
-        breakpoint()
         self.assertTrue(resid1[1] > resid2[1])
         
               
