@@ -210,12 +210,37 @@ def histogram_comparison_residuals(histT,hist0,weight,normalize=True):
     avg_binT = bin_avg(histT)
     all_bin = np.unique(np.concatenate([avg_bin0,avg_binT]))
     
+    def within_epsilon(val,targ,epsilon):
+        return ((val < targ + epsilon) & (val > targ - epsilon))
+    
+    
     if normalize:
         normT = histT[0]/histT[0].sum()
         norm0 = hist0[0]/hist0[0].sum()
     else:
         normT = histT[0]
         norm0 = hist0[0]
+    
+    # setup a way to evaluate if two values are close.
+    avg_step = np.diff(avg_bin0).mean()
+    err = 1.0e-4 * avg_step
+    residuals_list = []
+    for abi in all_bin:
+        in_avg_bin0 = within_epsilon(abi,avg_bin0, err)
+        in_avg_binT = within_epsilon(abi,avg_binT, err)
+        if in_avg_bin0.sum() > 0 and in_avg_binT.sum() > 0:
+            id0 = in_avg_bin0.argmax()
+            idT = in_avg_binT.argmax()
+            residuals_list.append((normT[idT] - norm0[id0])**2.0)
+        elif in_avg_binT.sum() > 0:
+            residuals_list.append(normT[in_avg_binT.argmax()]**2)
+        elif in_avg_bin0.sum() > 0:
+            residuals_list.append(norm0[in_avg_bin0.argmax()]**2)
+        else:
+            raise ValueError("There must be alignment to within {0:5.3e} of histogram spacing between respective histograms\n\n".format(err)+
+                             "{0} \n\n and \n\n {1} \n\n are not aligned!".format(str(hist0),str(histT)))
+    residuals = np.array(residuals_list)
+    
     
     # a rather tedious list comprehension. Saves computation time though.
     residuals = np.array(
@@ -447,7 +472,7 @@ class ObjectiveFunction():
                                            del_sig_T[wave_type], rng, wave_type)
             
             if Tsample[wave_type].max() > 60:
-                breakpoint()
+                warn("Heat waves of greater than 60 C are not realistic")
         # this returns a tuple the first element is the histogram of temperatures
         # the second element returns the cdf with values mapped to the bin averages.
             if len(Tsample[wave_type]) < min_num_waves:
@@ -996,7 +1021,10 @@ class SolveDistributionShift(object):
         else:
             xf0 = x_solution
             obj_func = ObjectiveFunction(self._events,random_seed)
-            optimize_result = self.optimize_result
+            if hasattr(self,'optimize_result'):
+                optimize_result = self.optimize_result
+            else:
+                optimize_result = None
         
         # TODO - establish level of convergence.
         
@@ -1006,7 +1034,7 @@ class SolveDistributionShift(object):
         thresholds = {}
         histT_tuple = {}
         residuals_dict = {}
-        for rand_adj in [1253, 9098, 3562]:
+        for rand_adj in [1,2,3]:
             (resid[rand_adj], Tsample[rand_adj], durations[rand_adj], 
              thresholds[rand_adj], histT_tuple[rand_adj], residuals_dict[rand_adj]) = obj_func.markov_gaussian_model_for_peak_temperature(
                   xf0,
