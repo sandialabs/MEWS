@@ -573,6 +573,7 @@ class ExtremeTemperatureWaves(Extremes):
         opt_val = _mix_user_and_default(default_vals, 'historic', solve_options)
         
         obj_solve = None
+        sobj_dict = {}
         for month in range(1,13):
             
             hist0 = {}
@@ -628,6 +629,7 @@ class ExtremeTemperatureWaves(Extremes):
             for wt1, wt2 in WAVE_MAP.items():
                 new_stats[wt1][month] = param[wt2]
             
+            self.hist_obj_solve = obj_solve
         return new_stats
         
     

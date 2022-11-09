@@ -134,13 +134,26 @@ def create_complementary_histogram(sample, hist0):
             (bin_spacing > bin_spacing[0]*(1. + sign*0.000001)).any()):
             raise ValueError("The histogram input 'hist0' must have a constant bin spacing")
         
-    
-    
-        # this always comes out to a positive integer under the constraints present 
-        num_bin = np.abs(int((sample.max() - sample.min())/bin_spacing[0])+2)
+        # find the closest point to sample.min() in hist0[1]
+        idmin = np.array([np.abs(sample.min() - val) for val in hist0[1]]).argmin()
+        idmax = np.array([np.abs(sample.max() - val) for val in hist0[1]]).argmin()
         
-        hist1 = np.histogram(sample,num_bin,range=(np.floor(sample.min()/bin_spacing[0])*bin_spacing[0],
-                                                   np.ceil(sample.max()/bin_spacing[0])*bin_spacing[0]))
+        # increment away from the closest point until you exceed the min and max of the sample
+        id_minval = np.array([hist0[1][idmin] - idx * bin_spacing[0] < sample.min() for idx in range(2*int(np.abs(sample.min() - hist0[1].min()))+1)]).argmax()
+        id_maxval = np.array([hist0[1][idmax] + idx * bin_spacing[0] > sample.max() for idx in range(2*int(np.abs(sample.max() - hist0[1].max()))+1)]).argmax()
+        
+        minval = hist0[1][idmin] - id_minval * bin_spacing[0]
+        maxval = hist0[1][idmax] + id_maxval * bin_spacing[0]
+        
+        num_bin = (maxval-minval)/bin_spacing[0]
+        
+        if np.abs(num_bin - int(num_bin)) > 1e-6:
+            raise ValueError("The bin spacing algorithm has not produced a whole integer!")
+        
+        num_bin = int(num_bin)
+        
+        hist1 = np.histogram(sample,num_bin,range=(minval,
+                                                   maxval))
         
         bin_avg = (hist1[1][1:]+hist1[1][0:-1])/2
         
