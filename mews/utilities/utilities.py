@@ -147,7 +147,7 @@ def create_complementary_histogram(sample, hist0):
         
         num_bin = (maxval-minval)/bin_spacing[0]
         
-        if np.abs(num_bin - int(num_bin)) > 1e-6:
+        if np.abs(num_bin - round(num_bin)) > 1e-6:
             raise ValueError("The bin spacing algorithm has not produced a whole integer!")
         
         num_bin = int(num_bin)
