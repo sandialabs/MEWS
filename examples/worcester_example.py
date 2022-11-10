@@ -13,7 +13,7 @@ from mews.events import ExtremeTemperatureWaves
 
 
 if __name__ == "__main__":
-    step = 1
+    step = 2
     # STEP 1 to using MEWS, create a climate increase in surface temperature
     #        set of scenarios,
     # 
