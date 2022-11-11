@@ -53,6 +53,12 @@ DEFAULT_SOLVE_OPTIONS = {VALID_SOLVE_OPTION_TIMES[0]:_DEFAULT_S_OPT,
 
 INVALID_VALUE = -99
 
+DECAY_FUNC_TYPES =  {"exponential":0,"linear":1,"exponential_cutoff":2,
+               "linear_cutoff":3,
+               "quadratic_times_exponential_decay_with_cutoff":4,
+               "delayed_exponential_decay_with_cutoff":5}
+DECAY_FUNC_NAMES = list(DECAY_FUNC_TYPES.keys())
+DECAY_FUNC_NAMES.insert(0,None)
 
 DEFAULT_NONE_DECAY_FUNC = {}
 for awn in ABREV_WAVE_NAMES:

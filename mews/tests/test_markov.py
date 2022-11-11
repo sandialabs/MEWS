@@ -210,6 +210,16 @@ class Test_Markov(unittest.TestCase):
             values[idx] = markov_func(cdf, rand_big[0:1000], 1, coef_quadratic, np.array([4,4]))
 
         self.assertTrue((values[0]==values[1]).all())
+        
+        # func_type=5 delayed exponential with cutoff
+        coef_delayed = np.array([[0.001,300,100],[0.002,400,200]])
+        
+        values = {}
+        for idx, markov_func in enumerate([markov_chain_time_dependent_py, 
+                                           markov_chain_time_dependent_wrapper]):    
+            values[idx] = markov_func(cdf, rand_big[0:1000], 1, coef_delayed, np.array([5,5]))
+
+        self.assertTrue((values[0]==values[1]).all())
     
     def test_MarkovChain(self):
         always0 = np.array([[1,0],[1,0]],dtype=float)

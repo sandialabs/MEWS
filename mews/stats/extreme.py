@@ -26,7 +26,8 @@ from mews.cython.markov import markov_chain
 from mews.stats.markov import MarkovPy
 from mews.stats.markov_time_dependent import (markov_chain_time_dependent_wrapper,
                                               markov_chain_time_dependent_py)
-from mews.constants.data_format import INVALID_VALUE, WAVE_MAP, DEFAULT_NONE_DECAY_FUNC
+from mews.constants.data_format import (INVALID_VALUE, WAVE_MAP, DEFAULT_NONE_DECAY_FUNC,
+                                       DECAY_FUNC_TYPES, ABREV_WAVE_NAMES)
 from mews.errors.exceptions import ExtremesIntegrationError
 from numpy.random  import default_rng, seed
 from scipy.optimize import curve_fit, minimize
@@ -123,18 +124,16 @@ class DiscreteMarkov():
 
     """
     # this list must be updated if new function types are added to the markov_time_dependent_wrapper functions
-    _func_types = {"exponential":0,"linear":1,"exponential_cutoff":2,
-                   "linear_cutoff":3,
-                   "quadratic_times_exponential_decay_with_cutoff":4}
+    _func_types = DECAY_FUNC_TYPES
     # DO NOT CHANGE THE ORDER OF THIS LIST! 
-    _events = ['cs','hw']
+    _events = ABREV_WAVE_NAMES
     
     def __init__(self,rng,
                       transition_matrix,
                       state_names=None,
                       use_cython=True,
-                      decay_func_type={'hw':None,'cs':None},
-                      coef={'hw':None,'cs':None}):
+                      decay_func_type=DEFAULT_NONE_DECAY_FUNC,
+                      coef=DEFAULT_NONE_DECAY_FUNC):
         if not decay_func_type is None:
            for wt in self._events:
                if not decay_func_type[wt] is None and not decay_func_type[wt] in self._func_types:
@@ -279,8 +278,8 @@ class DiscreteMarkov():
         # The Markov Chain is about 10x slower in Python
         if self.use_cython:
             if self.decay_func_type is None or (
-                    self.decay_func_type['cs'] is None 
-                    and self.decay_func_type['hw'] is None):
+                    self.decay_func_type[ABREV_WAVE_NAMES[0]] is None 
+                    and self.decay_func_type[ABREV_WAVE_NAMES[1]] is None):
                 state = markov_chain(cdf,prob,state0)
             else:
                 
@@ -886,8 +885,8 @@ class Extremes():
                 if not self.use_global:
                     coef, decay_func_type = self._coef_form(max_avg_dist['param'][month], min_avg_dist['param'][month])
                 else:
-                    coef = {'cs':None,'hw':None}
-                    decay_func_type = {'cs':None,'hw':None}
+                    coef = DEFAULT_NONE_DECAY_FUNC
+                    decay_func_type = DEFAULT_NONE_DECAY_FUNC
                 
                 objDM = DiscreteMarkov(rng, modified_trans_matrix, 
                                        state_name, use_cython, decay_func_type=decay_func_type,
@@ -1257,9 +1256,9 @@ class Extremes():
                                                         ).argmax()]
             
             if is_hw:
-                wstr = 'hw'
+                wstr = ABREV_WAVE_NAMES[1]
             else:
-                wstr = 'cs'
+                wstr = ABREV_WAVE_NAMES[0]
             
             param = integral_dist['param'][s_month]
             
@@ -1459,10 +1458,10 @@ class Extremes():
         hwcoef = hw_param['decay function coef']
         cscoef = cs_param['decay function coef']
         
-        coef = {'cs':cscoef, 'hw':hwcoef}
+        coef = {ABREV_WAVE_NAMES[0]:cscoef, ABREV_WAVE_NAMES[1]:hwcoef}
         
-        decay_func_type = {'cs':cs_param['decay function'],
-                           'hw':hw_param['decay function']}
+        decay_func_type = {ABREV_WAVE_NAMES[0]:cs_param['decay function'],
+                           ABREV_WAVE_NAMES[1]:hw_param['decay function']}
         
         return coef, decay_func_type
         

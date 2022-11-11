@@ -18,6 +18,7 @@ from mews.graphics.plotting2D import Graphics
 from scipy.optimize import minimize, LinearConstraint, differential_evolution, NonlinearConstraint
 from copy import deepcopy
 from warnings import warn
+from mews.constants.data_format import DECAY_FUNC_NAMES, ABREV_WAVE_NAMES
 
 import numpy as np
 
@@ -275,6 +276,8 @@ def unpack_coef_from_x(x,decay_func_type,events):
                 # 1) time to maximum 2) maximum prob, 3) cutoff time
                 # the order has to be 6,10,8 as a result instead of 6,8,10
                 coef[wt] = np.array([x[8+offset],x[9+offset],x[10+offset]])
+            elif decay_func == DECAY_FUNC_NAMES[6]:
+                coef[wt] = np.array([x[8+offset],x[9+offset],x[10+offset]])
             else: # should never happen:
                 raise ValueError("Invalid decay_func_type. '{0}' was input, but only valid values are : \n\n{1}".format(
                     decay_func,str(SolveDistributionShift._decay_func_types_entries.keys())))
@@ -399,8 +402,6 @@ class ObjectiveFunction():
          Other inputs are documented in input to "SolveDistributionShift.__init__"
         
         """
-        #if self.iterations == 10:
-            #breakpoint()
         # We want the same set of random numbers every time so that the
         # Markov process is not causing as much variation
         rng = self._rng
@@ -421,9 +422,6 @@ class ObjectiveFunction():
         Phw = x[5]
         Pcss = x[6]
         Phws = x[7]
-
-        #if self.iterations == 10:
-        #    breakpoint()
         
         # next parameters are the probability of sustainting a cold snap and then a 
         # heat wave
@@ -653,37 +651,42 @@ class SolveDistributionShift(object):
                            'multipliers to max probability time',
                            'slope or exponent multipliers',
                            'cutoff time multipliers',
-                           'max peak prob for quadratic model']
+                           'max peak prob for quadratic model',
+                           'delay_time_multipliers']
     
-    _default_problem_bounds = {'cs':{_bound_desc[0]: (0.0, 2.0),
+    _default_problem_bounds_all = {ABREV_WAVE_NAMES[0]:{_bound_desc[0]: (0.0, 2.0),
                                      _bound_desc[1]: (-0.1,4),
                                      _bound_desc[2]: (0.00001, 0.0125),
                                      _bound_desc[3]: (0.958, 0.999999),
                                      _bound_desc[4]: (0,2),
                                      _bound_desc[5]: (0,1),
                                      _bound_desc[6]: (1,3),
-                                     _bound_desc[7]: (0.97, 1.0)},
-                               'hw':{_bound_desc[0]: (0.0, 2.0),
+                                     _bound_desc[7]: (0.97, 1.0),
+                                     _bound_desc[8]: (0,3)},
+                               ABREV_WAVE_NAMES[1]:{_bound_desc[0]: (0.0, 2.0),
                                      _bound_desc[1]: (-0.1,2),
                                      _bound_desc[2]: (0.00001,0.0125),
                                      _bound_desc[3]: (0.958,0.999999),
                                      _bound_desc[4]: (0.1,2),
                                      _bound_desc[5]: (0,1),
                                      _bound_desc[6]: (1,3),
-                                     _bound_desc[7]: (0.97, 1.0)}}
+                                     _bound_desc[7]: (0.97, 1.0),
+                                     _bound_desc[8]: (0,3)}}
     _lin_exp_list = _bound_desc[0:4]
     _lin_exp_list.append(_bound_desc[5])
     _lin_exp_cutoff_list = _lin_exp_list
     _lin_exp_cutoff_list.append(_bound_desc[6])
     _quad_list = [_bound_desc[0],_bound_desc[1],_bound_desc[2],_bound_desc[3],_bound_desc[4],_bound_desc[6],_bound_desc[7]]
+    _delay_list = [_bound_desc[0],_bound_desc[1],_bound_desc[2],_bound_desc[3],_bound_desc[5],_bound_desc[6],_bound_desc[8]]
     
     # this provides a basis for evaluating if problem_bounds has all the entries needed.
-    _decay_func_types_entries = {None:_bound_desc[0:4],
-                                 'linear':_bound_desc[0:4],
-                                 'exponential':_lin_exp_list,
-                                 'linear_cutoff':_lin_exp_cutoff_list,
-                                 'exponential_cutoff':_lin_exp_cutoff_list,
-                                 "quadratic_times_exponential_decay_with_cutoff":_quad_list}
+    _decay_func_types_entries = {DECAY_FUNC_NAMES[0]:_bound_desc[0:4],
+                                 DECAY_FUNC_NAMES[2]:_bound_desc[0:4],
+                                 DECAY_FUNC_NAMES[1]:_lin_exp_list,
+                                 DECAY_FUNC_NAMES[4]:_lin_exp_cutoff_list,
+                                 DECAY_FUNC_NAMES[3]:_lin_exp_cutoff_list,
+                                 DECAY_FUNC_NAMES[5]:_quad_list,
+                                 DECAY_FUNC_NAMES[6]:_delay_list}
     
     
     # cs = cold snap, hw = heat wave.
@@ -932,6 +935,8 @@ class SolveDistributionShift(object):
         
         
         """
+        
+        self._default_problem_bounds = self._grab_relevant_bounds(decay_func_type,problem_bounds)
         self._test_mode = test_mode
         self._check_inputs(num_step,
                            random_seed,
@@ -955,6 +960,8 @@ class SolveDistributionShift(object):
                            min_num_waves,
                            x_solution,
                            test_mode)
+        
+        
         
         # determine limits on temperature
         abs_max_temp = {}
@@ -1358,16 +1365,17 @@ class SolveDistributionShift(object):
             if not wt in self._events:
                 raise ValueError("The problem bounds must have entries for both heat waves and cold snaps ({0})".format(str(self._events)))
             else:                
-                for decay_type, entries_needed in self._decay_func_types_entries.items():
-                    numvar = len(entries_needed)
-                    for entry in entries_needed:
-                        if not entry in pb:
-                            if decay_type is None:
-                                func_descr_str = "with no decay function "
-                            else:
-                                func_descr_str = "with a " + decay_type + " function "
-                            raise ValueError("The problem formulation "+func_descr_str+" must have {0:d} variables.".format(numvar) + 
-                                             "\nThe formaulation for each variable is:\n\n" + self._variable_order_string)
+                decay_func = decay_func_type[wt]
+                entries_needed = self._decay_func_types_entries[decay_func]
+                numvar = len(entries_needed)
+                for entry in entries_needed:
+                    if not entry in pb:
+                        if decay_func is None:
+                            func_descr_str = "with no decay function "
+                        else:
+                            func_descr_str = "with a " + decay_func + " function "
+                        raise ValueError("The problem formulation "+func_descr_str+" must have {0:d} variables.".format(numvar) + 
+                                         "\nThe formaulation for each variable is:\n\n" + self._variable_order_string)
         if not self._test_mode:
             if num_step < 8760*50:
                 raise ValueError("The input 'num_step' needs to be a large value > 8760*50 since a Markov process statistics must be characterized for 50 year events.")
@@ -1430,18 +1438,23 @@ class SolveDistributionShift(object):
             if not decay_func is None:
                 max_duration = param0[wt]['normalizing duration']
                 
-                if decay_func == "exponential" or decay_func == "linear":
+                if decay_func == DECAY_FUNC_NAMES[1] or decay_func == DECAY_FUNC_NAMES[2]:
                     bounds_x0.append(tuple(np.array(dpb[wt]['slope or exponent multipliers'])/max_duration))
                     num_added = 1
                     
-                elif decay_func == "exponential_cutoff" or decay_func == "linear_cutoff":
+                elif decay_func == DECAY_FUNC_NAMES[3] or decay_func == DECAY_FUNC_NAMES[4]:
                     bounds_x0.append(tuple(np.array(dpb[wt]['slope or exponent multipliers'])/max_duration))
                     bounds_x0.append(tuple(max_duration*np.array(dpb[wt]['cutoff time multipliers']))) # cutoff times can be much larger   
                     num_added = 2
-                elif decay_func == "quadratic_times_exponential_decay_with_cutoff":
-                    bounds_x0.append(tuple(max_duration * np.array(dpb['cs']['multipliers to max probability time'])))
-                    bounds_x0.append(tuple(max_duration * np.array(dpb['cs']['cutoff time multipliers']))) # cutoff times can be much larger
+                elif decay_func == DECAY_FUNC_NAMES[5]:
+                    bounds_x0.append(tuple(max_duration * np.array(dpb[wt]['multipliers to max probability time'])))
+                    bounds_x0.append(tuple(max_duration * np.array(dpb[wt]['cutoff time multipliers']))) # cutoff times can be much larger
                     bounds_x0.append(tuple(dpb[wt]['max peak prob for quadratic model']))
+                    num_added = 3
+                elif decay_func == DECAY_FUNC_NAMES[6]:
+                    bounds_x0.append(tuple(max_duration * np.array(dpb[wt]['slope or exponent multipliers'])))
+                    bounds_x0.append(tuple(max_duration * np.array(dpb[wt]['cutoff time multipliers']))) # cutoff times can be much larger
+                    bounds_x0.append(tuple(dpb[wt]['delay_time_multipliers']))
                     num_added = 3
                 else:
                     raise ValueError("Invalid decay function type '{0}': only valid values are: \n\n{1}".format(decay_func,str(self._decay_func_types_entries.keys())))
@@ -1473,6 +1486,39 @@ class SolveDistributionShift(object):
         lc = LinearConstraint(constrain_matrix, np.array([1/(num_step/25)]), np.array([1.0-1/(num_step/25)]))
 
         return bounds_x0, lc, nlc
+    
+    def _grab_relevant_bounds(self,decay_func_type,problem_bounds):
+        allb = self._default_problem_bounds_all
+        
+        new_dict = {}
+        
+        for wv,subdict in allb.items():
+            # somne input checking need because this is ahead of input checks
+            if wv in decay_func_type:
+                decay_name = decay_func_type[wv]
+            else:
+                raise ValueError("The decay_func_type input must be a dictionary over all wave names: " + str(ABREV_WAVE_NAMES))
+            
+            if not problem_bounds is None:            
+                if wv in problem_bounds:
+                    pbs = problem_bounds[wv]
+                else:
+                    raise ValueError("The problem_bounds input must be a dictionary over all wave names:" + str(ABREV_WAVE_NAMES))
+            else:
+                pbs = {}
+                
+            new_dict[wv] = {}
+            for entry in self._decay_func_types_entries[decay_name]:
+                if not entry in pbs:
+                    new_dict[wv][entry] = allb[wv][entry]
+                else:
+                    new_dict[wv][entry] = pbs[entry]
+            # now check that no superfluous values exist
+            for key,val in pbs.items():
+                if not key in self._decay_func_types_entries[decay_name]:
+                    raise ValueError("\n\nThe problem bounds for {0} type decay functions does not include '{2}' only contains the following entries: {1}".format(
+                        decay_name,str(self._decay_func_types_entries[decay_name]),key))
+        return new_dict
     
 class MaxTemperatureNonlinearConstraint():
     

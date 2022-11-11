@@ -71,6 +71,32 @@ cpdef DTYPE_t exponential_decay_with_cutoff(DTYPE_t time_in_state,
         
     return val
 
+cpdef DTYPE_t delayed_exponential_decay_with_cutoff(DTYPE_t time_in_state,
+                                DTYPE_t lamb,
+                                DTYPE_t cutoff,
+                                DTYPE_t delay):
+    """
+    This provides an exponential decay of probability after a delay time "delay"
+    of a specific state continuing. Probability reduces to zero at cutoff time
+    "cutoff"
+    
+    TODO - THIS FUNCTION IS NOT DONEmarkov processes cutoff in cutoff + 2. Fixing this in cython
+    is finicky so I am delaying fixing for now.
+    
+    """
+    cdef DTYPE_t val
+    cdef DTYPE_t zero = 0.0
+    cdef DTYPE_t one = 1.0
+    
+    if time_in_state >= cutoff + delay:
+        val = zero
+    elif time_in_state <= delay:
+        val = one
+    else:
+        val = exp(-(time_in_state - delay) * lamb)
+        
+    return val
+
 cpdef DTYPE_t linear_decay(DTYPE_t time_in_state,
                                 DTYPE_t slope):
     """
@@ -176,8 +202,13 @@ cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
                                                                   coef[idym1,1],
                                                                   P0,
                                                                   coef[idym1,2])
+    elif func_type == 5:
+        func_eval = delayed_exponential_decay_with_cutoff(time_in_state,
+                                                          coef[idym1,0],
+                                                          coef[idym1,1],
+                                                          coef[idym1,2])
     else:
-        print("func_type must be 0,1,2,3, or 4...upredictable behavior is resulting!")
+        print("func_type must be 0,1,2,3,4 or 5...upredictable behavior is resulting!")
         
     cdf1[0] = cdf0[0] + P0 * func_eval
     cdf1[idy] = one - P0 * func_eval
@@ -232,6 +263,7 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
            4 - use quadratic time exponential that peaks at a specific time and
                then decays. This function increases probability of sustaining
                a heat wave and then decays after the peak
+           5 - use delayed exponential with cutoff.
                
                for func_type 0
                    coef is 1 element = lambda for exp(-lambda * t)
@@ -239,10 +271,12 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
                1: coef has 1 element = slope for slope * t
                2: coef has 2 elements = lambda and a cutoff time
                3: coef has 2 elements = slope and a cutoff time
-               4: coef has 4 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
-                                         3) initial probability at time = 0,
-                                         and 4) cutoff time at which probability drops
+               4: coef has 3 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
+                                         3) cutoff time at which probability drops
                                          to zero.
+               5: coef has 3 elements = 1) lambda for exp (-lambda * t),
+                                        2) cutoff time where probability = 0
+                                        3) delay time before exponential decay begins
                                 
     
     

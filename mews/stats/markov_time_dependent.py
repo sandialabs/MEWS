@@ -68,7 +68,7 @@ def cython_function_input_checks(cdf,
     state0 = int_check(state0,'state0',[0,cdf.shape[0]-1])
     array_check(func_type,np.integer,'func_type',1)
     for idx, ifunc in enumerate(func_type):
-        int_check(ifunc, 'func_type[{0:d}]'.format(idx), [0,4])
+        int_check(ifunc, 'func_type[{0:d}]'.format(idx), [0,5])
 
     if (rand > 1).any() or (rand < 0).any():
         raise ValueError("The rand input vector elements must be a probabilities (i.e. 0<=rand<=1)")
@@ -146,6 +146,7 @@ def markov_chain_time_dependent_wrapper(cdf,
            4 - use quadratic time exponential that peaks at a specific time and
                then decays. This function increases probability of sustaining
                a heat wave and then decays after the peak
+           5 - use delayed exponential decay with cutoff
                
                for func_type 0
                    coef is 1 element = lambda for exp(-lambda * t)
@@ -156,6 +157,10 @@ def markov_chain_time_dependent_wrapper(cdf,
                4: coef has 4 elelments = 1) time_to_peak, 2) Peak Maximum Probability,
                                          and 3) cutoff time at which probability drops
                                          to zero.
+                                         
+               5: coef has 3 elements = 1) lambda for exp (-lambda * t),
+                                         2) cutoff time where probability = 0
+                                         3) delay time before exponential decay begins
            
     check_inputs : bool : optional : Default = True
         Check all of the inputs types to assure that cython
@@ -210,6 +215,31 @@ def exponential_decay_with_cutoff(time_in_state,
         val = zero
     else:
         val = exp(-time_in_state * lamb)
+        
+    return val
+
+def delayed_exponential_decay_with_cutoff(time_in_state,
+                                          lamb,
+                                          cutoff,
+                                          delay):
+    """
+    This provides an exponential decay of probability after a delay time "delay"
+    of a specific state continuing. Probability reduces to zero at cutoff time
+    "cutoff"
+    
+    TODO - THIS FUNCTION IS NOT DONEmarkov processes cutoff in cutoff + 2. Fixing this in cython
+    is finicky so I am delaying fixing for now.
+    
+    """
+    zero = 0.0
+    one = 1.0
+    
+    if time_in_state >= cutoff + delay:
+        val = zero
+    elif time_in_state <= delay:
+        val = one
+    else:
+        val = exp(-(time_in_state - delay) * lamb)
         
     return val
 
@@ -310,6 +340,11 @@ def evaluate_decay_function(cdf0,
                                                                       coef[idym1,1],
                                                                       P0,
                                                                       coef[idym1,2])
+    elif func_type == 5:
+        func_eval = delayed_exponential_decay_with_cutoff(time_in_state,
+                                                          coef[idym1,0],
+                                                          coef[idym1,1],
+                                                          coef[idym1,2])
     else:
         raise ValueError("func_type must be 0,1,2,3, or 4...upredictable behavior is resulting!")
         

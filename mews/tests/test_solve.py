@@ -78,22 +78,21 @@ class Test_SolveDistributionShift(unittest.TestCase):
         #         breakpoint()
         run_test = True
         if run_test:
+
             default_problem_bounds = {'cs':{'delT_mu': (0.0, 2.0),
                                              'delT_sig multipliers': (-0.1,4),
                                              'P_event': (0.00025, 0.0125),
                                              'P_sustain': (0.975, 0.999999),
                                              'multipliers to max probability time': (0,2),
-                                             'slope or exponent multipliers' : (0,1),
                                              'cutoff time multipliers':(1,4),
                                              'max peak prob for quadratic model': (0.976, 1.0)},
                                        'hw':{'delT_mu': (0.0, 2.0),
                                              'delT_sig multipliers': (-0.1,4),
                                              'P_event': (0.00025,0.0125),
                                              'P_sustain': (0.985,0.999999),
-                                             'multipliers to max probability time': (0.1,2),
                                              'slope or exponent multipliers' : (0,1),
                                              'cutoff time multipliers':(1,4),
-                                             'max peak prob for quadratic model': (0.986, 1.0)}}
+                                             'delay_time_multipliers':(0.1,3)}}
             
             decay_func_type = {'hw':""}
             
@@ -106,7 +105,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
             num_step = 8760*50  # provides 11 50 year periods
             rng = default_rng(29023430)
             decay_func_type = [{'cs':'quadratic_times_exponential_decay_with_cutoff',
-                                'hw':'quadratic_times_exponential_decay_with_cutoff'}]#[None,"linear","exponential","exponential_cutoff","quadratic_times_exponential_decay_with_cutoff"]  # 8 parameters
+                                'hw':'delayed_exponential_decay_with_cutoff'}]#[None,"linear","exponential","exponential_cutoff","quadratic_times_exponential_decay_with_cutoff"]  # 8 parameters
+
             for decay_func in decay_func_type:
                 param = {}
                 param['hw'] = {}

@@ -29,8 +29,7 @@ from mews.constants.data_format import (WAVE_MAP, VALID_SOLVE_OPTIONS, DEFAULT_S
 from copy import deepcopy
 from datetime import datetime
 from scipy.optimize import bisect, fsolve
-from mews.constants.physical import (HOURS_IN_YEAR, DAYS_IN_YEAR, HOURS_IN_DAY,
-    )
+from mews.constants.physical import (HOURS_IN_YEAR, DAYS_IN_YEAR, HOURS_IN_DAY)
 from mews.constants.analysis import (DEFAULT_SOLVER_NUMBER_STEPS, 
                                      DEFAULT_RANDOM_SEED)
 
@@ -1647,6 +1646,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
             avg_delT_hw_period = np.array([historic_temp_func(yr-baseline_year)
                                            for yr in np.arange(ext_temp_waves_obj.hw_beg_date,
                                                                ext_temp_waves_obj.hw_end_date+.01,0.01)]).mean()
+            # remember these numbers are negative
             hw_delT = avg_delT_hw_period-avg_delT_1850_1900
             baseline_delT = -avg_delT_1850_1900
             
