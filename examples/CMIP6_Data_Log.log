@@ -1,0 +1,13 @@
+2022-11-09 11:13:46,655 | INFO | Script Initiation
+2022-11-09 11:13:46,657 | WARNING | Unable to import cartopy
+2022-11-09 11:13:46,657 | WARNING | Cannot display world map because cartopy is not properly installed
+2022-11-09 11:13:47,101 | INFO | Parallel processing failed for threading! Reverting to non-parallel
+2022-11-09 11:13:47,101 | WARNING | Cannot display world map because cartopy is not properly installed
+2022-11-09 11:13:47,943 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:13:49,365 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:16:59,901 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:17:02,870 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:17:03,624 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:17:07,639 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:17:08,145 | WARNING | Download failed. Data node is down. Trying again with other nodes
+2022-11-09 11:18:38,374 | WARNING | Download failed. Data node is down. Trying again with other nodes
