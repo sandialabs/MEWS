@@ -52,13 +52,30 @@ Directories
 
 Installation
 ------------
+  * To install the latest released version:
+    
+    pip install mews
+    
+    For the current code:
+    
+    cd < a directory you want to work with >
+    python -m venv <a virtual environment name>
+    <a virtual environment name>/Scripts/activate
+    git clone https://github.com/sandialabs/MEWS.git
+    pip install -e .
+    
+    Then run the following to ensure the code passes unit testing
+    
+    pip install pytest
+    pytest
+    
+    All tests should pass. If not, contact the dlvilla@sandia.gov.
+
   * MEWS requires Cython which needs a C comnpiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
 that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them. It is necessary
 to assure the correct version of the build tools is installed. The stack exchange thread below shows how to verify the correct version is installed.
 
 https://stackoverflow.com/questions/66838238/cython-setup-py-cant-find-installed-visual-c-build-tools
-
-   * MEWS requires GDAL. Use conda install GDAL before installing MEWS.  
 
    * MEWS downloads CMIP6 data when using the ClimateScenario class. This step can be messy though and requires many retries when downloading the data live from multiple servers. As a result, the entire dataset (~24Gb) has been uploaded to https://osf.io/ts9e8/files/osfstorage and is publicly available to manually download.
 
