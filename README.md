@@ -68,6 +68,13 @@ Installation
     cd MEWS
     pip install -e .
     ```
+    If this does not work an alternative method is to:
+    
+    ```
+    cd MEWS
+    pip install -r requirements.txt
+    python setup.py develop
+    ```
     
     Then run the following to ensure the code passes unit testing
     
