@@ -71,6 +71,10 @@ Installation
     If this does not work an alternative method is to:
     
     ```
+    cd < a directory you want to work with >
+    python -m venv <a virtual environment name>
+    <a virtual environment name>/Scripts/activate
+    
     cd MEWS
     pip install -r requirements.txt
     python setup.py develop
