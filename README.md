@@ -76,8 +76,11 @@ Installation
     ```
     
     All tests should pass. If not, contact the dlvilla@sandia.gov.
+    
+    The API for MEWS is not yet documented and has many inputs. The best example of how to use the latest version is available in examples/worcester_example.py
+    the other examples are either depricated or are not being kept up to date presently.
 
-  * MEWS requires Cython which needs a C comnpiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
+  * MEWS requires Cython which needs a C compiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
 that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them. It is necessary
 to assure the correct version of the build tools is installed. The stack exchange thread below shows how to verify the correct version is installed.
 
