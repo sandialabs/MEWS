@@ -65,6 +65,7 @@ Installation
     python -m venv <a virtual environment name>
     <a virtual environment name>/Scripts/activate
     git clone https://github.com/sandialabs/MEWS.git
+    cd MEWS
     pip install -e .
     ```
     
