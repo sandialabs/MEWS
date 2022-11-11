@@ -52,13 +52,51 @@ Directories
 
 Installation
 ------------
-  * MEWS requires Cython which needs a C comnpiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
+  * To install the latest released version:
+    
+    ```
+    pip install mews
+    ```
+    
+    For the current code:
+    
+    ```
+    cd < a directory you want to work with >
+    python -m venv <a virtual environment name>
+    <a virtual environment name>/Scripts/activate
+    git clone git@github.com:sandialabs/MEWS.git
+    cd MEWS
+    pip install -e .
+    ```
+    If this does not work an alternative method is to:
+    
+    ```
+    cd < a directory you want to work with >
+    python -m venv <a virtual environment name>
+    <a virtual environment name>/Scripts/activate
+    git clone git@github.com:sandialabs/MEWS.git
+    cd MEWS
+    pip install -r requirements.txt
+    python setup.py develop
+    ```
+    
+    Then run the following to ensure the code passes unit testing
+    
+    ```
+    pip install pytest
+    pytest
+    ```
+    
+    All tests should pass. If not, contact the dlvilla@sandia.gov.
+    
+    The API for MEWS is not yet documented and has many inputs. The best example of how to use the latest version is available in examples/worcester_example.py
+    the other examples are either depricated or are not being kept up to date presently.
+
+  * MEWS requires Cython which needs a C compiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools 
 that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them. It is necessary
 to assure the correct version of the build tools is installed. The stack exchange thread below shows how to verify the correct version is installed.
 
 https://stackoverflow.com/questions/66838238/cython-setup-py-cant-find-installed-visual-c-build-tools
-
-   * MEWS requires GDAL. Use conda install GDAL before installing MEWS.  
 
    * MEWS downloads CMIP6 data when using the ClimateScenario class. This step can be messy though and requires many retries when downloading the data live from multiple servers. As a result, the entire dataset (~24Gb) has been uploaded to https://osf.io/ts9e8/files/osfstorage and is publicly available to manually download.
 
