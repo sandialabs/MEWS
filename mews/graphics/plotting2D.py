@@ -101,6 +101,7 @@ class Graphics():
                     binT = bin_avg(histT)
                 else:
                     binT = None
+                    ttup = None
                 
                 if bin_prev is None:
                     second_condition = False

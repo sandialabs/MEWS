@@ -29,7 +29,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # clean this up HOW MUCH of this from Test_Alter is needed?
-        cls.plot_results = False
+        cls.plot_results = True
         cls.write_results = False
         cls.rng = default_rng()
 

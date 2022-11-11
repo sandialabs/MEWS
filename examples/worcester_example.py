@@ -9,6 +9,7 @@ import os
 import numpy as np
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
+import pickle as pkl
 
 
 
@@ -33,6 +34,8 @@ if __name__ == "__main__":
     
     # gives consistency in run results
     random_seed = 7293821
+    
+    num_realization_per_scenario = 10
     
     # plot_results 
     plot_results = True
@@ -62,6 +65,10 @@ if __name__ == "__main__":
                         align_gcm_to_historical=True)
         scen_dict = cs_obj.calculate_coef(scenarios)
         
+        if not os.path.exists("temp_pickles"):
+            os.mkdir("temp_pickles")
+        pkl.dump([cs_obj],open(os.path.join("temp_pickles","cs_obj.pickle"),'wb'))
+        
     else:
         # this is the results obtained by dlvilla 10/31/2022
         scen_dict = {'historical': np.poly1d([1.35889778e-10, 7.56034740e-08, 1.55701410e-05, 1.51736807e-03,
@@ -69,6 +76,9 @@ if __name__ == "__main__":
          'SSP245': np.poly1d([-0.00019697,  0.04967771, -0.09146572]),
          'SSP370': np.poly1d([ 0.00017505,  0.03762937, -0.07095332]),
          'SSP585': np.poly1d([0.00027245, 0.05231527, 0.0031547 ])}
+        
+        cs_obj = pkl.load(open(os.path.join("temp_pickles","cs_obj.pickle"),'rb'))
+        
     
     #STEP 2. FIT THE HISTORIC DATA.
     # USE THESE TO CONTROL OPTIMIZATION...
@@ -92,6 +102,7 @@ if __name__ == "__main__":
                                     'plot_results':plot_results,
                                     'test_mode':False,
                                     'min_num_waves':10}}
+        
         # I had to manually add the daily summaries and norms
         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
                                           use_local=True, random_seed=random_seed,
@@ -101,7 +112,20 @@ if __name__ == "__main__":
                                           solve_options=solve_options,proxy=os.path.join("..","..","proxy.txt"),
                                           norms_unit_conversion=unit_conv_norms)
         
-        obj.create_scenario(scenario_name, start_year, num_year, climate_temp_func,)
+        for syear in future_years:
+            for scen in scenarios:
+                # Question - do you want to look across the extreme event confidence 
+                #            intervals or just stick to the 50%?
+                #          - do you want a cold snap shift? I don't have information for
+                #            how much cold snaps will change with increasing global warming
+                results = obj.create_scenario(scenario_name=scen, 
+                                              start_year=syear, 
+                                              num_year=1, 
+                                              climate_temp_func=scen_dict[scen],
+                                              num_realization=num_realization_per_scenario,
+                                              obj_clim=cs_obj,
+                                              increase_factor_ci="50%",
+                                              cold_snap_shift=None)   
     else:
         pass
     
