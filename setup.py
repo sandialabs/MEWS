@@ -15,7 +15,7 @@ MAINTAINER_EMAIL = 'dlvilla@sandia.gov'
 LICENSE = 'Revised BSD'
 URL = 'https://github.com/sandialabs/MEWS'
 DEPENDENCIES = ['numpy', 'pandas', 'matplotlib','scipy','statsmodels',
-                'openpyxl',
+                'openpyxl', 'cython',
                 'xarray[complete]']
 
 try:
