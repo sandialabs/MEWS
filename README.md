@@ -54,20 +54,26 @@ Installation
 ------------
   * To install the latest released version:
     
+    ```
     pip install mews
+    ```
     
     For the current code:
     
+    ```
     cd < a directory you want to work with >
     python -m venv <a virtual environment name>
     <a virtual environment name>/Scripts/activate
     git clone https://github.com/sandialabs/MEWS.git
     pip install -e .
+    ```
     
     Then run the following to ensure the code passes unit testing
     
+    ```
     pip install pytest
     pytest
+    ```
     
     All tests should pass. If not, contact the dlvilla@sandia.gov.
 
