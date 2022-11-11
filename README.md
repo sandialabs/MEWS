@@ -64,7 +64,7 @@ Installation
     cd < a directory you want to work with >
     python -m venv <a virtual environment name>
     <a virtual environment name>/Scripts/activate
-    git clone https://github.com/sandialabs/MEWS.git
+    git clone git@github.com:sandialabs/MEWS.git
     cd MEWS
     pip install -e .
     ```
@@ -74,7 +74,7 @@ Installation
     cd < a directory you want to work with >
     python -m venv <a virtual environment name>
     <a virtual environment name>/Scripts/activate
-    
+    git clone git@github.com:sandialabs/MEWS.git
     cd MEWS
     pip install -r requirements.txt
     python setup.py develop
