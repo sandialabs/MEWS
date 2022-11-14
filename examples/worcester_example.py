@@ -23,7 +23,10 @@ if __name__ == "__main__":
     # with proper proxy settings.
     
     # HERE CS stands for climate scenario (not cold snap)
-    future_years = [2020,2040,2060,2080,2100]
+    future_years = [2014,2020,2040,2060,2080,2100]
+    
+    # CI interval 
+    ci_intervals = ["5%","50%","95%"]
     
     # Station - Worcester Regional Airport
     station = os.path.join("example_data","Worcester","USW00094746.csv")
@@ -77,7 +80,7 @@ if __name__ == "__main__":
          'SSP370': np.poly1d([ 0.00017505,  0.03762937, -0.07095332]),
          'SSP585': np.poly1d([0.00027245, 0.05231527, 0.0031547 ])}
         
-        cs_obj = pkl.load(open(os.path.join("temp_pickles","cs_obj.pickle"),'rb'))
+        cs_obj = pkl.load(open(os.path.join("temp_pickles","cs_obj.pickle"),'rb'))[0]
         
     
     #STEP 2. FIT THE HISTORIC DATA.
@@ -93,7 +96,8 @@ if __name__ == "__main__":
                                       'plot_results':plot_results,
                                       'num_step':2000000,
                                       'test_mode':False,
-                                      'min_num_waves':10},
+                                      'min_num_waves':10,
+                                      'out_path': os.path.join("example_data","Worcester","results")},
                           'future': {'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
                                     'max_iter': 25,
                                     'limit_temperatures': False,
@@ -101,7 +105,8 @@ if __name__ == "__main__":
                                     'num_step':2000000,
                                     'plot_results':plot_results,
                                     'test_mode':False,
-                                    'min_num_waves':10}}
+                                    'min_num_waves':10,
+                                    'out_path': os.path.join("example_data","Worcester","results")}}
         
         # I had to manually add the daily summaries and norms
         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
@@ -111,23 +116,32 @@ if __name__ == "__main__":
                                           num_cpu=num_cpu, write_results=True, test_markov=False,
                                           solve_options=solve_options,proxy=os.path.join("..","..","proxy.txt"),
                                           norms_unit_conversion=unit_conv_norms)
+        if not os.path.exists("temp_pickles"):
+            os.mkdir("temp_pickles")
+        pkl.dump([obj],open(os.path.join("temp_pickles","obj.pickle"),'wb'))
+          
+    else:
         
+        obj = pkl.load(open(os.path.join("temp_pickles","obj.pickle"),'rb'))[0]
+    
+    if step == 3:
+        # still working on this!
+        # this is the longest step.
         for syear in future_years:
             for scen in scenarios:
+                for cii in ci_intervals: 
                 # Question - do you want to look across the extreme event confidence 
                 #            intervals or just stick to the 50%?
                 #          - do you want a cold snap shift? I don't have information for
                 #            how much cold snaps will change with increasing global warming
-                results = obj.create_scenario(scenario_name=scen, 
-                                              start_year=syear, 
-                                              num_year=1, 
-                                              climate_temp_func=scen_dict[scen],
-                                              num_realization=num_realization_per_scenario,
-                                              obj_clim=cs_obj,
-                                              increase_factor_ci="50%",
-                                              cold_snap_shift=None)   
-    else:
-        pass
+                    results = obj.create_scenario(scenario_name=scen, 
+                                                  start_year=syear, 
+                                                  num_year=1, 
+                                                  climate_temp_func=scen_dict[scen],
+                                                  num_realization=num_realization_per_scenario,
+                                                  obj_clim=cs_obj,
+                                                  increase_factor_ci=cii,
+                                                  cold_snap_shift=None) 
     
     # 
     

@@ -15,21 +15,49 @@ WAVE_MAP = {}
 for awn,wn in zip(ABREV_WAVE_NAMES,WAVE_NAMES):
     WAVE_MAP[wn] = awn
 
-VALID_SOLVE_OPTIONS = ['problem_bounds',
-                       'decay_func_type',
-                'use_cython',
-                'num_cpu',
-                'plot_results',
-                'max_iter',
-                'plot_title',
-                'fig_path',
-                'weights',
-                'limit_temperatures',
-                'delT_above_shifted_extreme',
-                'num_step',
-                'min_num_waves',
-                'x_solution',
-                'test_mode']
+VALID_SOLVE_INPUTS = ['num_step',    #0
+                 'param0',#1
+                 'random_seed',#2
+                 'hist0',#3
+                 'durations0',#4
+                 'delT_above_shifted_extreme',#5
+                 'historic_time_interval',#6
+                 'hours_per_year',#7
+                 'problem_bounds',#8
+                 'ipcc_shift',#9
+                 'decay_func_type',#10
+                 'use_cython',#11
+                 'num_cpu',#12
+                 'plot_results',#13
+                 'max_iter',#14
+                 'plot_title',#15
+                 'out_path',#16
+                 'weights',#17
+                 'limit_temperatures',#18
+                 'min_num_waves',#19
+                 'x_solution',#20
+                 'test_mode',#21
+                 'num_postprocess',#22
+                 'extra_output_columns']#23
+
+
+VALID_SOLVE_OPTIONS = [VALID_SOLVE_INPUTS[8],#'problem_bounds
+                       VALID_SOLVE_INPUTS[10],#'decay_func_type
+                VALID_SOLVE_INPUTS[11],#'use_cython',
+                VALID_SOLVE_INPUTS[12],#'num_cpu',
+                VALID_SOLVE_INPUTS[13],#'plot_results',
+                VALID_SOLVE_INPUTS[14],#'max_iter',
+                VALID_SOLVE_INPUTS[15],#'plot_title',
+                VALID_SOLVE_INPUTS[16],#'out_path',
+                VALID_SOLVE_INPUTS[17],#'weights',
+                VALID_SOLVE_INPUTS[18],#'limit_temperatures',
+                VALID_SOLVE_INPUTS[5],#'delT_above_shifted_extreme',
+                VALID_SOLVE_INPUTS[0],#'num_step',
+                VALID_SOLVE_INPUTS[19],#'min_num_waves',
+                VALID_SOLVE_INPUTS[20],#'x_solution',
+                VALID_SOLVE_INPUTS[21],#'test_mode',
+                VALID_SOLVE_INPUTS[22],#'num_postprocess'
+                VALID_SOLVE_INPUTS[23]]#extra_output_columns
 VALID_SOLVE_OPTION_TIMES = ['historic','future']
 
 _DEFAULT_S_OPT = {VALID_SOLVE_OPTIONS[0]:None,
@@ -47,7 +75,9 @@ _DEFAULT_S_OPT = {VALID_SOLVE_OPTIONS[0]:None,
                 VALID_SOLVE_OPTIONS[11]:DEFAULT_SOLVER_NUMBER_STEPS,
                 VALID_SOLVE_OPTIONS[12]:25,
                 VALID_SOLVE_OPTIONS[13]:None,
-                VALID_SOLVE_OPTIONS[14]:False}
+                VALID_SOLVE_OPTIONS[14]:False,
+                VALID_SOLVE_OPTIONS[15]:3,
+                VALID_SOLVE_OPTIONS[16]:{'future year':None,'climate scenario':None, 'threshold confidence interval': None, 'month':None}}
 DEFAULT_SOLVE_OPTIONS = {VALID_SOLVE_OPTION_TIMES[0]:_DEFAULT_S_OPT,
                          VALID_SOLVE_OPTION_TIMES[1]:_DEFAULT_S_OPT}
 

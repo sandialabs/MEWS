@@ -29,15 +29,16 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # clean this up HOW MUCH of this from Test_Alter is needed?
-        cls.plot_results = True
+        cls.plot_results = False
         cls.write_results = False
         cls.rng = default_rng()
 
         try:
             os.removedirs("mews_results")
+            os.removedirs("temp_out")
         except:
             warnings.warn(
-                "The testing could not remove the temporary directory ./mews/tests/mews_results")
+                "The testing could not remove the temporary directory ./mews/tests/mews_results or ./mews/tests/temp_out")
 
         proxy_location = os.path.join("..", "..", "..", "proxy.txt")
 
@@ -106,15 +107,17 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                       + " that need to be removed!")
         try:
             os.removedirs("mews_results")
+            os.removedirs("temp_out")
         except:
             warnings.warn(
-                "The testing could not remove the temporary directory ./mews/tests/mews_results")
+                "The testing could not remove the temporary directory ./mews/tests/mews_results or ./mews/tests/temp_out")
 
         if cls.from_main_dir:
             os.chdir(os.path.join("..", ".."))
 
     def test_albuquerque_extreme_waves(self):
-
+        
+        # OLD TEST
         station = os.path.join(self.test_weather_path,"USW00023050.csv")
         weather_files = [os.path.join(self.test_weather_path,"USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
 
@@ -130,11 +133,12 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         This test verifies that the statistics coming out of the new
         ExtremeTemperatureWaves class roughly converge to the results indicated
         in Figure SPM.6 that the entire analysis method has been based off of.
-
+p
         The complexity of the transformations and regressions required to fit
         NOAA data and then change then shift that data's distributions makes
         it necessary to verify that no major error have been introduced.
 
+        OLD TEST
         """
 
         clim_scen = ClimateScenario()
@@ -278,7 +282,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                       'plot_results':self.plot_results,
                                       'num_step':20000,
                                       'test_mode':True,
-                                      'min_num_waves':10},
+                                      'min_num_waves':10,
+                                      'out_path':os.path.join("temp_out","test_output.png")},
                           'future': {'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
                                     'max_iter': 1,
                                     'limit_temperatures': True,
@@ -286,7 +291,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                     'num_step':20000,
                                     'plot_results':self.plot_results,
                                     'test_mode':True,
-                                    'min_num_waves':10}}
+                                    'min_num_waves':10,
+                                    'out_path':os.path.join("temp_out")}}  # extra_output_columns must be altered later.
 
         num_realizations = 2
 

@@ -24,7 +24,7 @@ from mews.utilities.utilities import filter_cpu_count
 from mews.stats.distributions import (cdf_truncnorm, trunc_norm_dist, 
                                       inverse_transform_fit, transform_fit)
 from mews.constants.data_format import (WAVE_MAP, VALID_SOLVE_OPTIONS, DEFAULT_SOLVE_OPTIONS,
-                                        VALID_SOLVE_OPTION_TIMES)
+                                        VALID_SOLVE_OPTION_TIMES,VALID_SOLVE_INPUTS)
 
 from copy import deepcopy
 from datetime import datetime
@@ -54,6 +54,19 @@ def _mix_user_and_default(default_vals,solve_type,solve_options):
         else:
             opt_val[key] = def_val
     return opt_val
+
+def _process_extra_columns(ext_col,month,fut_year=None,clim_scen=None,ci_interval=None):
+    #{'future year':None,'climate scenario':None, 'threshold confidence interval': None}
+    
+    # This function is only used in historic and future context.
+    for key, val in zip(['future year', 'climate scenario', 'threshold confidence interval','month'],[fut_year,clim_scen,ci_interval,month]):
+        
+        if (not val is None):
+            ext_col[key] = val
+        else:
+            ext_col[key] = 'historic'
+    
+    return ext_col
 
 class ExtremeTemperatureWaves(Extremes):
     
@@ -190,7 +203,7 @@ class ExtremeTemperatureWaves(Extremes):
              'plot_results',
              'max_iter',
              'plot_title',
-             'fig_path',
+             'out_path',
              'weights',
              'limit_temperatures',
              'delT_above_shifted_extreme',
@@ -385,8 +398,8 @@ class ExtremeTemperatureWaves(Extremes):
         for year in np.arange(start_year, start_year + num_year,1):
             
             self.extreme_delstats[scenario_name][increase_factor_ci] = {}
-
             
+
             (transition_matrix, 
              transition_matrix_delta,
              del_E_dist,
@@ -548,9 +561,32 @@ class ExtremeTemperatureWaves(Extremes):
                 if not opt in VALID_SOLVE_OPTIONS:
                     raise ValueError("The input 'solve_options['{0}'] has an invalid solve option = '{1}'".format(tim,opt) +
                                      "\n\nValid options are:\n\n{0}".format(",\n".join(VALID_SOLVE_OPTIONS)))
+                    
+        
         return solve_options
             
+    def _create_figure_out_name(self,dirname,basename,month,is_dir,dir_exists,scen=None,ci_int=None,year=None,is_historic=True):
+
+        if not dir_exists:
+            if not os.path.exists(dirname):
+                os.mkdir(dirname)
                     
+        if not scen is None:
+            ext_str = "_{0}_{1}_{2}".format(scen,ci_int,str(year))
+        else:
+            ext_str = ""
+        if is_historic:
+            hstr = "historic"
+        else:
+            hstr = "future"
+            
+        if is_dir:
+            filename = os.path.join(dirname,basename,hstr+"_month_{0:d}{1}.png".format(month,ext_str))
+        else:
+            filename = os.path.join(dirname,basename.split(".")[0]+"_"+hstr+"_month_{0:d}{1}.png".format(month,ext_str))
+        
+        return filename
+    
     def _solve_historic_distributions(self,stats, solve_options, frac_hours_per_year):
         # solve options unpacked
         
@@ -570,6 +606,11 @@ class ExtremeTemperatureWaves(Extremes):
         
         # bring in values assigned by the user. Use defaults for unassigned values.
         opt_val = _mix_user_and_default(default_vals, 'historic', solve_options)
+
+        fig_out_dir_name = os.path.dirname(opt_val['out_path'])
+        fig_out_base_name = os.path.basename(opt_val['out_path'])
+        fig_is_dir = os.path.isdir(opt_val['out_path'])
+        fig_dir_exists = os.path.exists(fig_out_dir_name)
         
         obj_solve = None
         sobj_dict = {}
@@ -582,6 +623,15 @@ class ExtremeTemperatureWaves(Extremes):
                 hist0[wname2] = stats[wname1][month]['historical temperatures (hist0)'] 
                 durations0[wname2] = stats[wname1][month]['historical durations (durations0)']
                 param0[wname2] = stats[wname1][month]
+            
+            
+            
+            out_path_month = self._create_figure_out_name(fig_out_dir_name,
+                                                        fig_out_base_name,
+                                                        month,
+                                                        fig_is_dir,
+                                                        fig_dir_exists)
+            extra_columns = _process_extra_columns(opt_val['extra_output_columns'],month)
             
             if obj_solve is None:
                 obj_solve = SolveDistributionShift(opt_val['num_step'], 
@@ -600,12 +650,14 @@ class ExtremeTemperatureWaves(Extremes):
                                        plot_results=opt_val['plot_results'],
                                        max_iter=opt_val['max_iter'],
                                        plot_title=opt_val['plot_title'],
-                                       fig_path=opt_val['fig_path'],
+                                       out_path=out_path_month,
                                        weights=opt_val['weights'],
                                        limit_temperatures=opt_val['limit_temperatures'],
                                        min_num_waves=opt_val['min_num_waves'],
                                        x_solution=opt_val['x_solution'],
-                                       test_mode=opt_val['test_mode'])
+                                       test_mode=opt_val['test_mode'],
+                                       num_postprocess=opt_val['num_postprocess'],
+                                       extra_output_columns=extra_columns)
 
                 if opt_val['test_mode']:
                     # this makes all other runs just be evaluations when 
@@ -616,20 +668,30 @@ class ExtremeTemperatureWaves(Extremes):
                 
                 param = obj_solve.param
             else:
+                if month == 12:
+                    write_csv = True
+                else:
+                    write_csv = False
                 # only reassign values that change by month (and x_solution for testing purposes
                 # to reduce run time)
                 inputs = {"param0":param0,
                           "hist0":hist0,
                           "durations0":durations0,
                           "hours_per_year":int(frac_hours_per_year[month-1] * HOURS_IN_YEAR),
-                          "x_solution":x_solution}
-                param = obj_solve.reanalyze(inputs)
+                          "x_solution":x_solution,
+                          "out_path":out_path_month,
+                          "extra_output_columns":extra_columns}
+                param = obj_solve.reanalyze(inputs, write_csv)
             
             for wt1, wt2 in WAVE_MAP.items():
                 new_stats[wt1][month] = param[wt2]
             
             self.hist_obj_solve = obj_solve
         return new_stats
+    
+
+            
+        
         
     
     def _real_value_stats(self,wave_type,scenario_name,year,ci_interval,stat_name,duration):
@@ -724,6 +786,7 @@ class ExtremeTemperatureWaves(Extremes):
         solve_options = self.solve_options
         obj = None
         # Form the parameters needed by Extremes but on a monthly basis.
+        solve_obj = None
         for hot_tup,cold_tup in zip(stats['heat wave'].items(), stats['cold snap'].items()):
             
             month = cold_tup[0]
@@ -745,6 +808,16 @@ class ExtremeTemperatureWaves(Extremes):
                     if 'test_mode' in solve_options['future']:
                         if solve_options['future']['test_mode']:
                             solve_options['x_solution'] = obj.obj_solve.optimize_result.x
+                            
+            if not 'future' in self.solve_options:
+                self.solve_options[VALID_SOLVE_OPTION_TIMES[1]] = {}
+
+            if not VALID_SOLVE_INPUTS[23] in self.solve_options[VALID_SOLVE_OPTION_TIMES[1]]:
+                
+                self.solve_options[VALID_SOLVE_OPTION_TIMES[1]][VALID_SOLVE_INPUTS[23]] = {} 
+                
+            extra_columns = _process_extra_columns(self.solve_options[VALID_SOLVE_OPTION_TIMES[1]][VALID_SOLVE_INPUTS[23]], 
+                                                   month, year, scenario, increase_factor_ci)       
             # Due to not finding information in IPCC yet, we assume that cold events
             # do not increase in magnitude or frequency.
             obj = _DeltaTransition_IPCC_FigureSPM6(hot_param,
@@ -761,7 +834,11 @@ class ExtremeTemperatureWaves(Extremes):
                                                month,
                                                self._random_seed,
                                                solve_options,
-                                               cold_snap_shift)
+                                               cold_snap_shift,
+                                               write_csv=True,
+                                               extra_columns=extra_columns,
+                                               solve_obj=solve_obj)
+            solve_obj = obj.obj_solve
             solution_obtained = True
 
             transition_matrix_delta[month] = obj.transition_matrix_delta
@@ -1617,7 +1694,14 @@ class _DeltaTransition_IPCC_FigureSPM6():
                  month=None,
                  random_seed=None,
                  solve_options=None,
-                 cold_snap_shift=None):
+                 cold_snap_shift=None,
+                 write_csv=False,
+                 extra_columns=None,
+                 solve_obj=None):
+        if solve_obj is None:
+            self.obj_solve = None
+        else:
+            self.obj_solve = solve_obj
         
         #input validation
         if use_global==False:
@@ -1658,6 +1742,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
             self._delT_ipcc_min_frac = delT_ipcc_min_frac
             self.delT_ipcc_frac = self._hw_probability_shape_func(prob_hw_arr)
             delT_ipcc_frac_month = self.delT_ipcc_frac[int(month-1)]
+            
         else:
             hw_delT = None 
             baseline_delT = None
@@ -1700,7 +1785,8 @@ class _DeltaTransition_IPCC_FigureSPM6():
             tup = self._new_analysis(hot_param,cold_param,delT_ipcc_frac_month,
                                ipcc_val_10,ipcc_val_50,increase_factor_ci,
                                delta_TG, solve_options,random_seed, 
-                               month_hours_per_year,cold_snap_shift)
+                               month_hours_per_year,cold_snap_shift,write_csv,
+                               extra_columns)
             
         
         (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
@@ -1874,7 +1960,8 @@ class _DeltaTransition_IPCC_FigureSPM6():
     def _new_analysis(self, hot_param, cold_param, delT_ipcc_frac_month, 
                       ipcc_val_10, ipcc_val_50,
                       increase_factor_ci, delta_TG, solve_options, random_seed,
-                      frac_month_hours_per_year,cold_snap_shift):
+                      frac_month_hours_per_year,cold_snap_shift,write_csv,
+                      extra_columns):
 
         # 1. arrange inputs
         if random_seed is None:
@@ -1912,34 +1999,47 @@ class _DeltaTransition_IPCC_FigureSPM6():
             param0[wn2] = mstats[wn1]
         
         # END OF ARRANGING INPUTS
-        
-        obj_solve = SolveDistributionShift(opt_val['num_step'], 
-                               param0, 
-                               random_seed, 
-                               hist0, 
-                               durations0, 
-                               opt_val['delT_above_shifted_extreme'], 
-                               historic_time_interval, 
-                               int(frac_month_hours_per_year*HOURS_IN_YEAR),
-                               problem_bounds=opt_val['problem_bounds'],
-                               ipcc_shift=ipcc_shift,
-                               decay_func_type=opt_val['decay_func_type'],
-                               use_cython=opt_val['use_cython'],
-                               num_cpu=opt_val['num_cpu'],
-                               plot_results=opt_val['plot_results'],
-                               max_iter=opt_val['max_iter'],
-                               plot_title=opt_val['plot_title'],
-                               fig_path=opt_val['fig_path'],
-                               weights=opt_val['weights'],
-                               limit_temperatures=opt_val['limit_temperatures'],
-                               min_num_waves=opt_val['min_num_waves'],
-                               x_solution=opt_val['x_solution'],
-                               test_mode=opt_val['test_mode'])
-        self.obj_solve = obj_solve
+        if self.obj_solve is None:
+            obj_solve = SolveDistributionShift(opt_val['num_step'], 
+                                   param0, 
+                                   random_seed, 
+                                   hist0, 
+                                   durations0, 
+                                   opt_val['delT_above_shifted_extreme'], 
+                                   historic_time_interval, 
+                                   int(frac_month_hours_per_year*HOURS_IN_YEAR),
+                                   problem_bounds=opt_val['problem_bounds'],
+                                   ipcc_shift=ipcc_shift,
+                                   decay_func_type=opt_val['decay_func_type'],
+                                   use_cython=opt_val['use_cython'],
+                                   num_cpu=opt_val['num_cpu'],
+                                   plot_results=opt_val['plot_results'],
+                                   max_iter=opt_val['max_iter'],
+                                   plot_title=opt_val['plot_title'],
+                                   out_path=opt_val['out_path'],
+                                   weights=opt_val['weights'],
+                                   limit_temperatures=opt_val['limit_temperatures'],
+                                   min_num_waves=opt_val['min_num_waves'],
+                                   x_solution=opt_val['x_solution'],
+                                   test_mode=opt_val['test_mode'],
+                                   num_postprocess=opt_val["num_postprocess"],
+                                   extra_output_columns=extra_columns)
+            self.obj_solve = obj_solve
+        else:
+            inputs = {"param0":param0,
+                      "hist0":hist0,
+                      "durations0":durations0,
+                      "hours_per_year":int(frac_month_hours_per_year * HOURS_IN_YEAR),
+                      "x_solution":opt_val['x_solution'],
+                      "out_path":opt_val['out_path'],
+                      "extra_output_columns":extra_columns,
+                      "ipcc_shift":ipcc_shift}
+            self.obj_solve.reanalyze(inputs,write_csv)
 
         
-        par = obj_solve.param
-        des = obj_solve.del_shifts
+        
+        par = self.obj_solve.param
+        des = self.obj_solve.del_shifts
         
         Phwm = hot_param["hourly prob of heat wave"]
         # probability a heat wave is sustainted
@@ -1963,7 +2063,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
         del_a_delT_max_hwm = des['hw']['del_a']
         del_b_delT_max_hwm = des['hw']['del_b']
         
-        delT_abs_max = obj_solve.abs_max_temp  # this is a dictionary which is new
+        delT_abs_max = self.obj_solve.abs_max_temp  # this is a dictionary which is new
 
         return (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
            P_prime_hwsm, del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
@@ -2237,7 +2337,6 @@ class _DeltaTransition_IPCC_FigureSPM6():
         # NEXT STEPS - GATHER ALL YOUR VARIABLES AND FORMULATE THE DELTA M matrix
         # RETURN THEM SO YOU CAN GET THEM INTO MEWS' original EXTREMES class.
         if abs(P_prime_hwm) > 1 or abs(P_prime_hwsm) > 1:
-            breakpoint()
             raise ValueError("The adjusted probabilities must be less than one!")
     
         return (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 

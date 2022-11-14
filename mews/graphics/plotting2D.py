@@ -47,7 +47,7 @@ class Graphics():
         return fig, ax
 
     @staticmethod
-    def plot_sample_dist_shift(hist0, histT_tuple_dict, ipcc_shift, thresholds_dict, events, plot_title=None, fig_path=None, is_temperature=True):
+    def plot_sample_dist_shift(hist0, histT_tuple_dict, ipcc_shift, thresholds_dict, events, plot_title=None, fig_path=None, is_temperature=True, plot_results=False):
         """
 
 
@@ -69,7 +69,6 @@ class Graphics():
         # adjust historical bins if needed.
         
 
-        
         for histT_tup, thresh_tup, ax in zip(histT_tuple_dict.items(), thresholds_dict.items(), axl):
             labels_given = False
             bin_prev = None
@@ -199,3 +198,6 @@ class Graphics():
             axl[0].set_title(plot_title)
         if not fig_path is None:
             plt.savefig(fig_path, dpi=300)
+            
+        if not plot_results:
+            plt.close(fig)
