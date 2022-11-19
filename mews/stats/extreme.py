@@ -290,7 +290,7 @@ class DiscreteMarkov():
                                                             state0,
                                                             self.coef,
                                                             np.array(int_func_list),
-                                                            check_inputs=False)
+                                                            check_inputs=True)
         else:
             if self.decay_func_type is None:
                 state = MarkovPy.markov_chain_py(cdf,prob,state0)
@@ -300,7 +300,7 @@ class DiscreteMarkov():
                                                        state0,
                                                        self.coef,
                                                        np.array(int_func_list),
-                                                       check_input=False)
+                                                       check_input=True)
 
         if count_in_min_steps_intervals:
             # translate state into an array of min_step length segments

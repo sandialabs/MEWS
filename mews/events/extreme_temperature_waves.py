@@ -685,8 +685,10 @@ class ExtremeTemperatureWaves(Extremes):
             
             for wt1, wt2 in WAVE_MAP.items():
                 new_stats[wt1][month] = param[wt2]
+            sobj_dict[month] = obj_solve
             
-            self.hist_obj_solve = obj_solve
+            
+        self.hist_obj_solve = sobj_dict
         return new_stats
     
 

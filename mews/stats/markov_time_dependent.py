@@ -72,30 +72,50 @@ def cython_function_input_checks(cdf,
 
     if (rand > 1).any() or (rand < 0).any():
         raise ValueError("The rand input vector elements must be a probabilities (i.e. 0<=rand<=1)")
-    elif (cdf > 1).any() or (cdf < 0).any():
+    elif (cdf > 1.0+1e-10).any() or (cdf < 0.0-1e-10).any():
+        print("BEGIN CDF\n\n")
+        print(cdf)
+        print("END CDF\n\n")
         raise ValueError("The cdf input matrix's elements must be probabilities (i.e. 0<=cdf<=1)")
     elif cdf.shape[0] != cdf.shape[1]:
         raise ValueError("The cdf must be a square matrix!")
     
-    for ftype in func_type:
-        for idx, col in enumerate(coef):
-            if ftype == 0 or ftype == 1 or ftype == 2 or ftype == 3:
-                if col[0] > 1.0 or col[0] < 0.0:
-                    raise ValueError("Exponent/slope coefficients must be between 0 and 1 for reasonable decays")
-            if ftype == 2 or ftype == 3:
-                if col[1] < 0.0:
-                    raise ValueError("The cutoff time must be greater than zero.")
-            if ftype == 4:
-                #coef - 1) time_to_peak
-                #       2) maximum probability
-                #       3) cutoff time!!
 
-                if col[0] < 0.0:
-                    raise ValueError("The peak time must be greater than zero!")
-                elif col[2] < 0.0:
-                    raise ValueError("The cutoff time must be greater than zero!")
-                elif col[1] < 0.0 or col[1] > 1.0:
-                    raise ValueError("The maximum probability must be between 0 and 1.")
+    for idx, col in enumerate(coef):
+        ftype = func_type[idx]
+        if ftype == 0 or ftype == 1 or ftype == 2 or ftype == 3:
+            if col[0] > 1.0 or col[0] < 0.0:
+                raise ValueError("Exponent/slope coefficients must be between 0 and 1 for reasonable decays")
+                
+        if ftype == 2 or ftype == 3:
+            if col[1] < 0.0:
+                raise ValueError("The cutoff time must be greater than zero.")
+                
+        if ftype == 4:
+            #coef - 1) time_to_peak
+            #       2) maximum probability
+            #       3) cutoff time!!
+            if col[0] < 0.0:
+                raise ValueError("The peak time must be greater than zero!")
+            elif col[2] < 0.0:
+                raise ValueError("The cutoff time must be greater than zero!")
+            elif col[1] < 0.0 or col[1] > 1.0:
+                raise ValueError("The maximum probability must be between 0 and 1.")
+                
+        if ftype == 5:
+            # coef 1) lambda for exp (-lambda * t),
+            #      2) cutoff time where probability = 0
+            #      3) delay time before exponential decay begins
+            if col[0] > 1.0 or col[0] < 0.0:
+                raise ValueError("Exponent/slope coefficients must be between 0 and 1 for reasonable decays")
+            if col[1] < 0.0:
+                raise ValueError("Cutoff time must be greater than 0.0.")
+            if col[2] < 0.0:
+                raise ValueError("Delay time must be greater than 0.0")
+                
+            
+        if ftype > 5:
+            raise ValueError("function types of 0 to 5 are allowed! A higher value of {0:d} was given".format(ftype))
             
     return state0, func_type
 
@@ -346,7 +366,7 @@ def evaluate_decay_function(cdf0,
                                                           coef[idym1,1],
                                                           coef[idym1,2])
     else:
-        raise ValueError("func_type must be 0,1,2,3, or 4...upredictable behavior is resulting!")
+        raise ValueError("func_type must be 0,1,2,3,4, or 5...upredictable behavior is resulting!")
         
     cdf1[0] = cdf0[0] + P0 * func_eval
     cdf1[idy] = one - P0 * func_eval

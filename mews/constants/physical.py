@@ -10,6 +10,7 @@ that are not user input to this location.
 """
 
 HOURS_IN_YEAR = 8760
+HOURS_IN_LEAP_YEAR = 8784
 HOURS_IN_DAY = 24
 DAYS_IN_YEAR = 365
 

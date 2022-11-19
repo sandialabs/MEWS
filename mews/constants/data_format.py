@@ -40,6 +40,11 @@ VALID_SOLVE_INPUTS = ['num_step',    #0
                  'num_postprocess',#22
                  'extra_output_columns']#23
 
+RESIDUAL_TERM_NAMES = ["Future temperature thresholds","Penalty on high temperatures",
+                       "Penalty on inverted waves (i.e. cold heat waves and hot cold snaps)",
+                       "Duration residuals multiplier", "Future stretched distribution residuals"]
+NUM_RESIDUAL_TERMS = len(RESIDUAL_TERM_NAMES)
+WEIGHTS_DEFAULT_ARRAY = np.ones(NUM_RESIDUAL_TERMS)
 
 VALID_SOLVE_OPTIONS = [VALID_SOLVE_INPUTS[8],#'problem_bounds
                        VALID_SOLVE_INPUTS[10],#'decay_func_type
@@ -69,7 +74,7 @@ _DEFAULT_S_OPT = {VALID_SOLVE_OPTIONS[0]:None,
                 VALID_SOLVE_OPTIONS[5]:20,
                 VALID_SOLVE_OPTIONS[6]:'',
                 VALID_SOLVE_OPTIONS[7]:"",
-                VALID_SOLVE_OPTIONS[8]:np.array([1.0,1.0,1.0,1.0]),
+                VALID_SOLVE_OPTIONS[8]:WEIGHTS_DEFAULT_ARRAY,
                 VALID_SOLVE_OPTIONS[9]:False,
                 VALID_SOLVE_OPTIONS[10]:{ABREV_WAVE_NAMES[0]:-20,ABREV_WAVE_NAMES[1]:20},
                 VALID_SOLVE_OPTIONS[11]:DEFAULT_SOLVER_NUMBER_STEPS,

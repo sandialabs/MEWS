@@ -9,16 +9,25 @@ Created on Fri Oct  7 08:28:02 2022
 """
 
 from mews.stats.extreme import DiscreteMarkov
-from mews.utilities.utilities import linear_interp_discreet_func, bin_avg
+from mews.utilities.utilities import (linear_interp_discreet_func, bin_avg,
+                                      histogram_non_intersection,
+                                      histogram_area,
+                                      histogram_intersection,
+                                      histogram_non_overlapping,
+                                      histogram_step_wise_integral)
 from numpy.random import default_rng
 from mews.stats.distributions import trunc_norm_dist, inverse_transform_fit
 from mews.utilities.utilities import find_extreme_intervals, create_complementary_histogram, dict_key_equal
 import matplotlib.pyplot as plt
 from mews.graphics.plotting2D import Graphics
-from scipy.optimize import minimize, LinearConstraint, differential_evolution, NonlinearConstraint
+from scipy.optimize import minimize, LinearConstraint, differential_evolution, NonlinearConstraint, fsolve
 from copy import deepcopy
 from warnings import warn
-from mews.constants.data_format import DECAY_FUNC_NAMES, ABREV_WAVE_NAMES, VALID_SOLVE_INPUTS
+from mews.constants.data_format import (DECAY_FUNC_NAMES, ABREV_WAVE_NAMES, 
+                                        VALID_SOLVE_INPUTS, 
+                                        DEFAULT_NONE_DECAY_FUNC, 
+                                        WEIGHTS_DEFAULT_ARRAY)
+from mews.constants.physical import HOURS_IN_LEAP_YEAR, HOURS_IN_YEAR
 
 import numpy as np
 import pandas as pd
@@ -82,18 +91,249 @@ def evaluate_temperature(durations, param, del_mu_T, del_sig_T, rng, wave_type):
     return temperature(T_per_durations, durations, pval)
 
 
+def calculated_hist0_stretched(hist0, ipcc_shift, historic_time_interval, hours_per_year, plot_results=False):
+    """
+
+    This function calculates a stretched form of the historical wave distribtuion
+    Such that it fulfills IPCC requirements but retains the generalized shape
+    of the historical distribution. A 4th order polynomial kernel function is used to 
+    integrate and find an optimal point at which the IPCC criteria are satisfied
+    
+    This stretched shape becomes the target shape for the entire future distribution
+    when solving for an IPCC shift in addition to direct residuals between the thresholds.
+
+    Parameters
+    ----------
+    hist0 : TYPE
+        DESCRIPTION.
+    ipcc_shift : TYPE
+        DESCRIPTION.
+    num_step : TYPE
+        DESCRIPTION.
+    historic_time_interval : TYPE
+        DESCRIPTION.
+    hours_per_year : TYPE
+        DESCRIPTION.
+    plot_result : bool : Optional
+        Output a plot of the old pdf versus the new pdf that has been stretched to
+        meet IPCC.
+
+    Raises
+    ------
+    ValueError
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+
+    def bilinear_kernel(T, A, T0, T10, T50):
+        return np.array([A[0]*(temp - T0)+1.0 if temp < T10
+                         else
+                         A[1]*(temp - T10) + A[0]*(T10 - T0) + 1.0
+                         if temp < T50
+                         else A[1]*(T50-T10) + A[0]*(T10 - T0) + 1.0
+                         for temp in T])
+
+    def cubic_kernel(T, A):
+        return np.polyval(np.poly1d([A[0], A[1], A[2], A[3], 1.0]), T)
+
+    def objective_function(x, param):
+
+        P10 = param[0]
+        P50 = param[1]
+        T10 = param[2]
+        T50 = param[3]
+        T10_shifted = param[4]
+        T50_shifted = param[5]
+        # must use normalized hist0
+        hist0 = param[6]
+        wt = param[7]  # wt = wave_type
+        return_new_pdf = param[8]
+
+        norm_area = histogram_step_wise_integral(
+            hist0, hist0[1].min(), hist0[1].max())
+        pdf0 = (hist0[0]/norm_area, hist0[1])
+        bin_ = pdf0[1]
+
+        if wt == "hw":
+            mult = 1.0
+        else:
+            mult = -1.0
+        
+        derivative_vals = 4*x[0]*bin_**3 + 3*x[1]*bin_**2 + 2*x[2]*bin_**2 + x[3]
+        
+        neg_deriv_penalty = -1e6 * derivative_vals[derivative_vals < 0.0].sum()
+
+        new_bin = bin_ * cubic_kernel(bin_, mult*x[0:4])
+
+        if wt == "hw":
+            
+            new_bin = np.concatenate([new_bin, np.array([new_bin[-1] + x[4]])])
+        else:
+            new_bin = np.concatenate([np.array([new_bin[0]-x[4]]), new_bin])
+        # add an extra free input to the pdf
+        if wt == "hw":
+            pdf0_0 = np.concatenate([pdf0[0], np.array([pdf0[0][-1]*x[5]])])
+        else:
+            pdf0_0 = np.concatenate([np.array([pdf0[0][0]*x[5]]), pdf0[0]])
+
+        # now recalculate and renormalize with the new bin spacing.
+
+        temp_pdf = (pdf0_0, new_bin)
+        norm_area_2 = histogram_step_wise_integral(
+            temp_pdf, temp_pdf[1].min(), temp_pdf[1].max())
+        pdf_new = (temp_pdf[0]/norm_area_2, new_bin)
+
+        if wt == "hw":
+            P10_actual = histogram_step_wise_integral(
+                pdf_new, bin_[0], T10_shifted)
+            P50_actual = histogram_step_wise_integral(
+                pdf_new, bin_[0], T50_shifted)
+        elif wt == "cs":
+            P10_actual = histogram_step_wise_integral(
+                pdf_new, bin_[0],T10_shifted)
+            P50_actual = histogram_step_wise_integral(
+                pdf_new, bin_[0],T50_shifted)
+        else:
+            raise ValueError("MEWS only handles 'cs', and 'hw' for wave types presently!")
+        
+        if wt == "hw":
+            residual2 = (P10 - P10_actual)**2 + (P50 - P50_actual)**2
+        else:
+            residual2 = 20**2*(P10 - P10_actual)**2 + 200**2*(P50 - P50_actual)**2
+            
+        # penalties if the distribution doesn't even contain the shifted T10 and T50
+        if (T10_shifted > pdf_new[1][-1] and wt == "hw"):
+            residual2 += (T10_shifted - pdf_new[1][-1])**2
+        elif (T10_shifted < pdf_new[1][0] and wt == "cs"):
+            residual2 += 20**2*(T10_shifted - pdf_new[1][0])**2
+
+        # larger terms are needed on "cs" because the probabilities
+        # are being assessed at 0.005, 0.00005 rather than at 0.98, 0.99 etc...
+        if (T50_shifted > pdf_new[1][-1] and wt == "hw"):
+            residual2 += (T50_shifted - pdf_new[1][-1])**2
+        elif (T50_shifted < pdf_new[1][0] and wt == "cs"):
+            residual2 += 200**2*(T50_shifted - pdf_new[1][0])**2
+
+        if return_new_pdf:
+            return residual2 + neg_deriv_penalty, pdf_new, P10_actual, P50_actual
+        else:
+            return residual2 + neg_deriv_penalty
+    # beginning of function.
+    hist0_stretched = {}
+    prob_vals = {}
+    param_val = {}
+    asol_val = {}
+
+    for wt, hist0_wt in hist0.items():
+
+        if not ipcc_shift[wt] is None:
+            
+            num_hist_wave = hist0_wt[0].sum()
+
+            cdf0 = ((hist0_wt[0]/hist0_wt[0].sum()).cumsum(),
+                    (hist0_wt[1][1:] + hist0_wt[1][0:-1])/2)
+
+            (P0_less_than_extreme, P_T_target_less_than_extreme,
+             P10_given_wave, P50_given_wave) = calculate_probabilities(num_hist_wave,
+                                                                       historic_time_interval,
+                                                                       hours_per_year,
+                                                                       ipcc_shift[wt],
+                                                                       wt)
+            Tthresh_historic = linear_interp_discreet_func(
+                P0_less_than_extreme,
+                cdf0)
+
+            # These are the exact values needed
+            T_shifted_target = Tthresh_historic + \
+                np.array([ipcc_shift[wt]['temperature']['10 year'],
+                         ipcc_shift[wt]['temperature']['50 year']])
+
+            param = [P_T_target_less_than_extreme[0],
+                     P_T_target_less_than_extreme[1],
+                     Tthresh_historic[0],
+                     Tthresh_historic[1],
+                     T_shifted_target[0],
+                     T_shifted_target[1],
+                     hist0_wt,
+                     wt,
+                     False]
+            # THIS SHOULD EXHIBIT A UNIQUE PERFECT SOLUTION UNLESS THE HISTOGRAM IS TOO COARSE
+            Asol = differential_evolution(objective_function, bounds=[
+                                          [-1e-3, 1e-3], [-5e-2, 5e-2], [-1e-1, 1e-1], [-1.0, 1.0], [0, 5], [0, 1]], args=(param,),tol = 0.000001)
+            param[-1] = True
+            residuals2, pdf_new, P10_actual, P50_actual = objective_function(
+                Asol.x, param)
+            
+            if Asol.fun > 1e-5:
+                warn("A perfect solution for shifting the temperature "+
+                     "distribution was not found. A square residual on 2 "+
+                     "probability targets of {0:10.8e} remains!".format(residuals2))
+                    
+            # return to a quantity.
+            hist0_stretched[wt] = (pdf_new[0]*hist0[wt][0].sum(), pdf_new[1])
+            
+            if plot_results:
+                pdf_norm_area = histogram_step_wise_integral(hist0[wt], hist0[wt][1].min(), hist0[wt][1].max())
+                pdf = (hist0[wt][0]/pdf_norm_area, hist0[wt][1])
+                fig,ax = plt.subplots(1,1)
+                ax.stairs(pdf[0], pdf[1])
+                ax.stairs(pdf_new[0],pdf_new[1])
+                ax.grid("on")
+                ax.set_xlabel("$\Delta$T ($^{\circ}$C)")
+                ax.set_ylabel("Probability Density Function")
+            
+            prob_vals[wt] = {"actual":{"10 year":P10_actual,"50 year":P50_actual},
+                             "target":{"10 year":P_T_target_less_than_extreme[0],"50 year":P_T_target_less_than_extreme[1]}}
+            param_val[wt] = param
+            asol_val[wt] = Asol
+        else:
+            hist0_stretched[wt] = None
+            prob_vals[wt] = None
+            param_val[wt] = None
+            asol_val[wt] = None
+            
+    return hist0_stretched, asol_val, objective_function, param_val, prob_vals
+
+def calculate_probabilities(num_hist_wave, historic_time_interval, hours_per_year, ipcc_shift, wave_type):
+    # Calculate probabilities
+    P10_given_wave, P50_given_wave = probability_of_extreme_10_50(
+        num_hist_wave, historic_time_interval, hours_per_year)
+    # probabilities a heat wave being less than the 10 and 50 year events
+    if wave_type == "cs":
+        P0_less_than_extreme = np.array([P10_given_wave,P50_given_wave])
+        P_T_target_less_than_extreme = np.array([P10_given_wave * ipcc_shift['frequency']['10 year'],
+                                                 P50_given_wave * ipcc_shift['frequency']['50 year']])
+    else:
+        P0_less_than_extreme = np.array([1.0-P10_given_wave, 1.0-P50_given_wave])
+        P_T_target_less_than_extreme = np.array([1.0 - P10_given_wave * ipcc_shift['frequency']['10 year'],
+                                                 1.0 - P50_given_wave * ipcc_shift['frequency']['50 year']])
+
+    # target probablities
+    
+
+    return P0_less_than_extreme, P_T_target_less_than_extreme, P10_given_wave, P50_given_wave
+
+
 def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
                                     histT_tuple,
                                     durations,
-                                    num_step,
                                     output_hist,
                                     delT_above_shifted_extreme,
                                     num_hist_wave,
                                     historic_time_interval,
                                     hours_per_year,
                                     wave_type,
-                                    weights):
+                                    weights,
+                                    hist0_stretched=None):
     # get and calculate cdf's for historical (0) and future (_T) distributions
+    # The hist0_strechted=None is for ObjectiveFunction.__init__ to
+    # go ahead and calculate and return a strethced hist0 that becomes the
+    # target distribution.
 
     cdf0 = ((hist0[0]/hist0[0].sum()).cumsum(),
             (hist0[1][1:] + hist0[1][0:-1])/2)
@@ -108,16 +348,12 @@ def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
         negative_penalty = (
             np.max([float((cdf_T[1] > 0).sum()) - 1.0, 0.0]))**2 * weights[2]
 
-    # Calculate probabilities
-    P10_given_wave, P50_given_wave = probability_of_extreme_10_50(
-        num_hist_wave, num_step, historic_time_interval, hours_per_year)
-
-    # probabilities a heat wave being less than the 10 and 50 year events
-    P0_less_than_extreme = np.array([1.0-P10_given_wave, 1.0-P50_given_wave])
-
-    # target probablities
-    P_T_target_less_than_extreme = np.array([1.0 - P10_given_wave * ipcc_shift['frequency']['10 year'],
-                                             1.0 - P50_given_wave * ipcc_shift['frequency']['50 year']])
+    (P0_less_than_extreme, P_T_target_less_than_extreme,
+     P10_given_wave, P50_given_wave) = calculate_probabilities(num_hist_wave,
+                                                               historic_time_interval,
+                                                               hours_per_year,
+                                                               ipcc_shift,
+                                                               wave_type)
 
     T_shifted_actual = linear_interp_discreet_func(
         P_T_target_less_than_extreme, cdf_T, False)
@@ -131,7 +367,7 @@ def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
         np.array([ipcc_shift['temperature']['10 year'],
                  ipcc_shift['temperature']['50 year']])
 
-    # penalize temperatures 5 C hotter than 50 year peak temperature
+    # penalize temperatures much hotter than 50 year peak temperature
     # The square root amplifies the low probability numbers to create increased residuals
     if wave_type == "hw":
         positive_penalty = ((histT_tuple[0][0][cdf_T[1] > (
@@ -140,6 +376,14 @@ def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
         positive_penalty = ((histT_tuple[0][0][cdf_T[1] < (
             T_shifted_target[1] + delT_above_shifted_extreme)]).sum())**0.5 * weights[1]
 
+    if not hist0_stretched is None:
+
+        shape_penalty = histogram_comparison_residuals(histT_tuple[0],hist0_stretched, weights[4], normalize=True)
+    else:
+        
+        shape_penalty = histogram_comparison_residuals(histT_tuple[0],hist0, weights[4], normalize=True)
+        
+        
     residuals = ((T_shifted_actual - T_shifted_target) /
                  T_shifted_target)**2 * weights[0]
 
@@ -149,10 +393,11 @@ def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
                 residuals,
                 negative_penalty,
                 positive_penalty)
-    return residuals + negative_penalty + positive_penalty
+
+    return residuals + negative_penalty + positive_penalty + shape_penalty
 
 
-def probability_of_extreme_10_50(num_hist_wave, num_step, historic_time_interval, hours_per_year):
+def probability_of_extreme_10_50(num_hist_wave, historic_time_interval, hours_per_year):
 
     num_hour_in_year = 8760
 
@@ -183,34 +428,50 @@ def duration_residuals_func(duration, duration0, ipcc_shift, weights):
     if ipcc_shift['frequency']['10 year'] it calculates a residual according to histogram comparison residuals
     in an attempt to make the number of waves equivalent.
     """
+    def bounding_penalty(duration0, duration, ipcc_shift, normalizing_factor, is_increase):
+
+        bound_duration = (
+            duration0[0]*ipcc_shift['frequency']['10 year'], duration0[1])
+        area = histogram_area(duration)
+
+        if is_increase:
+            area0 = histogram_area(duration0)
+            int_area = histogram_intersection(duration0, duration)
+            int_area_max = histogram_intersection(duration, bound_duration)
+        else:
+            area0 = histogram_area(bound_duration)
+            int_area = histogram_intersection(bound_duration, duration)
+            int_area_max = histogram_intersection(duration0, duration)
+
+        # lower_bound
+        if area0 - int_area > 0:
+            penalty = (area0 - int_area)/normalizing_factor
+        else:
+            penalty = 0.0
+
+        # upper bound
+        if area - int_area_max > 0:
+            penalty += (area - int_area_max)/normalizing_factor
+
+        return penalty
 
     match = (ipcc_shift is None) or (ipcc_shift['frequency'] == 1)
+
+    normalizing_factor = 0.5*np.min([duration[0].max()*(duration[1].max()-duration[1].min()),
+                                     duration0[0].max()*(duration0[1].max() - duration0[1].min())])
 
     if match:
         # we want actual numbers. - weight not included here but at return of penalty.
         residuals = histogram_comparison_residuals(
-            duration, duration0, 1.0, False)/(np.min([duration[0].max(), duration0[0].max()]))**2
+            duration, duration0, 1.0, False)/(normalizing_factor)
         penalty = residuals.sum()
     else:
-        num_waves = duration[0].sum()
-        num_waves0 = duration0[0].sum()
-        if ipcc_shift['frequency']['10 year'] > 1:
-            max_num_waves = num_waves0 * ipcc_shift['frequency']['10 year']
-            if num_waves > max_num_waves:
-                penalty = ((max_num_waves - num_waves)/num_waves0)**2
-            elif num_waves < num_waves0:
-                penalty = ((num_waves0 - num_waves)/num_waves)**2
-            else:
-                # TODO - give a slight penalty as we depart from the historic number of heat waves.
-                penalty = 0.0
-        else:
-            min_num_waves = num_waves0 * ipcc_shift['frequency']['10 year']
-            if num_waves < min_num_waves:  # we decreased more than the 10 year event which is not probable
-                penalty = ((min_num_waves - num_waves)/num_waves)**2
-            elif num_waves > num_waves0:  # we increased and should be decreasing.
-                penalty = ((num_waves - num_waves0)/num_waves0)**2
-            else:
-                penalty = 0.0
+        is_increase = ipcc_shift['frequency']['10 year'] > 1
+        penalty = bounding_penalty(
+            duration0, duration, ipcc_shift, normalizing_factor, is_increase)
+        # add additional penalty for non-overlapping area.
+        penalty += histogram_non_overlapping(duration0,
+                                             duration)/normalizing_factor
 
     return penalty * weights[3]
 
@@ -226,54 +487,20 @@ def histogram_comparison_residuals(histT, hist0, weight, normalize=True):
 
     """
 
-    avg_bin0 = bin_avg(hist0)
-    avg_binT = bin_avg(histT)
-    all_bin = np.unique(np.concatenate([avg_bin0, avg_binT]))
-
-    def within_epsilon(val, targ, epsilon):
-        return ((val < targ + epsilon) & (val > targ - epsilon))
-
     if normalize:
-        normT = histT[0]/histT[0].sum()
-        norm0 = hist0[0]/hist0[0].sum()
+        area0 = histogram_step_wise_integral(hist0)
+        areaT = histogram_step_wise_integral(histT)
+        hist0_temp = hist0[0]/area0
+        histT_temp = histT[0]/areaT
     else:
-        normT = histT[0]
-        norm0 = hist0[0]
+        hist0_temp = hist0[0]
+        histT_temp = histT[0]
 
-    # setup a way to evaluate if two values are close.
-    # TODO - speed this up. Either move it to cython or a massive list
-    #        comprehension.
-    avg_step = np.diff(avg_bin0).mean()
-    err = 1.0e-4 * avg_step
-    residuals_list = []
-    for abi in all_bin:
-        in_avg_bin0 = within_epsilon(abi, avg_bin0, err)
-        in_avg_binT = within_epsilon(abi, avg_binT, err)
-        if in_avg_bin0.sum() > 0 and in_avg_binT.sum() > 0:
-            id0 = in_avg_bin0.argmax()
-            idT = in_avg_binT.argmax()
-            residuals_list.append((normT[idT] - norm0[id0])**2.0)
-        elif in_avg_binT.sum() > 0:
-            residuals_list.append(normT[in_avg_binT.argmax()]**2)
-        elif in_avg_bin0.sum() > 0:
-            residuals_list.append(norm0[in_avg_bin0.argmax()]**2)
-        else:
-            raise ValueError("There must be alignment to within {0:5.3e} of histogram spacing between respective histograms\n\n".format(err) +
-                             "{0} \n\n and \n\n {1} \n\n are not aligned!".format(str(hist0), str(histT)))
-    residuals = np.array(residuals_list)
+    area_residual = histogram_non_intersection(
+        (hist0_temp, hist0[1]), (histT_temp, histT[1]))
 
-    # a rather tedious list comprehension. Saves computation time though.
-    # residuals = np.array(
-    # [(normT[np.where(avg_binT==abi)[0][0]] - norm0[np.where(avg_bin0==abi)[0][0]])**2
-    #     if ((abi in avg_bin0) and (abi in avg_binT))
-    #     else
-    # normT[np.where(avg_binT==abi)[0][0]]**2
-    #     if (abi in avg_binT)
-    #     else
-    # norm0[np.where(avg_bin0==abi)[0][0]]**2
-    #     for abi in all_bin])
-
-    return residuals * weight
+    # need an array so that other functions work out fine
+    return np.array([area_residual * weight])
 
 
 def unpack_coef_from_x(x, decay_func_type, events):
@@ -316,17 +543,14 @@ class ObjectiveFunction():
                                                    durations0,
                                                    historic_time_interval,
                                                    hours_per_year,
-                                                   ipcc_shift={
-                                                       'cs': None, 'hw': None},
-                                                   decay_func_type={
-                                                       'cs': None, 'hw': None},
+                                                   ipcc_shift=DEFAULT_NONE_DECAY_FUNC,
+                                                   decay_func_type=DEFAULT_NONE_DECAY_FUNC,
                                                    use_cython=True,
                                                    output_hist=False,
-                                                   delT_above_shifted_extreme={
-                                                       'cs': None, 'hw': None},
-                                                   weights=np.array(
-                                                       [1.0, 1.0, 1.0, 1.0]),
-                                                   min_num_waves=100):
+                                                   delT_above_shifted_extreme=DEFAULT_NONE_DECAY_FUNC,
+                                                   weights=WEIGHTS_DEFAULT_ARRAY,
+                                                   min_num_waves=100,
+                                                   hist0_stretched=DEFAULT_NONE_DECAY_FUNC):
         """
         This is an objective function. It finds residuals on one of the following
         criterion
@@ -413,10 +637,10 @@ class ObjectiveFunction():
                        drops to zero
                 x[10] = Maximum probability of sustaining a cold snap
 
-                x[11] = time to peak probability of sustaining a heat wave
-                x[12] = cutoff time at which probability of sustaining a heat wave
+                x[11] = Time to peak probability of sustaining a heat wave
+                x[12] = Maximum probability of sustaining a heat wave
+                x[13] = Cutoff time at which probability of sustaining a heat wave
                        drops to zero
-                x[13] = Maximum probability of sustaining a heat wave
 
 
 
@@ -500,7 +724,7 @@ class ObjectiveFunction():
                 # for cases where Markov process produces not enough heat waves. return
                 # 99999 residual recognizable at solution. We cannot get statistics on
                 # processes that are not creating events.
-                residuals[wave_type] = np.array([44444, 55555])
+                residuals[wave_type] = np.array([44444, 55555])*weights.sum()
                 thresholds[wave_type] = None
                 histT_tuple[wave_type] = None
                 duration_histograms[wave_type] = None
@@ -512,11 +736,11 @@ class ObjectiveFunction():
             else:
 
                 # normal evaluation cases.
+
                 histT_tuple[wave_type] = create_complementary_histogram(
                     Tsample[wave_type], hist0[wave_type])
 
                 # convert the durations to duration histograms for plotting later on.
-
                 # You must normalize num_step vs. historic_time_interval * hours_per_year/hours_in_year
                 duration_normalizing_factor = (
                     historic_time_interval * hours_per_year / self._hours_in_year) / num_step
@@ -534,7 +758,7 @@ class ObjectiveFunction():
 
                 else:
                     # this means very few waves are coming through and a statistical analysis is invalid. Huge Penalty
-                    duration_residuals[wave_type] = 99999
+                    duration_residuals[wave_type] = 1e5/duration_histograms[wave_type][0].sum()
 
                 if ipcc_shift[wave_type] is None:
 
@@ -547,21 +771,20 @@ class ObjectiveFunction():
 
                 else:
 
-                    residuals,
-                    negative_penalty,
-                    positive_penalty
                     if output_hist:
                         residuals[wave_type], thresholds[wave_type], temp_resid[wave_type], negative_penalty[wave_type], positive_penalty[wave_type] = ipcc_shift_comparison_residuals(
                             hist0[wave_type], ipcc_shift[wave_type],
                             histT_tuple[wave_type], durations[wave_type],
-                            num_step, output_hist, delT_above_shifted_extreme[wave_type],
-                            num_hist_wave, historic_time_interval, hours_per_year, wave_type, weights)
+                            output_hist, delT_above_shifted_extreme[wave_type],
+                            num_hist_wave, historic_time_interval, hours_per_year, 
+                            wave_type, weights, hist0_stretched[wave_type])
                     else:
                         residuals[wave_type] = ipcc_shift_comparison_residuals(hist0[wave_type], ipcc_shift[wave_type],
                                                                                histT_tuple[wave_type], durations[wave_type],
-                                                                               num_step, output_hist, delT_above_shifted_extreme[
+                                                                               output_hist, delT_above_shifted_extreme[
                                                                                    wave_type],
-                                                                               num_hist_wave, historic_time_interval, hours_per_year, wave_type, weights)
+                                                                               num_hist_wave, historic_time_interval, 
+                                                                               hours_per_year, wave_type, weights, hist0_stretched[wave_type])
 
         sum_resid = 0.0
         for wt, resid in residuals.items():
@@ -732,7 +955,7 @@ class SolveDistributionShift(object):
                  max_iter=20,
                  plot_title="",
                  out_path="",
-                 weights=np.array([1.0, 1.0, 1.0, 1.0]),
+                 weights=WEIGHTS_DEFAULT_ARRAY,
                  limit_temperatures=True,
                  min_num_waves=100,
                  x_solution=None,
@@ -899,6 +1122,8 @@ class SolveDistributionShift(object):
                           (or positive temperature cold snaps)
 
              weights[3] = multiplier on duration residuals
+             
+             weights[4] = Future stretched distribution residuals
 
         limit_temperatures : bool : optional : Default = True,
             Controls whether to use delT_above_shifted_extreme as a hard 
@@ -951,10 +1176,10 @@ class SolveDistributionShift(object):
                     calculated by this function
 
         """
-        if not hasattr(self,'inputs'):
+        if not hasattr(self, 'inputs'):
             self.df = None
             self._write_csv = False
-            
+
         self._default_problem_bounds = self._grab_relevant_bounds(
             decay_func_type, problem_bounds)
         self._test_mode = test_mode
@@ -993,23 +1218,24 @@ class SolveDistributionShift(object):
             else:
                 abs_max_temp[wtype] = (param0[wtype]['normalizing extreme temp'] + ipcc_shift[wtype]['temperature']['50 year'] +
                                        delT_above_shifted_extreme[wtype])
+                
+        
+        if problem_bounds is None:
+            self._prob_bounds = self._default_problem_bounds
+        else:
+            self._prob_bounds = problem_bounds
+
+        # linear constraint - do not allow Pcs and Phw to sum to more than specified amounts
+        # nonlinear constraint - do not allow maximum possible sampleable temperature to exceed a bound.
+        bounds_x0, linear_constraint, nonlinear_constraint = self._problem_bounds(decay_func_type,
+                                                                                  num_step,
+                                                                                  param0,
+                                                                                  abs_max_temp,
+                                                                                  limit_temperatures)
 
         # x_solution is a way to bypass optimization and to just evaluate the model on
         # a specific x_solution.
         if x_solution is None:
-
-            if problem_bounds is None:
-                self._prob_bounds = self._default_problem_bounds
-            else:
-                self._prob_bounds = problem_bounds
-
-            # linear constraint - do not allow Pcs and Phw to sum to more than specified amounts
-            # nonlinear constraint - do not allow maximum possible sampleable temperature to exceed a bound.
-            bounds_x0, linear_constraint, nonlinear_constraint = self._problem_bounds(decay_func_type,
-                                                                                      num_step,
-                                                                                      param0,
-                                                                                      abs_max_temp,
-                                                                                      limit_temperatures)
 
             constraints = [linear_constraint]
             # the nonlinear constrain is only enforceable when cutoff parameters are present
@@ -1017,8 +1243,15 @@ class SolveDistributionShift(object):
                 if not nlc is None:
                     constraints.append(nlc)
 
-            obj_func = ObjectiveFunction(self._events, random_seed)
-
+            obj_func = ObjectiveFunction(
+                self._events, random_seed)
+            
+            
+            # Create reasonable future histogram targets that reflect the IPCC shift but smoothly stretch
+            # the entire historical distribution
+            (hist0_stretched, asol_val, objective_function, param_val, prob_vals
+             ) = calculated_hist0_stretched(hist0,ipcc_shift, historic_time_interval,hours_per_year,plot_results)
+            
             # this optimization is not expected to converge. The objective function is stochastic. The
             # optimization still finds a solution but the population does not tend to stabilize because
             # of the stochastic objective function.
@@ -1038,7 +1271,8 @@ class SolveDistributionShift(object):
                                                            False,
                                                            delT_above_shifted_extreme,
                                                            weights,
-                                                           min_num_waves),
+                                                           min_num_waves,
+                                                           hist0_stretched),
                                                      constraints=tuple(
                                                          constraints),
                                                      workers=num_cpu,
@@ -1057,7 +1291,9 @@ class SolveDistributionShift(object):
                 optimize_result = None
 
         # TODO - establish level of convergence.
-
+        
+        self._is_solution_on_bounds(xf0,bounds_x0)
+        
         Tsample = {}
         durations = {}
         resid = {}
@@ -1099,8 +1335,8 @@ class SolveDistributionShift(object):
 
         # pack all results into a single self.df and write to csv if out_path != ""
         self._output_table(hist0, histT_tuple, durations0, durations,
-                         ipcc_shift, thresholds, self._events, out_path, 
-                         extra_output_columns)
+                           ipcc_shift, thresholds, self._events, out_path,
+                           extra_output_columns)
 
         # repackage everything for use in other parts of MEWS.
         self.optimize_result = optimize_result
@@ -1181,40 +1417,48 @@ class SolveDistributionShift(object):
         self.inputs['test_mode'] = test_mode
         self.inputs['num_postprocess'] = num_postprocess
         self.inputs['extra_output_columns'] = extra_output_columns
-    
-    def write_csv(self,out_path):
-        
+        self.bounds = bounds_x0
+
+    def write_csv(self, out_path):
         """
+        Incomplete or untested!
+        
         Write a csv from self.df - as an alternative to using reanalyze. 
         This helps cases where you just create the object once in a loop.
+
+        Parameters
+        ----------
+        out_path : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
         """
+    
         if not os.path.exists(os.path.dirname(out_path)):
-            try:
-                if len(os.path.dirname(out_path)) != 0:
-                    os.mkdir(os.path.dirname(out_path))
-            except:
-                breakpoint()
-            
-        
-        
+            if len(os.path.dirname(out_path)) != 0:
+                os.mkdir(os.path.dirname(out_path))
+
         one_or_more_period = "".join(out_path.split(".")[0:-1])
         if len(one_or_more_period) == 0:
             basestr = out_path
         else:
             basestr = one_or_more_period
 
-        self.df.to_csv(basestr + ".csv",na_rep="NaN")
+        self.df.to_csv(basestr + ".csv", na_rep="NaN")
 
     def reanalyze(self, inputs, write_csv=False):
         """
-        
+
 
         Parameters
         ----------
         inputs : dict
             A dictionary whose keys are only allowed to be input parameters names
             for the initialization of self (i.e. "SolveDistributionShift")
-            
+
         write_csv : bool, optional : Default = False
             Set to true to output the reanalysis (and all previous analyses.
             as a comma separated values (csv) file in the same directory location
@@ -1234,13 +1478,13 @@ class SolveDistributionShift(object):
             connects the MEWS analysis together.
 
         """
-        
-        
+
         if not isinstance(inputs, dict):
             raise TypeError("The input 'inputs' must be a dictionary!")
         if not isinstance(write_csv, bool):
-            raise TypeError("the input 'write_csv' must be a boolean (True/False)!")
-            
+            raise TypeError(
+                "the input 'write_csv' must be a boolean (True/False)!")
+
         self._write_csv = write_csv
 
         for key, val in inputs.items():
@@ -1254,8 +1498,8 @@ class SolveDistributionShift(object):
         tup = tuple([self.inputs[inp] for inp in self._valid_inputs])
 
         (num_step,
-         random_seed,
          param0,
+         random_seed,
          hist0,
          durations0,
          delT_above_shifted_extreme,
@@ -1413,13 +1657,26 @@ class SolveDistributionShift(object):
         elif not isinstance(num_postprocess, int):
             raise TypeError("The input 'num_postprocess' must be an integer!")
         elif not isinstance(extra_output_columns, dict):
-            raise TypeError("The input 'extra_output_columns' must be a dictionary!")
-            
-        for key,val in extra_output_columns.items():
+            raise TypeError(
+                "The input 'extra_output_columns' must be a dictionary!")
+        # look at total hours in events by durations0 These must be bounded by a fraction 
+        # of the total hours in the data.
+        hours_in_event = ((bin_avg(durations0['cs'])*durations0['cs'][0]).sum() + 
+                          (bin_avg(durations0['hw'])*durations0['hw'][0]).sum())
+        historic_hours = historic_time_interval * hours_per_year / HOURS_IN_YEAR
+        if historic_hours < hours_in_event:
+            raise ValueError("The historic record has more than 50% in extreme"+
+                             " states for total hours. This is not physically "+
+                             "realistic for 90% CI being used. Please investigate "+
+                             " the heat wave calculations")
+        
+        for key, val in extra_output_columns.items():
             if not isinstance(key, str):
-                raise TypeError("All keys to 'extra_output_columns' must be strings")
+                raise TypeError(
+                    "All keys to 'extra_output_columns' must be strings")
             if not isinstance(val, (str, numbers.Number, bool)):
-                raise TypeError("All values in 'extra_output_columns' must be string, numeric, or boolean!")
+                raise TypeError(
+                    "All values in 'extra_output_columns' must be string, numeric, or boolean!")
 
         if min_num_waves < 10:
             raise ValueError("The analysis being done is statistical. The minimum" +
@@ -1430,7 +1687,7 @@ class SolveDistributionShift(object):
             raise ValueError(
                 "The input 'num_postprocess' must be between 1 and 100!")
 
-        if hours_per_year > 8784 or hours_per_year < 0:
+        if hours_per_year > HOURS_IN_LEAP_YEAR or hours_per_year < 0:
             raise ValueError("The input 'hours_per_year' must be between 0 to" +
                              " 8784 and is ususally the number of hours in the" +
                              " current month being analyzed in the historic record.")
@@ -1439,9 +1696,9 @@ class SolveDistributionShift(object):
             if wt < 0.0:
                 raise ValueError(
                     "The elements of input 'weights' must be positive")
-        if len(weights) != 4:
+        if len(weights) != 5:
             raise ValueError(
-                "The input 'weights' should only have 4 elements.")
+                "The input 'weights' must have 5 elements.")
 
         if isinstance(problem_bounds, dict):
             dict_key_equal(self._default_problem_bounds, problem_bounds)
@@ -1596,15 +1853,15 @@ class SolveDistributionShift(object):
                 elif decay_func == DECAY_FUNC_NAMES[5]:
                     bounds_x0.append(
                         tuple(max_duration * np.array(dpb[wt]['multipliers to max probability time'])))
+                    bounds_x0.append(
+                        tuple(dpb[wt]['max peak prob for quadratic model']))
                     # cutoff times can be much larger
                     bounds_x0.append(
                         tuple(max_duration * np.array(dpb[wt]['cutoff time multipliers'])))
-                    bounds_x0.append(
-                        tuple(dpb[wt]['max peak prob for quadratic model']))
                     num_added = 3
                 elif decay_func == DECAY_FUNC_NAMES[6]:
                     bounds_x0.append(
-                        tuple(max_duration * np.array(dpb[wt]['slope or exponent multipliers'])))
+                        tuple(np.array(dpb[wt]['slope or exponent multipliers'])/max_duration))
                     # cutoff times can be much larger
                     bounds_x0.append(
                         tuple(max_duration * np.array(dpb[wt]['cutoff time multipliers'])))
@@ -1678,83 +1935,106 @@ class SolveDistributionShift(object):
                     raise ValueError("\n\nThe problem bounds for {0} type decay functions does not include '{2}' only contains the following entries: {1}".format(
                         decay_name, str(self._decay_func_types_entries[decay_name]), key))
         return new_dict
-
+    
+    
+    def _is_solution_on_bounds(self,solution,bounds):
+        
+        idx = 0
+        for sol,bound in zip(solution,bounds):
+            bound_range = bound[1] - bound[0]
+            if (sol - bound[0])/bound_range < 0.001:
+                warn("Variable x[{0:d}] is on its lower bound. Consider".format(idx)+
+                     " expanding the boundaries through the solve_options"+
+                     "['problem_bounds'] dictionary input.")
+            elif (bound[1]-sol)/bound_range < 0.001:
+                warn("Variable x[{0:d}] is on its upper bound. Consider".format(idx)+
+                     " expanding the boundaries through the solve_options"+
+                     "['problem_bounds'] dictionary input.")
+        pass
+    
     def _output_table(self, hist0, histT_tuple, durations0, durations, ipcc_shift, thresholds, events, out_path, extra_output_columns):
-        
-        
-        def add_histogram_rows(hist,table,event,extra_output_columns,unit,valtype, postprocess_num, threshold, normalize=False, write_csv=False):
+
+        def add_histogram_rows(hist, table, event, extra_output_columns, unit, valtype, postprocess_num, threshold, normalize=False, write_csv=False):
             if normalize:
                 norm = hist[0].sum()
             else:
                 norm = 1.0
             for idx, val in enumerate(hist[0]):
-                crow = [val/norm, valtype, unit, hist[1][idx], hist[1][idx+1], event, postprocess_num, threshold]
-                for key,val in extra_output_columns.items():
+                crow = [val/norm, valtype, unit, hist[1][idx], hist[1]
+                        [idx+1], event, postprocess_num, threshold]
+                for key, val in extra_output_columns.items():
                     crow.append(val)
-                    
+
                 table.append(crow)
-                
-        def add_threshold_rows(table,thre, event, postproc_num,extra_output_columns):
+
+        def add_threshold_rows(table, thre, event, postproc_num, extra_output_columns):
             for key, thr in thre.items():
-                for idx,val in enumerate(thr):
+                for idx, val in enumerate(thr):
                     if idx == 0:
                         tstr = "10 year "
                     else:
                         tstr = "50 year "
-                    lis = [np.nan, tstr + key, "degC", np.nan, np.nan, event, postproc_num, val]
-                    for key2,val2 in extra_output_columns.items():
+                    lis = [np.nan, tstr + key, "degC", np.nan,
+                           np.nan, event, postproc_num, val]
+                    for key2, val2 in extra_output_columns.items():
                         lis.append(val2)
                     table.append(lis)
-                    
+
         def add_shift_rows(table, shift, event, extra_output_columns):
             for key, shi in shift.items():
-                for key2,val in shi.items():
+                for key2, val in shi.items():
                     if key == "temperature":
                         unit = "degC"
                     else:
                         unit = "frequency multiplier"
-                    lis = [np.nan, key2 + " " + key + " shift", unit, np.nan, np.nan, event, np.nan, val]
-                    for key3,val2 in extra_output_columns.items():
+                    lis = [np.nan, key2 + " " + key + " shift",
+                           unit, np.nan, np.nan, event, np.nan, val]
+                    for key3, val2 in extra_output_columns.items():
                         lis.append(val2)
                     table.append(lis)
-                    
+
         table = []
-        columns = ['histogram value','type','unit','bin start','bin end','event','postprocess num','threshold']
+        columns = ['histogram value', 'type', 'unit', 'bin start',
+                   'bin end', 'event', 'postprocess num', 'threshold']
         for key in extra_output_columns.keys():
             columns.append(key)
-        
+
         for event in events:
             h0e = hist0[event]
             d0e = durations0[event]
 
-            add_histogram_rows(h0e,table,event,extra_output_columns,"degC","data temperature",np.nan,np.nan, True)
-            add_histogram_rows(d0e,table,event,extra_output_columns,"hr","data duration",np.nan,np.nan)
-            
+            add_histogram_rows(h0e, table, event, extra_output_columns,
+                               "degC", "data temperature", np.nan, np.nan, True)
+            add_histogram_rows(
+                d0e, table, event, extra_output_columns, "hr", "data duration", np.nan, np.nan)
+
             # remember histT_tuple has two entries one with averaged bin locations
             for postproc_num, hTpost in histT_tuple.items():
                 hTe = hTpost[event]
                 dTe = durations[postproc_num][event]
                 # now do the fit or future results histograms
-                add_histogram_rows(hTe[0],table,event,extra_output_columns,"$^{\circ}$C","fit temperature",postproc_num,np.nan, True)
-                add_histogram_rows(dTe,table,event,extra_output_columns,"hr","fit duration",postproc_num,np.nan)
-                
-                
+                add_histogram_rows(hTe[0], table, event, extra_output_columns,
+                                   "$^{\circ}$C", "fit temperature", postproc_num, np.nan, True)
+                add_histogram_rows(dTe, table, event, extra_output_columns,
+                                   "hr", "fit duration", postproc_num, np.nan)
+
                 if not thresholds[postproc_num][event] is None:
-                    add_threshold_rows(table,thresholds[postproc_num][event],event, postproc_num,extra_output_columns)
-                
+                    add_threshold_rows(
+                        table, thresholds[postproc_num][event], event, postproc_num, extra_output_columns)
+
             if not ipcc_shift[event] is None:
-                add_shift_rows(table, ipcc_shift[event], event, extra_output_columns)
-        
-        df = pd.DataFrame(table,columns=columns)
-        
+                add_shift_rows(
+                    table, ipcc_shift[event], event, extra_output_columns)
+
+        df = pd.DataFrame(table, columns=columns)
+
         if self.df is None:
             self.df = df
         else:
-            self.df = pd.concat([self.df,df])
+            self.df = pd.concat([self.df, df])
 
         if self._write_csv and len(out_path) > 0:
             self.write_csv(out_path)
-
 
 
 class MaxTemperatureNonlinearConstraint():

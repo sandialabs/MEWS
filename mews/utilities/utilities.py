@@ -86,7 +86,182 @@ def check_for_nphistogram(hist):
         raise TypeError("The histogram tuples elements must be of type np.ndarray")
     elif len(hist[0]) != len(hist[1]) - 1:
         raise ValueError("The histogram tuple first entry must be one element smaller in lenght than the second entry!")
+
+def histogram_area(hist):
+    bin_ = bin_avg(hist)
+    h_ = hist[0]
+    
+    return np.trapz(h_,bin_)
+
+def histogram_step_wise_integral(hist,a=None,b=None):
+    """
+    Calculates the integral assuming that a constant value is sustained
+    for each bin in a histogram
+
+    Parameters
+    ----------
+    hist : 2-tuple from np.histogram first entry is one less long as second
+           first element are values and second element are bin edges
+        DESCRIPTION.
+    a : float, optional
+        lower integration boundary. The default is None. If None, then just
+        use the lowest bound of the histogram bins
+    b : float, optional
+        upper integration boundary. The default is None. If None, then just
+        use the highest bound of the histogram bins
+
+    Raises
+    ------
+    ValueError
+        raised if a > b.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    if a is None:
+        a = hist[1].min()
+    if b is None:
+        b = hist[1].max()
+    
+    if a > b:
+        raise ValueError("Input 'a' must be greater than input 'b'.")
+    if a == b:
+        return 0.0
+    
+    bin_ = hist[1]
+    h_ = hist[0]    
+    
+    if a > bin_[-1]:
+        return 0.0
+    elif b < bin_[0]:
+        return 0.0
+    
+    
+    if a < bin_[0]:
+        beg_area = 0.0
+        beg_bin = 0
+    else:
+        # this is the first bin boundary division ahead of a
+        diva = (bin_ < a).argmin()
+        beg_area = h_[diva-1] * (bin_[diva] - a)
+        beg_bin = diva
         
+    if b > bin_[-1]:
+        end_area = 0.0
+        end_bin = len(bin_)
+    else:
+        divb = (bin_ < b).argmin()
+        end_area = h_[divb-1] * (b - bin_[divb-1])
+        end_bin = divb-1
+        
+    return (np.diff(bin_)[beg_bin:end_bin] * h_[beg_bin:end_bin]).sum() + beg_area + end_area
+    
+
+def histogram_intersection(hist1,hist2):
+    def int_boundaries(bin_,maxb,minb):
+        bin_ = bin_[bin_ <= maxb]
+        return bin_[bin_ >= minb]
+    
+    bin1 = bin_avg(hist1)
+    bin2 = bin_avg(hist2)
+    h1 = hist1[0]
+    h2 = hist2[0]
+    
+    maxintb = np.min([bin1.max(),bin2.max()])
+    minintb = np.max([bin1.min(),bin2.min()])
+    
+    bin1int = int_boundaries(bin1,maxintb,minintb)
+    bin2int = int_boundaries(bin2,maxintb,minintb)
+    
+    intpoint = np.unique(np.concatenate([bin1int,bin2int]))
+    
+    interp_vals1 = np.interp(intpoint,bin1,h1)
+    interp_vals2 = np.interp(intpoint,bin2,h2)
+    
+    minvals = np.min(np.concatenate([interp_vals1.reshape([len(interp_vals1),1]),
+                           interp_vals2.reshape([len(interp_vals2),1])],axis=1),axis=1)
+    
+    return np.trapz(minvals,intpoint)
+
+
+def histogram_non_overlapping(hist1,hist2,return_min_max=False):
+    bin1 = bin_avg(hist1)
+    bin2 = bin_avg(hist2)
+    h1 = hist1[0]
+    h2 = hist2[0]
+    
+    # find max boundaries 
+    maxintb = np.min([bin1.max(),bin2.max()])
+    minintb = np.max([bin1.min(),bin2.min()])
+    
+    maxb = np.max([bin1.max(),bin2.max()])
+    minb = np.min([bin1.min(),bin2.min()])
+    
+    
+    # establish what points to integrate
+    if maxb in bin1:
+        elem = bin1 >= maxintb
+        intpoint_max = bin1[elem]
+        h_max = h1[elem]
+    else:
+        elem = bin2 >= maxintb
+        intpoint_max = bin2[elem]
+        h_max = h2[elem]
+    
+    if minb in bin1:
+        elem = bin1 <= minintb
+        intpoint_min = bin1[elem]
+        h_min = h1[elem]
+    else:
+        elem = bin2 <= minintb
+        intpoint_min = bin2[elem]
+        h_min = h2[elem]
+        
+    # integrate
+    min_side_area = np.trapz(h_min,intpoint_min)
+    max_side_area = np.trapz(h_max,intpoint_max) 
+    
+    if return_min_max:
+        return min_side_area, max_side_area
+    else:
+        return min_side_area + max_side_area
+
+
+def histogram_non_intersection(hist1,hist2):
+    """
+    Calculates a numeric approximation of the non-intersecting area of 
+    two histograms. values are assumed to occur at the centriod of each bin
+    significant errors may result for low-resolution histograms
+
+    Parameters
+    ----------
+    hist1 : tuple output from numpy.histogram
+        first histogram
+    hist2 : tuple output from numpy.histogram
+        second histogram
+
+    Returns
+    -------
+    float
+        Non-intersecting area of a histogram.
+
+    """
+    
+    intersect_area = histogram_intersection(hist1,hist2)
+    non_overlapping_area = histogram_non_overlapping(hist1,hist2)
+    
+    bin1 = bin_avg(hist1)
+    bin2 = bin_avg(hist2)
+    
+    area1 = np.trapz(hist1[0],bin1)
+    area2 = np.trapz(hist2[0],bin2)
+    
+    return area1 + area2 - 2 * intersect_area
+    
+
 def create_complementary_histogram(sample, hist0):
     
     """
@@ -123,37 +298,14 @@ def create_complementary_histogram(sample, hist0):
     
         check_for_nphistogram(hist0)
         
-        bin_spacing = np.diff(hist0[1])
+        bin_spacing = np.diff(hist0[1]).mean()
         
-        # assure a constant
-        if bin_spacing[0] < 0.0:
-            sign = -1
-        else:
-            sign = 1
-        if ((bin_spacing < bin_spacing[0]*(1-sign*0.000001)).any() or 
-            (bin_spacing > bin_spacing[0]*(1. + sign*0.000001)).any()):
-            raise ValueError("The histogram input 'hist0' must have a constant bin spacing")
+        start = np.floor(sample.min() / bin_spacing)
+        end = np.ceil(sample.max()/ bin_spacing)
         
-        # find the closest point to sample.min() in hist0[1]
-        idmin = np.array([np.abs(sample.min() - val) for val in hist0[1]]).argmin()
-        idmax = np.array([np.abs(sample.max() - val) for val in hist0[1]]).argmin()
+        num_bin = int(end - start)
         
-        # increment away from the closest point until you exceed the min and max of the sample
-        id_minval = np.array([hist0[1][idmin] - idx * bin_spacing[0] < sample.min() for idx in range(2*int(np.abs(sample.min() - hist0[1].min()))+1)]).argmax()
-        id_maxval = np.array([hist0[1][idmax] + idx * bin_spacing[0] > sample.max() for idx in range(2*int(np.abs(sample.max() - hist0[1].max()))+1)]).argmax()
-        
-        minval = hist0[1][idmin] - id_minval * bin_spacing[0]
-        maxval = hist0[1][idmax] + id_maxval * bin_spacing[0]
-        
-        num_bin = (maxval-minval)/bin_spacing[0]
-        
-        if np.abs(num_bin - round(num_bin)) > 1e-6:
-            raise ValueError("The bin spacing algorithm has not produced a whole integer!")
-        
-        num_bin = int(num_bin)
-        
-        hist1 = np.histogram(sample,num_bin,range=(minval,
-                                                   maxval))
+        hist1 = np.histogram(sample,num_bin,range=(start*bin_spacing,end*bin_spacing))
         
         bin_avg = (hist1[1][1:]+hist1[1][0:-1])/2
         
