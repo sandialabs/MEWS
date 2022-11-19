@@ -5,8 +5,8 @@
 
 The Multi-scenario Extreme Weather Simulator (MEWS) is a Python package designed to add
 extreme weather events to existing weather data or projections. MEWS does not simulate
-weather but rather adds variations in weather for the purpose of probabilistic resilience
-analyses of infrastructure systems. 
+weather but rather adds variations in weather for the purpose of probabilistic analyses 
+of infrastructure or environmental systems. 
 
 Currently, MEWS provides the capacity to add extreme events that are initiated via a Markov
 chain. When an extreme events occurs, sampling from a probability distribution indicates 
