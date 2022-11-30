@@ -26,6 +26,10 @@ from mews.stats.distributions import (cdf_truncnorm, trunc_norm_dist,
 from mews.constants.data_format import (WAVE_MAP, VALID_SOLVE_OPTIONS, DEFAULT_SOLVE_OPTIONS,
                                         VALID_SOLVE_OPTION_TIMES,VALID_SOLVE_INPUTS)
 
+from mews.utilities.utilities import (write_readable_python_dict,
+                                      read_readable_python_dict,
+                                      dict_key_equal)
+
 from copy import deepcopy
 from datetime import datetime
 from scipy.optimize import bisect, fsolve
@@ -45,6 +49,33 @@ from warnings import warn
 
 import matplotlib.pyplot as plt
 
+
+def _assemble_x_solution(stats,month):
+    """
+    This must follow the x input vector convention for 
+    ObjectiveFunction.markov_gaussian_model_for_peak_temperature
+    in solve.py
+
+    Returns
+    -------
+    x_solution : TYPE
+        DESCRIPTION.
+
+    """
+    # no deltas on mean and std.
+    x_solution = [0.0,0.0,0.0,0.0]
+    # proba of waves
+    x_solution.append(stats['cold snap'][month]['hourly prob of heat wave'])
+    x_solution.append(stats['heat wave'][month]['hourly prob of heat wave'])
+    # probab sustain waves
+    x_solution.append(stats['cold snap'][month]['hourly prob stay in heat wave'])
+    x_solution.append(stats['heat wave'][month]['hourly prob stay in heat wave'])
+    for wave_type in ['cold snap', 'heat wave']:
+        if 'decay function coef' in stats[wave_type][month]:
+            for coef in stats[wave_type][month]['decay function coef']:
+                x_solution.append(coef)
+
+    return np.array(x_solution)
 
 def _mix_user_and_default(default_vals,solve_type,solve_options):
     opt_val = {}
@@ -67,6 +98,28 @@ def _process_extra_columns(ext_col,month,fut_year=None,clim_scen=None,ci_interva
             ext_col[key] = 'historic'
     
     return ext_col
+
+def _create_figure_out_name(dirname,basename,month,is_dir,dir_exists,scen=None,ci_int=None,year=None,is_historic=True):
+
+    if not dir_exists:
+        if not os.path.exists(dirname) and len(dirname) > 0:
+            os.mkdir(dirname)
+                
+    if not scen is None:
+        ext_str = "_{0}_{1}_{2}".format(scen,ci_int,str(year))
+    else:
+        ext_str = ""
+    if is_historic:
+        hstr = "historic"
+    else:
+        hstr = "future"
+        
+    if is_dir:
+        filename = os.path.join(dirname,basename,hstr+"_month_{0:d}{1}.png".format(month,ext_str))
+    else:
+        filename = os.path.join(dirname,basename.split(".")[0]+"_"+hstr+"_month_{0:d}{1}.png".format(month,ext_str))
+    
+    return filename
 
 class ExtremeTemperatureWaves(Extremes):
     
@@ -210,10 +263,18 @@ class ExtremeTemperatureWaves(Extremes):
              'num_step',
              'min_num_waves',
              'x_solution',
-             'test_mode']
+             'test_mode',
+             'num_postprocess',
+             'extra_output_columns']
             
         See the documentation for mews.stats.solve.SolveDistributionShift 
         to understand these parameters.
+        
+    solution_file : str : optional : Default = ""
+        Path and name of a file that contains a solution either historic
+        or for the current scenario. This enables by-passing the optimization
+        problem that takes significant computational resources so that
+        MEWS can implement a solution already computed quickly
         
     Returns
     -------
@@ -243,7 +304,8 @@ class ExtremeTemperatureWaves(Extremes):
                  num_cpu=None,
                  write_results=True,
                  test_markov=False,
-                 solve_options=None):
+                 solve_options=None,
+                 solution_file=""):
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
@@ -269,15 +331,18 @@ class ExtremeTemperatureWaves(Extremes):
             # ! TODO - move all plotting out of this class
             plt.close("all")
 
-        # The year is arbitrary and should simply not be a leap year
+        # The year input 2001 is arbitrary and should simply not be a leap year
         self._read_and_curate_NOAA_data(station,2001,unit_conversion,norms_unit_conversion,use_local)
         
         # produce the initial values of several parameters. The optimization
         # will actually produce the statistics needed.
         stats, hours_per_year = self._wave_stats(self.NOAA_data,include_plots)
-
+        
+        # self.stats will be overridden later on!
+        self.stats = stats
+        
         if not use_global:
-            new_stats = self._solve_historic_distributions(stats, solve_options, hours_per_year)
+            new_stats = self._solve_historic_distributions(stats, solve_options, hours_per_year,solution_file)
         else:
             new_stats = stats
             
@@ -304,15 +369,16 @@ class ExtremeTemperatureWaves(Extremes):
         self._create_scenario_has_been_run = False
         self._write_results = write_results
         self.solve_options = solve_options
+        self.future_solve_obj = {}
 
         
-    def create_scenario(self,scenario_name,start_year,num_year,climate_temp_func,
-                        num_realization=1,obj_clim=None,increase_factor_ci="50%",
-                        cold_snap_shift=None):
+    def create_scenario(self,scenario_name,year,climate_temp_func,
+                        num_realization=1,climate_baseyear=None,increase_factor_ci="50%",
+                        cold_snap_shift=None,solution_file=""):
         
         """
         >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func,
-                                num_realization,obj_clim,increase_factor_ci)
+                                num_realization,climate_baseyear,increase_factor_ci)
         
         Places results into self.extreme_results and self.ext_obj
         
@@ -327,13 +393,13 @@ class ExtremeTemperatureWaves(Extremes):
         scenario_name : str 
             A string indicating the name of a scenario
         
-        start_year : int 
-            A year (must be >= 2020) that is the starting point of the analysis
-                     
-        num_year : int 
-            Number of subsequent years to include in the analysis
+        year : int 
+            A year (must be >= 2014) that is the starting point of the analysis
         
-        climate_temp_func : func 
+        climate_temp_func : dict of func 
+            Must contain key 'historic' and 'scenario_name' so that
+            the historic baseline and increase in temperature can be 
+            quantified.
             self.use_global = True
                 A function that provides a continuous change in temperature that
                 is scaled to a yearly time scale. time = 2020 is the begin of the 
@@ -349,10 +415,9 @@ class ExtremeTemperatureWaves(Extremes):
             Number of times to repeat the entire analysis of each weather file 
             so that stochastic analysis can be carried out.
             
-        obj_clim : mews.weather.climate.ClimateScenario : optional : Default =None
+        climate_baseyear : int : optional : Default =None
             Only used when self.use_global = False
-            This is a ClimateScenario object from which several 
-            input values are needed.
+            Required if use_global = True. Should be 2014 for CMIP6.
             
         increase_factor_ci : str : optional : Default = "50%"
             Choose one of "[5%, 50%, 95%]" indicating what values out of table SPM6
@@ -376,16 +441,22 @@ class ExtremeTemperatureWaves(Extremes):
                                                         frequency of events>,
                                             '50 year': <50 year ...}}
             
+        solution_file : str : optional : Default = ""
+            Path and name of a file that contains a solution either historic
+            or for the current scenario. This enables by-passing the optimization
+            problem that takes significant computational resources so that
+            MEWS can implement a solution already computed quickly
+            
         Returns
         -------    
-        resulsts_dict : dict : 
+        results_dict : dict : 
             A dictionary whose key is the year analyzed
             
-        self.extreme_results is better suited.
         
         """
         self.extreme_results[scenario_name] = {}
         self.extreme_delstats[scenario_name] = {}
+        
         
         if not increase_factor_ci in _DeltaTransition_IPCC_FigureSPM6._valid_increase_factor_tracks:
             raise ValueError("The input 'increase_factor_ci' must be a string with one of the following three values: \n\n{0}".format(
@@ -395,61 +466,76 @@ class ExtremeTemperatureWaves(Extremes):
         ext_obj_dict = {}
         results_dict = {}
         
-        for year in np.arange(start_year, start_year + num_year,1):
+        if not scenario_name in self.future_solve_obj:
+            self.future_solve_obj[scenario_name] = {}
             
-            self.extreme_delstats[scenario_name][increase_factor_ci] = {}
-            
-
-            (transition_matrix, 
-             transition_matrix_delta,
-             del_E_dist,
-             del_delTmax_dist) = self._create_transition_matrix_dict(self.stats,climate_temp_func,year,
-                                                     obj_clim,scenario_name,increase_factor_ci, cold_snap_shift)
-            
-            if self.use_global == False:
-                base_year = obj_clim.baseline_year
-            else:
-                base_year = None
-                                                     
-            # now initiate use of the Extremes class to unfold the process
-            ext_obj_dict[year] = super().__init__(start_year,
-                     {'func':trunc_norm_dist, 'param':self.stats['heat wave']},
-                     del_delTmax_dist,
-                     {'func':trunc_norm_dist, 'param':self.stats['cold snap']},
-                     None,
-                     transition_matrix,
-                     transition_matrix_delta,
-                     self._weather_files,
-                     num_realizations=num_realization,
-                     num_repeat=1,
-                     use_cython=True,
-                     column='Dry Bulb Temperature',
-                     tzname=None,
-                     write_results=self._write_results,
-                     results_folder=self._results_folder,
-                     results_append_to_name=scenario_name,
-                     run_parallel=self._run_parallel,
-                     min_steps=HOURS_IN_DAY,
-                     test_shape_func=False,
-                     doe2_input=self._doe2_input,
-                     random_seed=self._random_seed,
-                     max_E_dist={'func':trunc_norm_dist,'param':self.stats['heat wave']},
-                     del_max_E_dist=del_E_dist,
-                     min_E_dist={'func':trunc_norm_dist,'param':self.stats['cold snap']},
-                     del_min_E_dist=None,
-                     current_year=int(year),
-                     climate_temp_func=climate_temp_func,
-                     averaging_steps=HOURS_IN_DAY,
-                     use_global=self.use_global,
-                     baseline_year=base_year,
-                     norms_hourly=self.df_norms_hourly,
-                     num_cpu=self._num_cpu,
-                     test_markov=self._test_markov)
-            results_dict[year] = self.results
+        if not increase_factor_ci in self.future_solve_obj[scenario_name]:
+            self.future_solve_obj[scenario_name][increase_factor_ci] = {}
         
-            self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
-            # this is happening 
-            self._verification_data[year] = self._delTmax_verification_data
+
+            
+        if not year in self.future_solve_obj[scenario_name][increase_factor_ci]:
+            self.future_solve_obj[scenario_name][increase_factor_ci][year] = {}
+        
+        self.extreme_delstats[scenario_name][increase_factor_ci] = {}
+        
+
+        (transition_matrix, 
+         transition_matrix_delta,
+         del_E_dist,
+         del_delTmax_dist) = self._create_transition_matrix_dict(self.stats,
+                                                                 climate_temp_func,
+                                                                 year,
+                                                                 climate_baseyear,
+                                                                 scenario_name,
+                                                                 increase_factor_ci, 
+                                                                 cold_snap_shift,
+                                                                 solution_file)
+        
+        if self.use_global == False:
+            base_year = climate_baseyear
+        else:
+            base_year = None
+                                                 
+        # now initiate use of the Extremes class to unfold the process
+        ext_obj_dict[year] = super().__init__(year,
+                 {'func':trunc_norm_dist, 'param':self.stats['heat wave']},
+                 del_delTmax_dist,
+                 {'func':trunc_norm_dist, 'param':self.stats['cold snap']},
+                 None,
+                 transition_matrix,
+                 transition_matrix_delta,
+                 self._weather_files,
+                 num_realizations=num_realization,
+                 num_repeat=1,
+                 use_cython=True,
+                 column='Dry Bulb Temperature',
+                 tzname=None,
+                 write_results=self._write_results,
+                 results_folder=self._results_folder,
+                 results_append_to_name=scenario_name,
+                 run_parallel=self._run_parallel,
+                 min_steps=HOURS_IN_DAY,
+                 test_shape_func=False,
+                 doe2_input=self._doe2_input,
+                 random_seed=self._random_seed,
+                 max_E_dist={'func':trunc_norm_dist,'param':self.stats['heat wave']},
+                 del_max_E_dist=del_E_dist,
+                 min_E_dist={'func':trunc_norm_dist,'param':self.stats['cold snap']},
+                 del_min_E_dist=None,
+                 current_year=int(year),
+                 climate_temp_func=climate_temp_func[scenario_name],
+                 averaging_steps=HOURS_IN_DAY,
+                 use_global=self.use_global,
+                 baseline_year=base_year,
+                 norms_hourly=self.df_norms_hourly,
+                 num_cpu=self._num_cpu,
+                 test_markov=self._test_markov)
+        results_dict[year] = self.results
+    
+        self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
+        # this is happening 
+        self._verification_data[year] = self._delTmax_verification_data
             
             
         self.extreme_results[scenario_name][increase_factor_ci] = results_dict
@@ -561,33 +647,15 @@ class ExtremeTemperatureWaves(Extremes):
                 if not opt in VALID_SOLVE_OPTIONS:
                     raise ValueError("The input 'solve_options['{0}'] has an invalid solve option = '{1}'".format(tim,opt) +
                                      "\n\nValid options are:\n\n{0}".format(",\n".join(VALID_SOLVE_OPTIONS)))
-                    
+            # REQUIRED solve options must be given defaults here.
+            for opt in [VALID_SOLVE_INPUTS[16]]:
+                if not opt in subdict:
+                    subdict[opt] = DEFAULT_SOLVE_OPTIONS[tim][opt]
+                
         
         return solve_options
-            
-    def _create_figure_out_name(self,dirname,basename,month,is_dir,dir_exists,scen=None,ci_int=None,year=None,is_historic=True):
-
-        if not dir_exists:
-            if not os.path.exists(dirname):
-                os.mkdir(dirname)
-                    
-        if not scen is None:
-            ext_str = "_{0}_{1}_{2}".format(scen,ci_int,str(year))
-        else:
-            ext_str = ""
-        if is_historic:
-            hstr = "historic"
-        else:
-            hstr = "future"
-            
-        if is_dir:
-            filename = os.path.join(dirname,basename,hstr+"_month_{0:d}{1}.png".format(month,ext_str))
-        else:
-            filename = os.path.join(dirname,basename.split(".")[0]+"_"+hstr+"_month_{0:d}{1}.png".format(month,ext_str))
-        
-        return filename
     
-    def _solve_historic_distributions(self,stats, solve_options, frac_hours_per_year):
+    def _solve_historic_distributions(self,stats, solve_options, frac_hours_per_year, solution_file):
         # solve options unpacked
         
         # loop over heat waves/ cold snaps
@@ -595,6 +663,14 @@ class ExtremeTemperatureWaves(Extremes):
         for wt1,wt2 in WAVE_MAP.items():
             new_stats[wt1] = {}
         
+        # This simply allows the user to evaluate a solution 
+        # and overrides performing an optimization
+        if len(solution_file) != 0:
+            override_stats = self.read_solution(solution_file)
+            stats = override_stats
+        else:
+            override_stats = None
+                
         random_seed = self._random_seed
         
         # These defaults do not match all of the defaults in solve.py
@@ -626,14 +702,27 @@ class ExtremeTemperatureWaves(Extremes):
             
             
             
-            out_path_month = self._create_figure_out_name(fig_out_dir_name,
+            
+            out_path_month = _create_figure_out_name(fig_out_dir_name,
                                                         fig_out_base_name,
                                                         month,
                                                         fig_is_dir,
                                                         fig_dir_exists)
             extra_columns = _process_extra_columns(opt_val['extra_output_columns'],month)
             
+            if not override_stats is None:
+                # must override some solve options (decay function does not change with month)
+                for wt,wave_type in zip(['cs','hw'],['cold snap','heat wave']):
+                    if 'decay function' in stats[wave_type][month]:
+                        opt_val['decay_func_type'][wt] = stats[wave_type][month]['decay function']
+                    else:
+                        opt_val['decay_func_type'][wt] = None
+            
             if obj_solve is None:
+                
+                if not override_stats is None:
+                    opt_val['x_solution'] = _assemble_x_solution(override_stats, month)
+                
                 obj_solve = SolveDistributionShift(opt_val['num_step'], 
                                        param0, 
                                        random_seed, 
@@ -662,16 +751,24 @@ class ExtremeTemperatureWaves(Extremes):
                 if opt_val['test_mode']:
                     # this makes all other runs just be evaluations when 
                     # we just want to run quick tests.
-                    x_solution = obj_solve.optimize_result.x
+                    if not override_stats is None:
+                        x_solution = opt_val['x_solution']
+                    else:
+                        x_solution = obj_solve.optimize_result.x
                 else:
                     x_solution = None
                 
                 param = obj_solve.param
             else:
+        
+                if not override_stats is None:
+                    x_solution = _assemble_x_solution(override_stats, month)
+                
                 if month == 12:
                     write_csv = True
                 else:
                     write_csv = False
+                    
                 # only reassign values that change by month (and x_solution for testing purposes
                 # to reduce run time)
                 inputs = {"param0":param0,
@@ -709,8 +806,8 @@ class ExtremeTemperatureWaves(Extremes):
         for month,subdict in stats.items():
             
             if stat_name == "delT":
-                minval = subdict['min extreme temp per duration']
-                maxval = subdict['max extreme temp per duration']
+                minval = subdict['hist min extreme temp per duration']
+                maxval = subdict['hist max extreme temp per duration']
                 param = subdict['extreme_temp_normal_param']
                 mu = param['mu']
                 sig = param['sig']
@@ -721,7 +818,7 @@ class ExtremeTemperatureWaves(Extremes):
             elif stat_name == "E":
                 minval = subdict['min energy per duration']
                 maxval = subdict['max energy per duration']
-                param = subdict['eenergy_normal_param']
+                param = subdict['energy_normal_param']
                 mu = param['mu']
                 sig = param['sig']
                 norm0 = subdict['normalizing energy']    
@@ -765,8 +862,8 @@ class ExtremeTemperatureWaves(Extremes):
         
     
     def _create_transition_matrix_dict(self,stats,climate_temp_func,year,
-                                       obj_clim,scenario,increase_factor_ci,
-                                       cold_snap_shift):
+                                       climate_baseyear,scenario,increase_factor_ci,
+                                       cold_snap_shift,solution_file):
         
         """
         Here is where the delta T, delta E and delta Markov matrix values are calculated
@@ -779,13 +876,35 @@ class ExtremeTemperatureWaves(Extremes):
         del_E_dist = {}
         del_delTmax_dist = {}
         
+        # This simply allows the user to evaluate a solution 
+        # and overrides performing an optimization
+        if len(solution_file) != 0:
+            override_stats = self.read_solution(solution_file)
+            stats = override_stats
+            
+        else:
+            override_stats = None
+        
+        
+        if not self.use_global:
+            # need a new copy that will not be altered.
+            solve_options = deepcopy(self.solve_options)    
+            fig_out_dir_name = os.path.dirname(solve_options['future']['out_path'])
+            fig_out_base_name = os.path.basename(solve_options['future']['out_path'])
+            fig_is_dir = os.path.isdir(solve_options['future']['out_path'])
+            fig_dir_exists = os.path.exists(fig_out_dir_name)
+        else:
+            solve_options = None
+        
+        
+        
         # gather the probability of a heat wave for each month.
         prob_hw = {}
         for month,stat in stats['heat wave'].items():
             prob_hw[month] = stat['hourly prob of heat wave']
             
         solution_obtained = False
-        solve_options = self.solve_options
+
         obj = None
         # Form the parameters needed by Extremes but on a monthly basis.
         solve_obj = None
@@ -794,7 +913,10 @@ class ExtremeTemperatureWaves(Extremes):
             month = cold_tup[0]
             cold_param = cold_tup[1]
             hot_param = hot_tup[1]
-
+            
+            if len(solution_file) > 0:
+                solve_options['future']['x_solution'] = _assemble_x_solution(stats, month)
+            
             Pwh = hot_param['hourly prob of heat wave']
             Pwsh = hot_param['hourly prob stay in heat wave']
             Pwc = cold_param['hourly prob of heat wave']
@@ -805,21 +927,43 @@ class ExtremeTemperatureWaves(Extremes):
             # just to speed up testing! This makes everything after month 1
             # just an evaluation of month 1 instead of an optimization for a
             # new month.
-            if solution_obtained:
-                if 'future' in solve_options:
-                    if 'test_mode' in solve_options['future']:
-                        if solve_options['future']['test_mode']:
-                            solve_options['x_solution'] = obj.obj_solve.optimize_result.x
-                            
-            if not 'future' in self.solve_options:
-                self.solve_options[VALID_SOLVE_OPTION_TIMES[1]] = {}
+            if not self.use_global:
+                if solution_obtained:
+                    if 'future' in solve_options:
+                        if 'test_mode' in solve_options['future']:
+                            if solve_options['future']['test_mode']:
+                                if override_stats is None:
+                                    solve_options['future']['x_solution'] = obj.obj_solve.optimize_result.x
+                                else:
+                                    pass # this has already been assigned above.
+                                
+                if not 'future' in solve_options:
+                    solve_options[VALID_SOLVE_OPTION_TIMES[1]] = {}
+    
+                if not VALID_SOLVE_INPUTS[23] in solve_options[VALID_SOLVE_OPTION_TIMES[1]]:
+                    
+                    solve_options[VALID_SOLVE_OPTION_TIMES[1]][VALID_SOLVE_INPUTS[23]] = {} 
+                
+                
+                extra_columns = _process_extra_columns(solve_options[VALID_SOLVE_OPTION_TIMES[1]][VALID_SOLVE_INPUTS[23]], 
+                                                       month, year, scenario, increase_factor_ci)  
 
-            if not VALID_SOLVE_INPUTS[23] in self.solve_options[VALID_SOLVE_OPTION_TIMES[1]]:
+
+                solve_options['future']['out_path'] = _create_figure_out_name(fig_out_dir_name, 
+                                        fig_out_base_name, 
+                                        month, 
+                                        fig_is_dir, 
+                                        fig_dir_exists, 
+                                        scenario, 
+                                        increase_factor_ci, 
+                                        year, 
+                                        is_historic=False)
                 
-                self.solve_options[VALID_SOLVE_OPTION_TIMES[1]][VALID_SOLVE_INPUTS[23]] = {} 
                 
-            extra_columns = _process_extra_columns(self.solve_options[VALID_SOLVE_OPTION_TIMES[1]][VALID_SOLVE_INPUTS[23]], 
-                                                   month, year, scenario, increase_factor_ci)       
+            else:
+                extra_columns = None
+
+            
             # Due to not finding information in IPCC yet, we assume that cold events
             # do not increase in magnitude or frequency.
             obj = _DeltaTransition_IPCC_FigureSPM6(hot_param,
@@ -828,7 +972,7 @@ class ExtremeTemperatureWaves(Extremes):
                                                year,
                                                self._hours_per_year[month-1],
                                                self.use_global,
-                                               obj_clim,scenario,
+                                               climate_baseyear,scenario,
                                                self,
                                                increase_factor_ci,
                                                prob_hw,
@@ -842,6 +986,8 @@ class ExtremeTemperatureWaves(Extremes):
                                                solve_obj=solve_obj)
             solve_obj = obj.obj_solve
             solution_obtained = True
+            
+            self.future_solve_obj[scenario][increase_factor_ci][year][month] = deepcopy(obj)
 
             transition_matrix_delta[month] = obj.transition_matrix_delta
             del_E_dist[month] = obj.del_E_dist
@@ -854,7 +1000,7 @@ class ExtremeTemperatureWaves(Extremes):
                 del_E_dist,
                 del_delTmax_dist)
         
-
+    
     def _read_and_curate_NOAA_data(self,station,year,unit_conversion,norms_unit_conversion,use_local=False):
     
         """
@@ -1370,6 +1516,8 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['extreme_temp_normal_param'] = self._determine_norm_param(extreme_temp_per_duration_norm)
             temp_dict['max extreme temp per duration'] = extreme_temp_per_duration.max()
             temp_dict['min extreme temp per duration'] = extreme_temp_per_duration.min()
+            temp_dict['hist max extreme temp per duration'] = extreme_temp_per_duration.max()
+            temp_dict['hist min extreme temp per duration'] = extreme_temp_per_duration.min()
             temp_dict['max energy per duration'] = wave_energy_per_duration.max()
             temp_dict['min energy per duration'] = wave_energy_per_duration.min()
             temp_dict['energy linear slope'] = par[0][0]
@@ -1425,7 +1573,7 @@ class ExtremeTemperatureWaves(Extremes):
                 #P0,lamb,lcov,pvalue = fit_exponential_distribution(month_duration_hr,include_plots)
                 
             if pvalue > 0.05:
-                if self.use_global:
+                if self.use_global and self.include_plots:
                     self._plot_linear_fit(log_prob_duration,num_hour_passed,results.params,results.pvalues,
                                     "Month=" + str(month)+" Markov probability")
                 warn(results.summary())
@@ -1462,7 +1610,7 @@ class ExtremeTemperatureWaves(Extremes):
         """
         wave_stats(df_combined,is_heat)
         
-        Calculates the statistical parameter per month for heat waves or cold snaps
+        Calculates the algebraically estimated statistical parameter per month for heat waves or cold snaps
         
         Parameters
         ----------    
@@ -1592,7 +1740,28 @@ class ExtremeTemperatureWaves(Extremes):
         plt.tight_layout()
         plt.savefig(title_string+"_monthly_MEWS_parameter_results.png",dpi=1000)
         
+    
+    def read_solution(self,solution_file):
         
+        file_exists = os.path.exists(solution_file)
+        if file_exists:
+            new_stats = read_readable_python_dict(solution_file)   
+        else:
+            raise FileNotFoundError("The solution file '{0}' does not exist. An existing file must be input!".format(solution_file))
+        
+        return new_stats
+    
+    def write_solution(self,solution_file,is_historic=True,overwrite=True):
+
+        file_exists = os.path.exists(solution_file)
+        if file_exists and not overwrite:
+            raise FileExistsError("The solution file '{0}' exists and overwrite has been set = False. Set overwrite to True if you want to overwrite!".format(solution_file))
+        else:
+            if file_exists:
+                os.remove(solution_file)
+
+            write_readable_python_dict(solution_file, self.stats)
+    
     
     
     def _delete_waves_fully_outside_this_month(self,heat_waves,df_wm,month,prev_month,next_month,hw_taken):
@@ -1648,18 +1817,24 @@ class ExtremeTemperatureWaves(Extremes):
 class _DeltaTransition_IPCC_FigureSPM6():
     """
     >>> obj = _DeltaTransition_IPCC_FigureSPM6(hot_param,
-                                              cold_param,
-                                              climate_temp_func,
-                                              year,
-                                              month_hours_per_year
-                                              use_global,
-                                              obj_clim=None,
-                                              scenario=None,
-                                              ext_temp_waves_obj=None,
-                                              increase_factor_ci="50%",
-                                              prob_hw=None
-                                              delT_ipcc_min_frac=1.0,
-                                              month=None)
+                                               cold_param,
+                                               climate_temp_func,
+                                               year,
+                                               month_hours_per_year,
+                                               use_global=False,
+                                               climate_baseyear=None,
+                                               scenario=None,
+                                               ext_temp_waves_obj=None,
+                                               increase_factor_ci="50%",
+                                               prob_hw=None,
+                                               delT_ipcc_min_frac=1.0,
+                                               month=None,
+                                               random_seed=None,
+                                               solve_options=None,
+                                               cold_snap_shift=None,
+                                               write_csv=False,
+                                               extra_columns=None,
+                                               solve_obj=None)
     
     This function has two use cases depending on whether MEWS is being used
     with the old global CMIP6 data or for actual CMIP6 lat/lon projections.
@@ -1687,7 +1862,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
     
     def __init__(self,hot_param,cold_param,climate_temp_func,year,month_hours_per_year,
                  use_global=False,
-                 obj_clim=None,
+                 climate_baseyear=None,
                  scenario=None,
                  ext_temp_waves_obj=None,
                  increase_factor_ci="50%",
@@ -1707,8 +1882,8 @@ class _DeltaTransition_IPCC_FigureSPM6():
         
         #input validation
         if use_global==False:
-            if obj_clim is None:
-                raise ValueError("'obj_clim' input must not be None if 'use_global'=False")
+            if climate_baseyear is None:
+                raise ValueError("'climate_baseyear' input must not be None if 'use_global'=False")
             if scenario is None:
                 raise ValueError("'scenario' input must not be None if 'use_global'=False")
             if ext_temp_waves_obj is None:
@@ -1722,10 +1897,10 @@ class _DeltaTransition_IPCC_FigureSPM6():
         if use_global == False:
             # unpack.
             hist_str = self._valid_scenario_names[0]
-            baseline_year = obj_clim.baseline_year
+            baseline_year = climate_baseyear
 
             # CMIP data goes back to 1850.
-            historic_temp_func = np.poly1d(obj_clim.cmip[hist_str].delT_polyfit)
+            historic_temp_func = climate_temp_func['historical']
             # average delT during IPCC baseline of 1850-1900
             avg_delT_1850_1900 = np.array([historic_temp_func(yr-baseline_year) for yr in np.arange(1850,1900.01,0.01)]).mean()
             # average delT during heat wave data used
@@ -1758,14 +1933,14 @@ class _DeltaTransition_IPCC_FigureSPM6():
 
         if use_global:
             # This is change in global temperature from 2020!
-            delta_TG = climate_temp_func(year)
+            delta_TG = climate_temp_func[scenario](year)
             
             # now interpolate from the IPCC tables 
             
             (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
             
         else:
-            delta_TG = climate_temp_func(year-baseline_year)
+            delta_TG = climate_temp_func[scenario](year-baseline_year)
             (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
 
         f_ipcc_ci_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]] 

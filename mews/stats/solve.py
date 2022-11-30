@@ -16,7 +16,7 @@ from mews.utilities.utilities import (linear_interp_discreet_func, bin_avg,
                                       histogram_non_overlapping,
                                       histogram_step_wise_integral)
 from numpy.random import default_rng
-from mews.stats.distributions import trunc_norm_dist, inverse_transform_fit
+from mews.stats.distributions import trunc_norm_dist, inverse_transform_fit, transform_fit
 from mews.utilities.utilities import find_extreme_intervals, create_complementary_histogram, dict_key_equal
 import matplotlib.pyplot as plt
 from mews.graphics.plotting2D import Graphics
@@ -60,6 +60,8 @@ def unpack_params(param, wave_type):
     return {'norm_duration':    param[wave_type]['normalizing duration'],
             'mu_T':             param[wave_type]['extreme_temp_normal_param']['mu'],
             'sig_T':            param[wave_type]['extreme_temp_normal_param']['sig'],
+            'hist_maxval_T':         param[wave_type]['hist max extreme temp per duration'],
+            'hist_minval_T':         param[wave_type]['hist min extreme temp per duration'],
             'maxval_T':         param[wave_type]['max extreme temp per duration'],
             'minval_T':         param[wave_type]['min extreme temp per duration'],
             'norm_temperature': param[wave_type]['normalizing extreme temp'],
@@ -80,13 +82,16 @@ def evaluate_temperature(durations, param, del_mu_T, del_sig_T, rng, wave_type):
     Sm1_T, S_T = shift_a_b_of_trunc_gaussian(
         del_mu_T, pval['mu_T'], del_sig_T, pval['sig_T'])
 
+    min_boundary = transform_fit(pval['minval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+    max_boundary = transform_fit(pval['maxval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+
     T_per_durations = np.array([trunc_norm_dist(rand,
                                                 pval['mu_T'] + del_mu_T,
                                                 pval['sig_T'] + del_sig_T,
-                                                -1+Sm1_T,
-                                                1+S_T,
-                                                pval['minval_T'],
-                                                pval['maxval_T']) for rand in rng.random(len(durations))])
+                                                min_boundary+Sm1_T,
+                                                max_boundary+S_T,
+                                                pval['hist_minval_T'],
+                                                pval['hist_maxval_T']) for rand in rng.random(len(durations))])
     # this returns actual temperatures.
     return temperature(T_per_durations, durations, pval)
 
@@ -354,9 +359,11 @@ def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
                                                                hours_per_year,
                                                                ipcc_shift,
                                                                wave_type)
-
-    T_shifted_actual = linear_interp_discreet_func(
-        P_T_target_less_than_extreme, cdf_T, False)
+    if len(cdf_T[0]) == 1:
+        T_shifted_actual = np.diff(histT_tuple[0][1])[0]*P0_less_than_extreme + histT_tuple[0][1][0]
+    else:
+        T_shifted_actual = linear_interp_discreet_func(
+            P_T_target_less_than_extreme, cdf_T, False)
 
     Tthresh_historic = linear_interp_discreet_func(
         P0_less_than_extreme,
@@ -398,14 +405,29 @@ def ipcc_shift_comparison_residuals(hist0, ipcc_shift,
 
 
 def probability_of_extreme_10_50(num_hist_wave, historic_time_interval, hours_per_year):
+    
+    """
+    This is the probability that a wave is the 10 year or 50 year wave given 
+    that an event has occurred. Since MEWS is monthly, the probability the
+    event will occur in January is 
+    
+    wave_rate_current_month = (number historical waves in current month/
+                               total historical time in current month)
+    P10_given_wave = 1 / (wave_rate_current_month * total time in 10 years)
+    
+    Notice that we multiply the wave rate by the total time in 10 years. 
+    Otherwise, you would be looking at 12 50 year events in the next 50 years
+    if you multiplied by the total time in 10 years in the current month.
+    
+    """
 
     num_hour_in_year = 8760
 
     if num_hist_wave == 0:
         return 0.0, 0.0
     else:
-        N10 = 10 * hours_per_year
-        N50 = 50 * hours_per_year
+        N10 = 10 * num_hour_in_year
+        N50 = 50 * num_hour_in_year
 
         # TODO - hours per year is not even needed.
         P10_given_wave = historic_time_interval * \
@@ -525,6 +547,8 @@ def unpack_coef_from_x(x, decay_func_type, events):
             else:  # should never happen:
                 raise ValueError("Invalid decay_func_type. '{0}' was input, but only valid values are : \n\n{1}".format(
                     decay_func, str(SolveDistributionShift._decay_func_types_entries.keys())))
+        else:
+            coef[wt] = None
     return coef
 
 
@@ -533,7 +557,10 @@ class ObjectiveFunction():
     def __init__(self, events, random_seed):
         self.iterations = 0
         self._events = events
-        self._rng = default_rng(random_seed)
+        if random_seed is None:
+            self._rng = default_rng()
+        else:
+            self._rng = default_rng(random_seed)
         self._hours_in_year = 8760
 
     def markov_gaussian_model_for_peak_temperature(self, x,
@@ -716,8 +743,6 @@ class ObjectiveFunction():
                                                       del_mu_T[wave_type],
                                                       del_sig_T[wave_type], rng, wave_type)
 
-            if Tsample[wave_type].max() > 60:
-                warn("Heat waves of greater than 60 C are not realistic")
         # this returns a tuple the first element is the histogram of temperatures
         # the second element returns the cdf with values mapped to the bin averages.
             if len(Tsample[wave_type]) < min_num_waves:
@@ -734,6 +759,8 @@ class ObjectiveFunction():
                 temp_resid[wave_type] = None
 
             else:
+                if Tsample[wave_type].max() > 60:
+                    warn("Heat waves of greater than 60 C are not realistic")
 
                 # normal evaluation cases.
 
@@ -1369,12 +1396,15 @@ class SolveDistributionShift(object):
             # shift the absolute extremes of the truncated gaussian distributions!
             (del_a, del_b) = shift_a_b_of_trunc_gaussian(
                 del_mu_T, pval["mu_T"], del_sig_T, pval["sig_T"])
-
-            param_new[wave_type]['min extreme temp per duration'] = inverse_transform_fit(-1+del_a,
+            
+            min_boundary = transform_fit(pval['minval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+            max_boundary = transform_fit(pval['maxval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+            
+            param_new[wave_type]['min extreme temp per duration'] = inverse_transform_fit(min_boundary+del_a,
                                                                                           pval['maxval_T'],
                                                                                           pval['minval_T'])
 
-            param_new[wave_type]['max extreme temp per duration'] = inverse_transform_fit(1+del_b,
+            param_new[wave_type]['max extreme temp per duration'] = inverse_transform_fit(max_boundary+del_b,
                                                                                           pval['maxval_T'],
                                                                                           pval['minval_T'])
             param_new[wave_type]['decay function coef'] = coef[wave_type]
@@ -1394,7 +1424,7 @@ class SolveDistributionShift(object):
         # changes can be made to just this dictionary after the intitial call
         # to the class.
         self.inputs['num_step'] = num_step
-        self.inputs['param0'] = param0,
+        self.inputs['param0'] = param0
         self.inputs['random_seed'] = random_seed
         self.inputs['hist0'] = hist0
         self.inputs['durations0'] = durations0
@@ -1523,8 +1553,8 @@ class SolveDistributionShift(object):
          extra_output_columns) = tup
 
         self.__init__(num_step,
-                      random_seed,
                       param0,
+                      random_seed,
                       hist0,
                       durations0,
                       delT_above_shifted_extreme,
@@ -1602,9 +1632,9 @@ class SolveDistributionShift(object):
         if not isinstance(test_mode, bool):
             raise TypeError(
                 "The input 'test_mode' must be a boolean (True/False)!")
-        if not isinstance(random_seed, int):
+        if not isinstance(random_seed, (type(None),int)):
             raise TypeError(
-                "The input 'random_seed' must be a 32 bit integer (i.e. any integer < 2**32-1 works)")
+                "The input 'random_seed' must be a 32 bit integer or None (i.e. any integer < 2**32-1 works)")
         elif not isinstance(param0, dict):
             raise TypeError(
                 "The input 'param0' must be a dictionary with specific structure:\n\n" + self._param0_struct)
@@ -2013,10 +2043,12 @@ class SolveDistributionShift(object):
                 hTe = hTpost[event]
                 dTe = durations[postproc_num][event]
                 # now do the fit or future results histograms
-                add_histogram_rows(hTe[0], table, event, extra_output_columns,
-                                   "$^{\circ}$C", "fit temperature", postproc_num, np.nan, True)
-                add_histogram_rows(dTe, table, event, extra_output_columns,
-                                   "hr", "fit duration", postproc_num, np.nan)
+                if not hTe is None:
+                    add_histogram_rows(hTe[0], table, event, extra_output_columns,
+                                       "$^{\circ}$C", "fit temperature", postproc_num, np.nan, True)
+                if not dTe is None:
+                    add_histogram_rows(dTe, table, event, extra_output_columns,
+                                       "hr", "fit duration", postproc_num, np.nan)
 
                 if not thresholds[postproc_num][event] is None:
                     add_threshold_rows(
@@ -2064,9 +2096,11 @@ class MaxTemperatureNonlinearConstraint():
                                                    pval['mu_T'],
                                                    del_sig_T,
                                                    pval['sig_T'])
-
-        Xb = inverse_transform_fit(1+del_b, pval['maxval_T'], pval['minval_T'])
-        Xa = inverse_transform_fit(-1+del_a,
+        min_boundary = transform_fit(pval['minval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+        max_boundary = transform_fit(pval['maxval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+        
+        Xb = inverse_transform_fit(min_boundary+del_b, pval['maxval_T'], pval['minval_T'])
+        Xa = inverse_transform_fit(max_boundary+del_a,
                                    pval['maxval_T'], pval['minval_T'])
 
         if self._wtype == 'cs':

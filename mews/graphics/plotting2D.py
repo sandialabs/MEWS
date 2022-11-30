@@ -7,7 +7,7 @@ Created on Mon May  3 13:49:21 2021
 from matplotlib import pyplot as plt
 from matplotlib import rc
 import matplotlib._color_data as mcd
-from mews.utilities.utilities import linear_interp_discreet_func, bin_avg
+from mews.utilities.utilities import linear_interp_discreet_func, bin_avg, histogram_step_wise_integral
 
 
 class Graphics():
@@ -63,7 +63,7 @@ class Graphics():
         font = {'size': 16}
         rc('font', **font)
         fig, axl = plt.subplots(len(histT_tuple_dict), 1, figsize=(
-            10, 10), sharex=True, sharey=True)
+            10, 4*len(histT_tuple_dict)), sharex=True, sharey=True)
         if len(histT_tuple_dict) == 1:
             axl = [axl]
         # adjust historical bins if needed.
@@ -111,10 +111,14 @@ class Graphics():
                     # cold snap, heat wave plot for temperature does not need
                     # different colors and labels because cs are negative and
                     # heat waves are positive.
-                    ax.plot(bin0, fun0/fun0.sum(), label=labels[0], color='blue')
+                    
+                    areaT = histogram_step_wise_integral(histT)
+                    area0 = histogram_step_wise_integral(hist0[wtype])
+                    
+                    ax.plot(bin0, fun0/area0, label=labels[0], color='blue')
                     
                     if not binT is None: 
-                        ax.plot(binT, histT[0], label=labels[1], color='orange')
+                        ax.plot(binT, histT[0]/areaT, label=labels[1], color='orange')
                         
                     bin_prev = bin0
                 elif bin_prev is None:
@@ -193,7 +197,8 @@ class Graphics():
             else:
                 ax.set_xlabel("Duration of wave (hr)")
             ax.legend(fontsize=12)
-    
+        
+        plt.tight_layout()
         if not plot_title is None:
             axl[0].set_title(plot_title)
         if not fig_path is None:

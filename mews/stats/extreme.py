@@ -174,6 +174,7 @@ class DiscreteMarkov():
         num_event = len(coef)
         for wt in self._events:
             cf = coef[wt]
+
             if cf is None:
                 len_cf = 0
             else:

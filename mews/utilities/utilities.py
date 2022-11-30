@@ -339,6 +339,142 @@ def linear_interp_discreet_func(vals, discreet_func_tup, is_x_interp=False):
                       xf[-1]
                      for va, idix in zip(vals,idi) ])
     return interp
+
+def write_readable_python_dict(filepath,dictionary,overwrite=True):
+    """
+    Write a python dictionary as a string in an ascii file that 
+    has a pleasantly readable format and can be evaluated using eval
+    to reproduce the dictionary when the file is read back into python.
+
+    Parameters
+    ----------
+    filepath : str
+        Valid filepath to a file        
+    dictionary : dict
+        Any python dictionary to be written to a file
+    overwrite : bool, optional
+        Indicate whether to overwrite existing files. The default is True.
+
+    Raises
+    ------
+    FileExistsError
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    
+    if os.path.exists(filepath) and not overwrite:
+        raise FileExistsError("The file:\n\n '{0}'\n\n".format(filepath) + 
+                              "Already exists. Set overwrite=True to overwrite it.")
+    else:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            
+        inquote = False
+        is_single_quote = False
+        inarray = False
+        newstr = ""
+        indent_level = 0
+        for char in str(dictionary).replace("array","np.array"):
+            if char == "," and not inquote and not inarray:
+                newstr = newstr + char + "\n" + indent_level * " "
+            elif char == "{" and not inquote:
+                indent_level = indent_level + 4
+                newstr = newstr + "\n" + indent_level * " " + char
+            elif char == "}" and not inquote:
+                indent_level = indent_level - 4
+                newstr = newstr + char + "\n" + indent_level * " "
+            elif char == "(" or char == "[" and not inquote:
+                inarray = True
+                newstr = newstr + char
+            elif char == ")" or char == "]" and not inquote:
+                inarray = False
+                newstr = newstr + char
+            elif char == "'" and not inquote:
+                inquote = True
+                is_single_quote = True
+                newstr = newstr + char
+            elif char == '"' and not inquote:
+                inquote = True
+                is_single_quote = False
+                newstr = newstr + char
+            elif char == "'" and inquote and is_single_quote:
+                inquote = False
+                newstr = newstr + char
+            elif char == '"' and inquote and not is_single_quote:
+                inquote = False
+                newstr = newstr + char
+            else:
+                newstr = newstr + char
+            
+        with open(filepath,'w') as fref:
+            fref.write(newstr)
+            
+def read_readable_python_dict(filepath):
+    """
+    Parameters
+    ----------
+    filepath : str 
+        Valid file path to a text file that contains a readable python dictionary
+        string written by "write_readable_python_dict"
+
+    Raises
+    ------
+    FileNotFoundError
+        If filepath does not exist, this exception is raised
+    SyntaxError
+        If the contents of the file fails to evaluate
+    ValueError
+        If the contents of the file evaluate to a non-dictionary
+
+    Returns
+    -------
+    A Python dictionary expressed in the file found at filepath
+
+    """
+    
+    if os.path.exists(filepath):
+        try:
+            with open(filepath,'r') as file:
+                fstr = file.read()
+            
+            inquote = False
+            is_single_quote = False
+            newstr = ""
+            for char in fstr:
+                if (char == " " and not inquote) or (char == "\n" and not inquote):
+                    pass # do nothing to add these.
+                elif char == "'" and not inquote:
+                    inquote = True
+                    is_single_quote = True
+                    newstr = newstr + char
+                elif char == '"' and not inquote:
+                    inquote = True
+                    is_single_quote = False
+                    newstr = newstr + char
+                elif char == "'" and inquote and is_single_quote:
+                    inquote = False
+                    newstr = newstr + char
+                elif char == '"' and inquote and not is_single_quote:
+                    inquote = False
+                    newstr = newstr + char
+                else:
+                    newstr = newstr + char            
+            
+            pdict = eval(newstr)
+            
+            if not isinstance(pdict,dict):
+                raise ValueError("The string read did not create a dictionary")
+            
+            return pdict
+        except: 
+            SyntaxError("The designated file '{0}' does not contain a readable python dictionary from write_readable_python_dict.")
+    else:
+        raise FileNotFoundError("The file\n\n  '{0}'\n\ndoes not exist!".format(filepath))
             
 def find_extreme_intervals(states_arr,states):
     """

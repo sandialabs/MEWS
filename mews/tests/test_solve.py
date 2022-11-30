@@ -31,7 +31,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # clean this up HOW MUCH of this from Test_Alter is needed?
-        cls.plot_results = False
+        cls.plot_results = True
         cls.write_results = False
         cls._run_all_tests = True
         cls.rng = default_rng(23985)
@@ -128,7 +128,9 @@ class Test_SolveDistributionShift(unittest.TestCase):
                 param['hw']['extreme_temp_normal_param']['mu'] = 0.0
                 param['hw']['extreme_temp_normal_param']['sig'] = 0.3
                 param['hw']['max extreme temp per duration'] = 0.55
+                param['hw']['hist max extreme temp per duration'] = 0.55
                 param['hw']['min extreme temp per duration'] = 0.1
+                param['hw']['hist min extreme temp per duration'] = 0.1
                 param['hw']['normalizing extreme temp'] = 18
                 param['hw']['normalized extreme temp duration fit slope'] = 1.0
                 param['hw']['normalized extreme temp duration fit intercept'] = 0.2
@@ -140,7 +142,9 @@ class Test_SolveDistributionShift(unittest.TestCase):
                 param['cs']['extreme_temp_normal_param']['mu'] = 0.0
                 param['cs']['extreme_temp_normal_param']['sig'] = 0.3
                 param['cs']['max extreme temp per duration'] = 0.55
+                param['cs']['hist max extreme temp per duration'] = 0.55
                 param['cs']['min extreme temp per duration'] = 0.1
+                param['cs']['hist min extreme temp per duration'] = 0.1
                 param['cs']['normalizing extreme temp'] = -18
                 param['cs']['normalized extreme temp duration fit slope'] = 1.0
                 param['cs']['normalized extreme temp duration fit intercept'] = 0.2
@@ -282,14 +286,19 @@ class Test_SolveDistributionShift(unittest.TestCase):
                                                                                        'sig': 0.4154535225139539}, 
                                         'extreme_temp_normal_param': {'mu': 0.0075494672194406755, 'sig': 0.3399804140386147}, 
                                         'max extreme temp per duration': 1.4307574699210692, 'min extreme temp per duration': 
-                                            0.5585639494466237, 'max energy per duration': 1.3562919483136582, 
+                                            0.5585639494466237,'hist max extreme temp per duration': 1.4307574699210692, 'hist min extreme temp per duration': 
+                                                0.5585639494466237, 'max energy per duration': 1.3562919483136582, 
                                             'min energy per duration': 0.3990299129968476, 'energy linear slope': 0.9768230669124248, 'normalized extreme temp duration fit slope': 0.6946813967764691, 'normalized extreme temp duration fit intercept': 0.46494070822925054, 'normalizing energy': -3775.333333333333, 'normalizing extreme temp': -25.3125, 'normalizing duration': 384, 'historic time interval': 650040.0, 'hourly prob stay in heat wave': 0.9863164139915251, 'hourly prob of heat wave': 0.005069067413290484, 'historical durations (durations0)': (np.array([53, 59, 37, 19,  9,  3,  2,  3,  1,  0,  0,  0,  0,  0,  0,  1]), np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
                    276., 300., 324., 348., 372., 396.])), 'historical temperatures (hist0)': (np.array([ 1,  0,  0,  2,  6,  2,  7, 13, 14, 11, 25, 22, 29, 20, 25,  6,  2,
                     1,  1]), np.array([-25.78947368, -24.78531856, -23.78116343, -22.77700831,
                    -21.77285319, -20.76869806, -19.76454294, -18.76038781,
                    -17.75623269, -16.75207756, -15.74792244, -14.74376731,
                    -13.73961219, -12.73545706, -11.73130194, -10.72714681,
-                    -9.72299169,  -8.71883657,  -7.71468144,  -6.71052632]))}, 'hw': {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)', 'energy_normal_param': {'mu': 0.07612295120388764, 'sig': 0.26004106669177984}, 'extreme_temp_normal_param': {'mu': -0.33020629173650035, 'sig': 0.2687845192334446}, 'max extreme temp per duration': 1.8604981436271297, 'min extreme temp per duration': 0.5661091912436009, 'max energy per duration': 1.8468741653468745, 'min energy per duration': -0.284239504158205, 'energy linear slope': 0.7404780352640733, 'normalized extreme temp duration fit slope': 0.4823740200889345, 'normalized extreme temp duration fit intercept': 0.45709478834728723, 'normalizing energy': 1648.666666666667, 'normalizing extreme temp': 23.157407407407405, 'normalizing duration': 144, 'historic time interval': 650040.0, 'hourly prob stay in heat wave': 0.9777962801504562, 'hourly prob of heat wave': 0.004445599228768125, 'historical durations (durations0)': (np.array([92, 49, 14,  6,  2,  1]), np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])), 'historical temperatures (hist0)': (np.array([ 1,  2,  2, 11, 35, 19, 18, 19, 13, 17, 10,  8,  6,  0,  2,  0,  1]), np.array([ 6.57244009,  7.57590029,  8.5793605 ,  9.58282071, 10.58628092,
+                    -9.72299169,  -8.71883657,  -7.71468144,  -6.71052632]))}, 'hw': {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)', 'energy_normal_param': {'mu': 0.07612295120388764, 'sig': 0.26004106669177984}, 'extreme_temp_normal_param': {'mu': -0.33020629173650035, 'sig': 0.2687845192334446}, 
+                                                                                      'max extreme temp per duration': 1.8604981436271297, 
+                                                                                      'min extreme temp per duration': 0.5661091912436009, 
+                                                                                      'hist max extreme temp per duration': 1.8604981436271297, 
+                                                                                      'hist min extreme temp per duration': 0.5661091912436009, 'max energy per duration': 1.8468741653468745, 'min energy per duration': -0.284239504158205, 'energy linear slope': 0.7404780352640733, 'normalized extreme temp duration fit slope': 0.4823740200889345, 'normalized extreme temp duration fit intercept': 0.45709478834728723, 'normalizing energy': 1648.666666666667, 'normalizing extreme temp': 23.157407407407405, 'normalizing duration': 144, 'historic time interval': 650040.0, 'hourly prob stay in heat wave': 0.9777962801504562, 'hourly prob of heat wave': 0.004445599228768125, 'historical durations (durations0)': (np.array([92, 49, 14,  6,  2,  1]), np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])), 'historical temperatures (hist0)': (np.array([ 1,  2,  2, 11, 35, 19, 18, 19, 13, 17, 10,  8,  6,  0,  2,  0,  1]), np.array([ 6.57244009,  7.57590029,  8.5793605 ,  9.58282071, 10.58628092,
                    11.58974113, 12.59320133, 13.59666154, 14.60012175, 15.60358196,
                    16.60704216, 17.61050237, 18.61396258, 19.61742279, 20.62088299,
                    21.6243432 , 22.62780341, 23.63126362]))}}, 'hist0': {'cs': (np.array([ 1,  0,  0,  2,  6,  2,  7, 13, 14, 11, 25, 22, 29, 20, 25,  6,  2,
@@ -382,6 +391,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                  'sig': 0.33027180813677953},
                 'max extreme temp per duration': 1.8135697651556644,
                 'min extreme temp per duration': 0.6265700963010938,
+                'hist max extreme temp per duration': 1.8135697651556644,
+                'hist min extreme temp per duration': 0.6265700963010938,
                 'max energy per duration': 1.59786617708341,
                 'min energy per duration': 0.26493943258502145,
                 'energy linear slope': 0.9147515369179842,
@@ -412,6 +423,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                  'sig': 0.37141737443335276},
                 'max extreme temp per duration': 1.6056618887870147,
                 'min extreme temp per duration': 0.7493661855698713,
+                'hist max extreme temp per duration': 1.6056618887870147,
+                'hist min extreme temp per duration': 0.7493661855698713,
                 'max energy per duration': 1.4918141998166654,
                 'min energy per duration': 0.12910763742847048,
                 'energy linear slope': 0.8642296404774669,
@@ -522,6 +535,180 @@ class Test_SolveDistributionShift(unittest.TestCase):
     
             self.assertTrue(resid1[1] > resid2[1])  
     
+    def test_known_worcester_case_June_2014_future(self):
+        
+        "This comes from a real case in Worcester MA in June 2014 shift"
+        
+        hist0 = {'hw':(np.array([ 1,  0,  0,  0,  1,  0, 10, 16, 29, 31, 25, 22, 12, 10,  9,  3,  2,1]),
+         np.array([ 3.36374743,  4.1596222 ,  4.95549697,  5.75137174,  6.54724651,
+                 7.34312128,  8.13899606,  8.93487083,  9.7307456 , 10.52662037,
+                11.32249514, 12.11836991, 12.91424468, 13.71011946, 14.50599423,
+                15.301869  , 16.09774377, 16.89361854, 17.68949331])),
+                  'cs':(np.array([ 2,  1,  2,  0,  6,  4,  6,  7, 16, 10, 20, 25, 22, 20, 19, 27, 26,
+                           8,  1,  4,  2,  2,  2,  2]),
+                   np.array([-15.31915509, -14.89055266, -14.46195023, -14.0333478 ,
+                          -13.60474537, -13.17614294, -12.74754051, -12.31893808,
+                          -11.89033565, -11.46173322, -11.03313079, -10.60452836,
+                          -10.17592593,  -9.7473235 ,  -9.31872106,  -8.89011863,
+                           -8.4615162 ,  -8.03291377,  -7.60431134,  -7.17570891,
+                           -6.74710648,  -6.31850405,  -5.88990162,  -5.46129919,
+                           -5.03269676]))}
+
+        
+        durations0 = {'hw':(np.array([76, 44, 24, 15,  9,  1,  2,  1]),
+         np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204.])),
+                      'cs':(np.array([79, 71, 46, 18,  8,  3,  4,  4,  0,  0,  1]),
+                       np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
+                              276.]))}
+        
+        historic_time_interval = 650040
+        
+        hours_per_year = 741
+        
+        random_seed = 7293821
+        
+        param0 = {'hw':{'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
+         'energy_normal_param': {'mu': -0.10226493816492782,
+          'sig': 0.37642169697450595},
+         'extreme_temp_normal_param': {'mu': 0.23483388928821727,
+          'sig': 0.4613883374783218},
+         'max extreme temp per duration': 1.7862463896925065,
+         'min extreme temp per duration': -0.1406602593461735,
+         'hist max extreme temp per duration': 1.7862463896925065,
+         'hist min extreme temp per duration': -0.1406602593461735,
+         'max energy per duration': 1.6310344056194355,
+         'min energy per duration': 0.1718715046306651,
+         'energy linear slope': 0.7603350767529872,
+         'normalized extreme temp duration fit slope': 0.39821590280496677,
+         'normalized extreme temp duration fit intercept': 0.5579202449045396,
+         'normalizing energy': 1340.0000000000005,
+         'normalizing extreme temp': 17.3125,
+         'normalizing duration': 192,
+         'historic time interval': 650040.0,
+         'hourly prob stay in heat wave': 0.9788886199655599,
+         'hourly prob of heat wave': 0.005405981846722733,
+         'historical durations (durations0)': (np.array([76, 44, 24, 15,  9,  1,  2,  1]),
+          np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204.])),
+         'historical temperatures (hist0)': (np.array([ 1,  0,  0,  0,  1,  0, 10, 16, 29, 31, 25, 22, 12, 10,  9,  3,  2,
+                  1]),
+          np.array([ 3.36374743,  4.1596222 ,  4.95549697,  5.75137174,  6.54724651,
+                  7.34312128,  8.13899606,  8.93487083,  9.7307456 , 10.52662037,
+                 11.32249514, 12.11836991, 12.91424468, 13.71011946, 14.50599423,
+                 15.301869  , 16.09774377, 16.89361854, 17.68949331])),
+         'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+         'decay function coef': np.array([ 96.91670234,   0.97129716, 197.65052132])},
+                  'cs':{'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
+        'energy_normal_param': {'mu': 0.012583096121127626,
+         'sig': 0.3865940662591064},
+        'extreme_temp_normal_param': {'mu': 0.2071786056066263,
+         'sig': 0.48418059193534846},
+        'max extreme temp per duration': 1.7795213892594484,
+        'min extreme temp per duration': 0.4087431054359999,
+        'hist max extreme temp per duration': 1.7795213892594484,
+        'hist min extreme temp per duration': 0.4087431054359999,
+        'max energy per duration': 1.6589417225644925,
+        'min energy per duration': -0.025886010311640867,
+        'energy linear slope': 0.8396179089345742,
+        'normalized extreme temp duration fit slope': 0.47674102276569175,
+        'normalized extreme temp duration fit intercept': 0.5526128780127326,
+        'normalizing energy': -1518.3333333333333,
+        'normalizing extreme temp': -15.113425925925927,
+        'normalizing duration': 264,
+        'historic time interval': 650040.0,
+        'hourly prob stay in heat wave': 0.9692740128468249,
+        'hourly prob of heat wave': 0.008634356940133602,
+        'historical durations (durations0)': (np.array([79, 71, 46, 18,  8,  3,  4,  4,  0,  0,  1]),
+         np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
+                276.])),
+        'historical temperatures (hist0)': (np.array([ 2,  1,  2,  0,  6,  4,  6,  7, 16, 10, 20, 25, 22, 20, 19, 27, 26,
+                 8,  1,  4,  2,  2,  2,  2]),
+         np.array([-15.31915509, -14.89055266, -14.46195023, -14.0333478 ,
+                -13.60474537, -13.17614294, -12.74754051, -12.31893808,
+                -11.89033565, -11.46173322, -11.03313079, -10.60452836,
+                -10.17592593,  -9.7473235 ,  -9.31872106,  -8.89011863,
+                 -8.4615162 ,  -8.03291377,  -7.60431134,  -7.17570891,
+                 -6.74710648,  -6.31850405,  -5.88990162,  -5.46129919,
+                 -5.03269676])),
+        'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+        'decay function coef': np.array([229.04473382,   0.9770868 , 534.34596956])}}
+        
+        
+        opt_val =  {'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
+                                    'max_iter': 30,
+                                    'limit_temperatures': False,
+                                    'num_cpu': -1,
+                                    'num_step': 2500000,
+                                    'plot_results': self.plot_results,
+                                    'decay_func_type': {'cs': 'quadratic_times_exponential_decay_with_cutoff', 'hw': "quadratic_times_exponential_decay_with_cutoff"},
+                                    'test_mode': False,
+                                    'min_num_waves': 10,
+                                    'out_path': os.path.join("temp_out", "worcester_future_6_50%_2014_SSP245.png")}
+        opt_val['problem_bounds'] = {'cs':{'delT_mu': (-4.0, 10.0),
+                             'delT_sig multipliers': (0.05,3),
+                             'P_event': (0.001, 0.02),
+                             'P_sustain': (0.97, 0.999999),
+                             'multipliers to max probability time': (0,1),
+                             'cutoff time multipliers':(2,3),
+                             'max peak prob for quadratic model': (0.98, 1.0)},
+                       'hw':{'delT_mu': (-4.0, 10.0),
+                             'delT_sig multipliers': (-2,3),
+                             'P_event': (0.0005,0.02),
+                             'P_sustain': (0.97,0.999999),
+                             'multipliers to max probability time': (0.1,2),
+                             'cutoff time multipliers':(1,3),
+                             'max peak prob for quadratic model': (0.97, 1.0)}}
+        opt_val['max_iter'] = 125
+        opt_val['num_cpu'] = -1
+        opt_val['weights'] = np.array([3.0,1,1,1,3.0])
+        opt_val['use_cython'] = True
+        opt_val['plot_title'] = "test_known_case_future"
+        opt_val['x_solution'] = np.array([0.37869749e-01, 0.15605901e+00, 0.01737277e+00, 0.04912986e-01,
+               5.39332295e-03, 5.34034912e-03, 9.89053004e-01, 9.60857492e-01,
+               277.23720951,   0.99576397, 287.62982799,
+               277.23720951,   0.99576397, 287.62982799])
+        
+        ipcc_shift = {'cs':None,
+                      'hw':{'temperature':{'10 year':0.982942, '50 year':1.027711},
+                            'frequency':{'10 year':1.898539, '50 year':2.510386}}}
+        
+        obj_solve = SolveDistributionShift(opt_val['num_step'], 
+                               param0, 
+                               random_seed, 
+                               hist0, 
+                               durations0, 
+                               opt_val['delT_above_shifted_extreme'], 
+                               historic_time_interval,
+                               hours_per_year,
+                               problem_bounds=opt_val['problem_bounds'],
+                               ipcc_shift=ipcc_shift,
+                               decay_func_type=opt_val['decay_func_type'],
+                               use_cython=opt_val['use_cython'],
+                               num_cpu=opt_val['num_cpu'],
+                               plot_results=opt_val['plot_results'],
+                               max_iter=opt_val['max_iter'],
+                               plot_title=opt_val['plot_title'],
+                               out_path=opt_val['out_path'],
+                               weights=opt_val['weights'],
+                               limit_temperatures=opt_val['limit_temperatures'],
+                               min_num_waves=opt_val['min_num_waves'],
+                               x_solution=opt_val['x_solution'],
+                               test_mode=opt_val['test_mode']) 
+        resid1 = obj_solve.residuals[1]
+        inputs = obj_solve.inputs
+        
+        inputs['out_path'] = os.path.join("temp_out", "worcester_future_6_50%_2014_SSP245_ADJUSTED.png")
+        
+        inputs['x_solution'] =  np.array([-1, -0.15605901e+00, 0.12737277e+00, -.25912986e-00,
+               5.39332295e-03, 5.34034912e-03, 9.89053004e-01, 9.60857492e-01,
+               277.23720951,   0.99576397, 287.62982799,
+               277.23720951,   0.99576397, 287.62982799])
+        
+        obj_solve.reanalyze(inputs)
+        resid2 = obj_solve.residuals[1]
+        
+        self.assertTrue(resid1 > resid2)
+        
+    
     def test_assert_warns_on_solution_boundary(self):
         run_test = self._run_all_tests
         if run_test:
@@ -565,6 +752,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                 param['hw']['extreme_temp_normal_param']['sig'] = 0.3
                 param['hw']['max extreme temp per duration'] = 0.55
                 param['hw']['min extreme temp per duration'] = 0.1
+                param['hw']['hist max extreme temp per duration'] = 0.55
+                param['hw']['hist min extreme temp per duration'] = 0.1
                 param['hw']['normalizing extreme temp'] = 18
                 param['hw']['normalized extreme temp duration fit slope'] = 1.0
                 param['hw']['normalized extreme temp duration fit intercept'] = 0.2
@@ -577,6 +766,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
                 param['cs']['extreme_temp_normal_param']['sig'] = 0.3
                 param['cs']['max extreme temp per duration'] = 0.55
                 param['cs']['min extreme temp per duration'] = 0.1
+                param['cs']['hist max extreme temp per duration'] = 0.55
+                param['cs']['hist min extreme temp per duration'] = 0.1
                 param['cs']['normalizing extreme temp'] = -18
                 param['cs']['normalized extreme temp duration fit slope'] = 1.0
                 param['cs']['normalized extreme temp duration fit intercept'] = 0.2
