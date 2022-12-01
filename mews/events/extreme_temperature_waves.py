@@ -17,7 +17,7 @@ must be replicated in any derivative works that use the source code.
 @author: dlvilla
 """
 from mews.stats import Extremes
-from mews.stats.solve import SolveDistributionShift 
+from mews.stats.solve import SolveDistributionShift, shift_a_b_of_trunc_gaussian
 from mews.weather.psychrometrics import relative_humidity
 from mews.weather.climate import ClimateScenario
 from mews.utilities.utilities import filter_cpu_count
@@ -28,7 +28,7 @@ from mews.constants.data_format import (WAVE_MAP, VALID_SOLVE_OPTIONS, DEFAULT_S
 
 from mews.utilities.utilities import (write_readable_python_dict,
                                       read_readable_python_dict,
-                                      dict_key_equal)
+                                      dict_key_equal, bin_avg)
 
 from copy import deepcopy
 from datetime import datetime
@@ -48,6 +48,61 @@ import statsmodels.api as sm
 from warnings import warn
 
 import matplotlib.pyplot as plt
+
+def _calculate_shift(obj2,first_try_solution_location,month_factors,sol_dir,cii):
+
+    stats = obj2.read_solution(first_try_solution_location)
+    stats_new = deepcopy(stats)
+    
+    for month in np.arange(1,13):                            
+        stat = stats['heat wave'][month]
+        stat_new = stats_new['heat wave'][month]
+        alpha = stat['normalized extreme temp duration fit slope']
+        beta = stat['normalized extreme temp duration fit intercept']
+        hist0 = stat['historical durations (durations0)']
+        avgbin = bin_avg(hist0)
+        Dmean = (hist0[0] * avgbin).sum()/hist0[0].sum()
+        Dmax = stat['normalizing duration']
+        delTmax = stat['normalizing extreme temp'] 
+        delTipcc = obj2.ipcc_results['ipcc_fact'][month]['10 year event'][cii + " CI Increase in Intensity"]
+        
+        delms = delTipcc / ((alpha * Dmean/Dmax + beta) * delTmax) / 2
+        
+        mu_T = stat['extreme_temp_normal_param']['mu']
+        sig_T = stat['extreme_temp_normal_param']['sig']
+        
+        dela, delb = shift_a_b_of_trunc_gaussian(delms*month_factors[month-1], mu_T, delms*month_factors[month-1], sig_T )
+        
+        stat_new['extreme_temp_normal_param']['mu'] = mu_T + month_factors[month-1] * delms
+        stat_new['extreme_temp_normal_param']['sig'] = sig_T + month_factors[month-1] * delms
+        stat_new['min extreme temp per duration'] = stat_new['min extreme temp per duration'] + dela
+        stat_new['max extreme temp per duration'] = stat_new['max extreme temp per duration'] + delb
+        
+        # now do energy assuming that energy grows proportionately with temperature (i.e. duration is not)
+        # increasing for this case.
+        
+        # ASSUME A SINUSOIDAL FORM! the area under a single sinusoidal wave 
+        # is 2 times the amplitude delTipcc.
+        alpha_E = stat['energy linear slope']
+        Emax = stat['normalizing energy']
+        
+        delms_E = 2 * delTipcc / ((alpha_E * Dmean/Dmax) * Emax) / 2
+
+        mu_E = stat['energy_normal_param']['mu']
+        sig_E = stat['energy_normal_param']['sig']
+        
+        dela_E, delb_E = shift_a_b_of_trunc_gaussian(delms_E*month_factors[month-1], mu_E, 
+                                                     delms_E*month_factors[month-1], sig_E)
+        
+        
+        
+        stat_new['energy_normal_param']['mu'] = mu_E + month_factors[month-1] * delms_E
+        stat_new['energy_normal_param']['sig'] = sig_E + month_factors[month-1] * delms_E
+        stat_new['min energy per duration'] = stat_new['min energy per duration'] + dela_E
+        stat_new['max energy per duration'] = stat_new['max energy per duration'] + delb_E
+    
+    obj2.stats = stats_new
+    obj2.write_solution(os.path.join(sol_dir,"iterate.txt"))
 
 
 def _assemble_x_solution(stats,month):
@@ -317,7 +372,7 @@ class ExtremeTemperatureWaves(Extremes):
         if delT_ipcc_min_frac > 1.0 or delT_ipcc_min_frac < 0.0:
             raise ValueError("The input 'delT_ipcc_min_frac' must be between 0.0 and 1.0!")
         
-        self.proxy = proxy
+        self._proxy = proxy
         self.use_global = use_global
         np.random.seed(random_seed)
         self._random_seed = random_seed
@@ -370,7 +425,192 @@ class ExtremeTemperatureWaves(Extremes):
         self._write_results = write_results
         self.solve_options = solve_options
         self.future_solve_obj = {}
+        self._station = station
+        self._unit_conversion = unit_conversion
+        self._use_local = use_local
+        self._include_plots = include_plots
+        self._norms_unit_conversion = norms_unit_conversion
+        self._num_cpu = num_cpu
+        self._test_markov = test_markov
+        self._solution_file = solution_file
 
+
+
+    def create_solutions(self,future_years,scenarios,ci_intervals,historic_solution,scen_dict,cold_snap_shift=None,filename=""):
+        """
+        
+        Write solution files for a broad range of future years, ssp scenarios, 
+        and confidence intervals. A historic solution must be run first. This is 
+        much quicker than "create_scenario" and uses
+        algebraic solution that shifts mean and stretches standard deviation
+        equally to exactly meet the average of the 10 and 50 year IPCC events.
+
+        Parameters
+        ----------
+        future_years : array-like
+            list of integers years > 2014
+        scenarios : array-like
+            list of valid SSP names ["SSP119","SSP126","SSP245","SSP370","SSP585"] are the only valid entries
+        ci_intervals : array-like maximum of 3 elements
+            list of confidence intervals to calculate ['5%','50%', and '95%'] are the
+            only valid entries
+        historic_solution : TYPE
+            DESCRIPTION.
+        scen_dict : TYPE
+            DESCRIPTION.
+        cold_snap_shift : dict, optional
+            manually input equivalent to the IPCC heat wave shift table. If none, 
+            cold snaps will be kept at their historical values
+        filename : str, optional
+            string to prepend to the filename output The default is "".
+
+        Raises
+        ------
+        ValueError
+            Whenever the function is called multiple times or "create_scenario"
+            has already been run.
+
+        Returns
+        -------
+        results : dictionary of dictionary of dictionary with ci, year, and scenario
+            as keys. with mew.stats.Alter type objects for actual realizations
+            THIS IS NOT THAT USEFUL
+            
+        filenames : list
+            a list of all the filenames with MEWS solution parameters written.
+
+        """
+        
+        
+        results = {}
+
+        filenames=[]
+        if self._create_scenario_has_been_run:
+            raise ValueError("This function cannot be run if create_scenario "+
+                             " has overwritten the historic solution on "+
+                             "initialization. The best use case is to run the"+
+                             " initiazation to produce historic fit (takes a "+
+                             "long time), use obj.write_solution, and then"+
+                             " reinitialize using a solution file multiple time"+
+                             " and running this routine 1 time.")
+
+        sol_dir = os.path.dirname(historic_solution)
+        
+        obj = deepcopy(self)
+
+        # still working on this!
+        # this is the longest step.
+        for syear in future_years:
+            results[syear] = {}
+            for scen in scenarios:
+                results[syear][scen] = {}
+                for cii in ci_intervals:
+                    
+                    # restart capability
+                    if syear in results:
+                        if scen in results[syear]:
+                            if cii in results[syear][scen]:
+                                continue
+                           
+                    # start fresh with the historical solution
+                    obj2 = deepcopy(obj)
+                    
+                    if not os.path.exists(historic_solution):
+                        obj2.write_solution(os.path.join(historic_solution))
+                    
+                    # reduces the number of iterations.
+                    obj2.solve_options['future']['num_postprocess'] = 1
+                    
+                    file_path = historic_solution
+                
+                    # Question - do you want to look across the extreme event confidence
+                    #            intervals or just stick to the 50%?
+                    #          - do you want a cold snap shift? I don't have information for
+                    #            how much cold snaps will change with increasing global warming
+                    
+                    # THIS IS THE HISTORICAL SOLUTION
+                    obj2._write_results = False
+                    results[syear][scen][cii] = obj2.create_scenario(scenario_name=scen,
+                                                                    year=syear,
+                                                                    climate_temp_func=scen_dict,
+                                                                    num_realization=1,
+                                                                    climate_baseyear=2014,
+                                                                    increase_factor_ci=cii,
+                                                                    cold_snap_shift=cold_snap_shift,
+                                                                    solution_file=file_path)
+                    # These must be one for the calculation to work!
+                    month_factors = [1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0,
+                                     1.0]
+                    
+                    obj2_hist = deepcopy(obj2)
+                    # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
+                    _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii)
+                    
+                    #month_factors = [1.6,
+                    #                 2.5,
+                    #                 2.5,
+                    #                 2.5,
+                    #                 2.0,
+                    #                 1.75,
+                    #                 3.0,
+                    #                 2.5,
+                    #                 3.0,
+                    #                 2.5,
+                    #                 2.25,
+                    #                 2.25]
+
+                    
+                    
+                    results[syear][scen][cii] = obj2.create_scenario(scenario_name=scen,
+                                                                    year=syear,
+                                                                    climate_temp_func=scen_dict,
+                                                                    num_realization=1,
+                                                                    climate_baseyear=2014,
+                                                                    increase_factor_ci=cii,
+                                                                    cold_snap_shift=cold_snap_shift,
+                                                                    solution_file=os.path.join(sol_dir,"iterate.txt"))
+            
+
+                    # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
+                    # variation.
+                    new_month_factors = []
+                    for month in np.arange(1,13):
+                        h_thresh = obj2_hist.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
+                        f_thresh = obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
+                        
+                        h_gap = 0.5*((h_thresh['target'][0] - h_thresh['actual'][0]) + (h_thresh['target'][1] - h_thresh['actual'][1]))       
+                        f_gap = 0.5*((f_thresh['target'][0] - f_thresh['actual'][0]) + (f_thresh['target'][1] - f_thresh['actual'][1]))
+                        
+                        new_month_factors.append(h_gap / (h_gap - f_gap))
+                        
+                    # now produce a solution that is reasonably good only based on changing temperature distribution parameters from the 
+                    # historic solution.
+
+                    _calculate_shift(obj2_hist,historic_solution,new_month_factors,sol_dir,cii)
+                    
+                    
+                    results[syear][scen][cii] = obj2_hist.create_scenario(scenario_name=scen,
+                                                                    year=syear,
+                                                                    climate_temp_func=scen_dict,
+                                                                    num_realization=1,
+                                                                    climate_baseyear=2014,
+                                                                    increase_factor_ci=cii,
+                                                                    cold_snap_shift=cold_snap_shift,
+                                                                    solution_file=os.path.join(sol_dir,"iterate.txt"))
+                    fname = filename+"final_solution_{0:d}_{1}_{2}.txt".format(syear,scen,cii)
+                    filenames.append(fname)
+                    obj2_hist.write_solution(os.path.join(sol_dir,fname))
+        return results,filenames
         
     def create_scenario(self,scenario_name,year,climate_temp_func,
                         num_realization=1,climate_baseyear=None,increase_factor_ci="50%",
@@ -1061,11 +1301,11 @@ class ExtremeTemperatureWaves(Extremes):
         
         
         """
-        if not self.proxy is None:
-            os.environ['http_proxy'] = self.proxy 
-            os.environ['HTTP_PROXY'] = self.proxy
-            os.environ['https_proxy'] = self.proxy
-            os.environ['HTTPS_PROXY'] = self.proxy
+        if not self._proxy is None:
+            os.environ['http_proxy'] = self._proxy 
+            os.environ['HTTP_PROXY'] = self._proxy
+            os.environ['https_proxy'] = self._proxy
+            os.environ['HTTPS_PROXY'] = self._proxy
         
         
         df_temp = []
@@ -1348,8 +1588,11 @@ class ExtremeTemperatureWaves(Extremes):
         ax.plot(xline,yfunc,color="k",linestyle="-")
         
         ax.grid("on")
-        
-        ax.set_title(fit_name)
+        ax.set_xlim([0,1])
+        ax.set_ylim([0,1])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        #ax.set_title(fit_name)
     
         
     def _plot_linear_fit(self,xdata,ydata,params,pvalues,fit_name):
@@ -1389,12 +1632,15 @@ class ExtremeTemperatureWaves(Extremes):
                               include_plots=True):
         
         # waves_other is for hw if in cs and for cs if in hw.
-        
         if include_plots:
-            fig1, ax1 = plt.subplots(4,3,figsize=(10,10))
-            fig2, ax2 = plt.subplots(4,3,figsize=(10,10))
-            fig3, ax3 = plt.subplots(4,3,figsize=(10,10))
-            fig4, ax4 = plt.subplots(4,3,figsize=(10,10))
+            fig1, ax1 = plt.subplots(4,3,figsize=(5,5))
+            fig2, ax2 = plt.subplots(4,3,figsize=(5,5))
+            fig3, ax3 = plt.subplots(4,3,figsize=(5,5))
+            fig4, ax4 = plt.subplots(4,3,figsize=(5,5))
+            fig1.subplots_adjust(wspace=0, hspace=0)
+            fig2.subplots_adjust(wspace=0, hspace=0)
+            fig3.subplots_adjust(wspace=0, hspace=0)
+            fig4.subplots_adjust(wspace=0, hspace=0)
         
         hour_in_day = 24
         stats = {}
@@ -1506,7 +1752,11 @@ class ExtremeTemperatureWaves(Extremes):
             
             if include_plots:
                 ax3[row,col].hist(wave_energy_per_duration_norm)
+                ax3[row,col].set_xticks([])
+                ax3[row,col].set_yticks([])
                 ax4[row,col].hist(extreme_temp_per_duration_norm)
+                ax4[row,col].set_xticks([])
+                ax4[row,col].set_yticks([])
 
             temp_dict['help'] = ("These statistics are already mapped"+
                                 " from -1 ... 1 and _inverse_transform_fit is"+
@@ -1601,6 +1851,19 @@ class ExtremeTemperatureWaves(Extremes):
             stats[month] = temp_dict
             
             col+=1
+            
+        if include_plots:
+            if is_hw:
+                fig1.savefig("historic_heat_wave_energy.png",dpi=300)
+                fig2.savefig("historic_heat_wave_temperature.png",dpi=300)
+                fig3.savefig("energy_per_duration_heat_wave_histogram",dpi=300)
+                fig4.savefig("maxdelT_per_duration_heat_wave_histogram",dpi=300)
+            else:
+                fig1.savefig("historic_cold_snap_energy.png",dpi=300)
+                fig2.savefig("historic_cold_snap_temperature.png",dpi=300)
+                fig3.savefig("energy_per_duration_cold_snap_histogram",dpi=300)
+                fig4.savefig("maxdelT_per_duration_cold_snap_histogram",dpi=300)                
+                
             
         return stats
     

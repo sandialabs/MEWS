@@ -16,6 +16,7 @@ import numpy as np
 
 import warnings
 
+
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
 from mews.graphics.plotting2D import Graphics
@@ -542,7 +543,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         return num_hw_dict
 
     def test_read_and_write_solution_file(self):
-        run_test = True #self.run_all_tests
+        run_test = self.run_all_tests
         if run_test:
             
             solve_options = {'historic':{'num_step':20000,
@@ -586,6 +587,85 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
 
             obj2.create_scenario('SSP585',2080,scen_dict,1,2014,
                                  solution_file=os.path.join("temp_out","test_solution_file2.txt"))
+            
+    def test_create_solutions(self):
+        run_test = self.run_all_tests
+        if run_test:
+            inp_dir = os.path.join(os.path.dirname(__file__),"data_for_testing")
+            """
+            INPUT DATA
+            
+            adjust all of these to desired values if analyzing a new location. Paths have
+            to be set and folders created if functioning outside of the MEWS repository 
+            structure.
+            
+            
+            
+            """
+            # STEP 1 to using MEWS, create a climate increase in surface temperature
+            #        set of scenarios,
+            #
+            # you must download https://osf.io/ts9e8/files/osfstorage or else
+            # endure the process of all the CMIP 6 files downloading (I had to restart ~100 times)
+            # with proper proxy settings.
+    
+            # HERE CS stands for climate scenario (not cold snap)
+            future_years = [2063] 
+    
+            # CI interval valid = ['5%','50%','95%']
+            ci_intervals = ["95%"]
+            
+            lat = 42.268
+            lon = 360-71.8763
+    
+            # Station - Worcester Regional Airport
+            station = os.path.join(inp_dir, "USW00094746.csv")
+            
+            historical_solution = os.path.join(inp_dir,"worcester_historical_solution.txt")
+    
+            # change this to the appropriate unit conversion (5/9, -(5/9)*32) is for F going to C
+            unit_conversion = (5/9, -(5/9)*32)
+            unit_conv_norms = (5/9, -(5/9)*32)
+    
+            # gives consistency in run results
+            random_seed = 7293821
+    
+            num_realization_per_scenario = 10
+    
+            # plot_results
+            plot_results = True
+            run_parallel = True
+            num_cpu = 20
+    
+            # No need to input "historical"
+            # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
+            scenarios = ['SSP370'] 
+    
+            weather_files = [os.path.join(inp_dir, "USA_MA_Worcester.Rgnl.AP.725095_TMY3.epw")]
+            
+            scen_dict = {'historical': np.poly1d([1.35889778e-10, 7.56034740e-08, 1.55701410e-05, 1.51736807e-03,
+                                                  7.20591313e-02, 4.26377339e-06]),
+                         'SSP245': np.poly1d([-0.00019697,  0.04967771, -0.09146572]),
+                         'SSP370': np.poly1d([0.00017505,  0.03762937, -0.07095332]),
+                         'SSP585': np.poly1d([0.00027245, 0.05231527, 0.0031547])}
+            
+            obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
+                                          use_local=True, random_seed=random_seed,
+                                          include_plots=plot_results,
+                                          run_parallel=run_parallel, use_global=False, delT_ipcc_min_frac=1.0,
+                                          num_cpu=num_cpu, write_results=True, test_markov=False,
+                                          solve_options=None,
+                                          norms_unit_conversion=unit_conv_norms,
+                                          solution_file=historical_solution)
+            
+            results,filenames = obj.create_solutions(future_years, scenarios, ci_intervals, historical_solution, scen_dict)
+            
+            self.assertTrue(len(filenames)==1)
+            self.assertTrue(os.path.exists(os.path.join(os.path.dirname(historical_solution),filenames[0])))
+            os.remove(os.path.join(os.path.dirname(historical_solution),filenames[0]))
+
+        else:
+            warnings.warn("The test_create_solutions unittest was not run because it is turned off!")
 
 
     @staticmethod

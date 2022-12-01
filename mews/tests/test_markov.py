@@ -22,6 +22,8 @@ Created on Thu Dec 16 16:07:57 2021
 """
 
 from mews.cython import markov_chain
+from mews.cython.markov_time_dependent import quadratic_times_exponential_decay_with_cutoff
+from mews.stats.markov_time_dependent import quadratic_times_exponential_decay_with_cutoff as quadratic_times_exponential_decay_with_cutoff_py
 from mews.stats.markov import MarkovPy
 
 from mews.stats.markov_time_dependent import (markov_chain_time_dependent_py,
@@ -309,6 +311,56 @@ class Test_Markov(unittest.TestCase):
         value = markov_chain(cat_and_mouse.cumsum(axis=1),rand,state0)[-1]
         
         self.assertEqual(value,4)      
+        
+    def test_quadratic_decay_func(self):
+        
+        linestyle = [":","-","--"]
+        color = ['k','k','k']
+        
+        nondim_delT = np.arange(0,10,.001)
+
+        Pratio = np.array([0.9,1.0,1.1])
+
+        if self.plot_results:
+            fig,ax = plt.subplots(1,1,figsize=(5,5))
+
+        yy = {}
+        yy_py = {}
+        for Pr,ls,col in zip(Pratio,linestyle,color):
+            yy[Pr] = np.array([quadratic_times_exponential_decay_with_cutoff(nd_delT,
+                                            1.0,
+                                            Pr,
+                                            1.0,
+                                            9.0) for nd_delT in nondim_delT])
+            yy_py[Pr] = np.array([quadratic_times_exponential_decay_with_cutoff_py(nd_delT,
+                                            1.0,
+                                            Pr,
+                                            1.0,
+                                            9.0) for nd_delT in nondim_delT])
+            
+            if self.plot_results:
+                ax.plot(nondim_delT,yy[Pr],label=r"$\frac{P_{max_{w,m}}}{P_{0_{w,m}}}$"+"={0:2.1f}".format(Pr),linestyle=ls,color=col)
+    
+        if self.plot_results:
+            ax.legend()
+            ax.set_xlabel(r"$\Delta t / \Delta t_{p_{w,m}}$")
+            ax.set_ylabel(r"$P_{s_{w,m}} / P_{0_{w,m}}$")
+            ax.grid("on")
+            plt.tight_layout()
+            plt.savefig("decay_function_illustration.png",dpi=300)
+            
+        # remember cutoff time occurs at 9.0
+        self.assertAlmostEqual(yy[1.0].sum(), len(yy[1.0])-999)
+        
+        ind1 = (nondim_delT == 1.0).argmax()
+        ind8 = (nondim_delT == 8.0).argmax()
+        self.assertAlmostEqual(yy[0.9][ind1],0.9)
+        self.assertAlmostEqual(yy[1.1][ind1],1.1)
+        self.assertAlmostEqual(yy[1.1][ind8], 0.6143431087434705)
+        self.assertTrue((yy_py[1.1]==yy[1.1]).all())
+        
+        
+        
         
 
         

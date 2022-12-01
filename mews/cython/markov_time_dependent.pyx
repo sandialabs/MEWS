@@ -166,6 +166,9 @@ cpdef DTYPE_t quadratic_times_exponential_decay_with_cutoff(DTYPE_t time_in_stat
         # evaluate_decay_function
         val = (one + (t_dimensionless)**two * exp(two) * 
                     (Pmax/P0 - 1)* exp(-two * t_dimensionless))
+        
+        if time_in_state >= two * time_to_peak:
+            val = val * exp(-exp(1)**(-2) * abs(Pmax/P0-1) * (t_dimensionless-2)**2)
     
     return val
     
