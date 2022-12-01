@@ -932,6 +932,7 @@ class CMIP_Data(object):
             CI_label_dict = {self._historical_scen_str:"Historical Data 95% CI","SSP119":"SSP1-1.9 Data 95% CI","SSP126":"SSP1-2.6 Data 95% CI",
                              "SSP245":"SSP2-4.5 Data 95% CI","SSP370":"SSP3.70 Data 95% CI","SSP585":"SSP5-8.5 Data 95% CI"}
     
+            flat_df_list = []
             for scenario in self.scenario_list:
                 
                 index = self.scenario_list.index(scenario)
@@ -952,7 +953,34 @@ class CMIP_Data(object):
                                     (self.total_model_data[scenario].avg_list-self.total_model_data[scenario].CI_list),
                                     (self.total_model_data[scenario].avg_list+self.total_model_data[scenario].CI_list),
                                     color=color_dict[scenario],alpha=.2,label=CI_label_dict[scenario])
+            
+                [flat_df_list.append([yr, val, "gcm data point", scenario])  
+                 for yr,val in zip(self.total_model_data[scenario].x_data_1d, 
+                                   self.total_model_data[scenario].y_data_1d)]
                 
+                [flat_df_list.append([yr, val, "polynomail fit", scenario])  
+                 for yr,val in zip(year_dict[scenario], 
+                                   self.total_model_data[scenario].delT_list_reg)]
+                
+                [flat_df_list.append([yr, val, "1/2 symmetric 95% confidence interval (CI) (add and subtract this from average to get CI)", scenario])  
+                 for yr,val in zip(year_dict[scenario], 
+                                   self.total_model_data[scenario].CI_list)]
+                                   
+                [flat_df_list.append([yr, val, "average of gcm data points", scenario])  
+                 for yr,val in zip(year_dict[scenario], 
+                                   self.total_model_data[scenario].avg_list)]
+                
+            df = pd.DataFrame(flat_df_list, columns=["Year","$\Delta T (^{\circ}C)","Type","Scenario"])
+            
+            df.to_csv(write_png + ".csv")
+                
+            
+                
+                
+                
+                
+            
+            
             plot_box = ax.get_position()
             ax.set_position([plot_box.x0, plot_box.y0,plot_box.width*0.8,plot_box.height])
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
@@ -970,7 +998,9 @@ class CMIP_Data(object):
                 plt.show()  
                 
             return fig,ax
-        
+    
+    def _total_model_data_to_csv(self,year_dict):
+        pass
     
     def results2(self,desired_scenario,resolution='low'):
         """

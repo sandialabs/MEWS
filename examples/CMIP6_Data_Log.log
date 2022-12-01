@@ -19,3 +19,32 @@
 2022-11-11 11:42:43,442 | INFO | All SSP370 files downloaded
 2022-11-11 11:42:43,575 | INFO | All SSP585 files downloaded
 2022-11-11 11:47:11,405 | INFO | Temperature computation complete
+2022-12-01 14:08:35,442 | INFO | Script Initiation
+2022-12-01 14:08:35,443 | WARNING | Unable to import cartopy
+2022-12-01 14:08:35,443 | WARNING | Cannot display world map because cartopy is not properly installed
+2022-12-01 14:08:36,127 | INFO | All historical files downloaded
+2022-12-01 14:08:36,216 | INFO | All SSP119 files downloaded
+2022-12-01 14:08:36,388 | INFO | All SSP126 files downloaded
+2022-12-01 14:08:36,621 | INFO | All SSP245 files downloaded
+2022-12-01 14:08:36,843 | INFO | All SSP370 files downloaded
+2022-12-01 14:08:37,066 | INFO | All SSP585 files downloaded
+2022-12-01 14:09:25,986 | INFO | Script Initiation
+2022-12-01 14:09:25,987 | WARNING | Unable to import cartopy
+2022-12-01 14:09:25,987 | WARNING | Cannot display world map because cartopy is not properly installed
+2022-12-01 14:09:26,718 | INFO | All historical files downloaded
+2022-12-01 14:09:26,794 | INFO | All SSP119 files downloaded
+2022-12-01 14:09:26,942 | INFO | All SSP126 files downloaded
+2022-12-01 14:09:27,135 | INFO | All SSP245 files downloaded
+2022-12-01 14:09:27,317 | INFO | All SSP370 files downloaded
+2022-12-01 14:09:27,515 | INFO | All SSP585 files downloaded
+2022-12-01 14:16:44,798 | INFO | Temperature computation complete
+2022-12-01 14:21:11,971 | INFO | Script Initiation
+2022-12-01 14:21:11,972 | WARNING | Unable to import cartopy
+2022-12-01 14:21:11,972 | WARNING | Cannot display world map because cartopy is not properly installed
+2022-12-01 14:21:12,750 | INFO | All historical files downloaded
+2022-12-01 14:21:12,827 | INFO | All SSP119 files downloaded
+2022-12-01 14:21:12,973 | INFO | All SSP126 files downloaded
+2022-12-01 14:21:13,168 | INFO | All SSP245 files downloaded
+2022-12-01 14:21:13,351 | INFO | All SSP370 files downloaded
+2022-12-01 14:21:13,572 | INFO | All SSP585 files downloaded
+2022-12-01 14:26:00,643 | INFO | Temperature computation complete

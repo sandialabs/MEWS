@@ -39,7 +39,7 @@ if __name__ == "__main__":
     
     """
     
-    step = 2
+    step = 1
     # STEP 1 to using MEWS, create a climate increase in surface temperature
     #        set of scenarios,
     #
@@ -78,6 +78,7 @@ if __name__ == "__main__":
     # No need to input "historical"
     # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
     scenarios = ['SSP585',"SSP245", 'SSP370'] 
+    
     output_folder_cs = os.path.join(
         "example_data", "Worcester", "climate_scenario_results")
 
@@ -113,7 +114,6 @@ if __name__ == "__main__":
             "temp_pickles", "cs_obj.pickle"), 'wb'))
 
     else:
-        # this is the results obtained by dlvilla 10/31/2022
         scen_dict = {'historical': np.poly1d([1.35889778e-10, 7.56034740e-08, 1.55701410e-05, 1.51736807e-03,
                                               7.20591313e-02, 4.26377339e-06]),
                      'SSP245': np.poly1d([-0.00019697,  0.04967771, -0.09146572]),
@@ -185,36 +185,14 @@ if __name__ == "__main__":
     if step == 3:
         inp_dir = os.path.join(os.path.dirname(__file__),"example_data","Worcester")
         
-        future_years = [2100] 
-
-        # CI interval valid = ['5%','50%','95%']
-        ci_intervals = ["95%"]
-        
-        lat = 42.268
-        lon = 360-71.8763
-
-        # Station - Worcester Regional Airport
         station = os.path.join(inp_dir, "USW00094746.csv")
         
         historical_solution = os.path.join(first_try_solution_location)
 
         # change this to the appropriate unit conversion (5/9, -(5/9)*32) is for F going to C
-        unit_conversion = (5/9, -(5/9)*32)
-        unit_conv_norms = (5/9, -(5/9)*32)
-
-        # gives consistency in run results
-        random_seed = 7293821
-
-        num_realization_per_scenario = 10
-
-        # plot_results
-        plot_results = True
-        run_parallel = True
-        num_cpu = 20
 
         # No need to input "historical"
         # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
-        scenarios = ['SSP370'] 
         
         results,filenames = obj.create_solutions(future_years, scenarios, ci_intervals, historical_solution, scen_dict)
     
