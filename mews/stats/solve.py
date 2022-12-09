@@ -27,6 +27,7 @@ from mews.constants.data_format import (DECAY_FUNC_NAMES, ABREV_WAVE_NAMES,
                                         VALID_SOLVE_INPUTS, 
                                         DEFAULT_NONE_DECAY_FUNC, 
                                         WEIGHTS_DEFAULT_ARRAY)
+from scipy.stats import kstest as kolmogorov_smirnov_test
 from mews.constants.physical import HOURS_IN_LEAP_YEAR, HOURS_IN_YEAR
 
 import numpy as np
@@ -727,6 +728,7 @@ class ObjectiveFunction():
         temp_resid = {}
         negative_penalty = {}
         positive_penalty = {}
+        
 
         for wave_type, state_int in zip(ABREV_WAVE_NAMES, [1, 2]):
 
@@ -834,7 +836,7 @@ class ObjectiveFunction():
             residuals_dict['temperature positive penalty'] = positive_penalty
             residuals_dict['durations'] = duration_residuals
 
-            return sum_resid, Tsample, duration_histograms, thresholds, histT_tuple, residuals_dict
+            return sum_resid, Tsample, duration_histograms, thresholds, histT_tuple, residuals_dict, durations
 
         else:
             return sum_resid
@@ -988,7 +990,8 @@ class SolveDistributionShift(object):
                  x_solution=None,
                  test_mode=False,
                  num_postprocess=3,
-                 extra_output_columns={}):
+                 extra_output_columns={},
+                 org_samples={'Temperature':None,'Durations':None}):
         """
         This class solves one of two problems. 
 
@@ -1187,7 +1190,13 @@ class SolveDistributionShift(object):
             data table can be assembled easily across a broad range of 
             categories such as confidence interval, climate scenario, and
             future year.
-
+            
+        org_samples : dict : optional : Default = {'Temperature':None,'Durations':None}
+            This is the original duration and Tmax samples from the 
+            historic data that hist0 and durations0 were derived from
+            they are used to return a Kolmogorov-Smirnov test pvalue
+            for equivalence between the MEWS stochastic model distribution
+            and the original extreme wave data.
 
         Raises
         ------
@@ -1327,9 +1336,13 @@ class SolveDistributionShift(object):
         thresholds = {}
         histT_tuple = {}
         residuals_dict = {}
+        Dsample = {}
+        ks_duration = {}
+        ks_temperature = {}
         for rand_adj in np.arange(1, num_postprocess+1):
             (resid[rand_adj], Tsample[rand_adj], durations[rand_adj],
-             thresholds[rand_adj], histT_tuple[rand_adj], residuals_dict[rand_adj]) = obj_func.markov_gaussian_model_for_peak_temperature(
+             thresholds[rand_adj], histT_tuple[rand_adj], residuals_dict[rand_adj],
+             Dsample[rand_adj]) = obj_func.markov_gaussian_model_for_peak_temperature(
                 xf0,
                 num_step,
                 param0,
@@ -1344,6 +1357,23 @@ class SolveDistributionShift(object):
                 delT_above_shifted_extreme=delT_above_shifted_extreme,
                 weights=weights,
                 min_num_waves=min_num_waves)
+                 
+            if not org_samples["Temperature"] is None:
+                # Calculate Kolomogorov-Smirnov tests 
+                ks_duration[rand_adj] = {'hw':kolmogorov_smirnov_test(Dsample[rand_adj]['hw'],
+                                                                      org_samples["Duration"]['hw'],
+                                                                      alternative="two-sided",mode='exact'),
+                                         'cs':kolmogorov_smirnov_test(Dsample[rand_adj]['cs'],
+                                                                      org_samples["Duration"]['cs'],
+                                                                      alternative="two-sided",mode='exact')}
+                                         
+                ks_temperature[rand_adj] = {'hw':kolmogorov_smirnov_test(Tsample[rand_adj]['hw'],
+                                                                         org_samples["Temperature"]['hw'],
+                                                                         alternative="two-sided",mode='exact'),
+                                            'cs':kolmogorov_smirnov_test(Tsample[rand_adj]['cs'],
+                                                                         org_samples["Temperature"]['cs'],
+                                                                         alternative="two-sided",mode='exact')}
+                                            
 
         if plot_results or len(out_path) > 0:
             Graphics.plot_sample_dist_shift(
@@ -1373,6 +1403,10 @@ class SolveDistributionShift(object):
         self.durations = durations
         self.histT_tuple = histT_tuple
         self.residuals_breakdown = residuals_dict
+        if not org_samples["Temperature"] is None:
+            self.kolmogorov_smirnov = {"Temperature":ks_temperature,"Duration":ks_duration}
+        else:
+            self.kolmogorov_smirnov = {"Temperature":None,"Duration":None}
 
         param_new = deepcopy(param0)
 
@@ -1447,6 +1481,7 @@ class SolveDistributionShift(object):
         self.inputs['test_mode'] = test_mode
         self.inputs['num_postprocess'] = num_postprocess
         self.inputs['extra_output_columns'] = extra_output_columns
+        self.inputs['org_samples'] = org_samples
         self.bounds = bounds_x0
 
     def write_csv(self, out_path):
@@ -1550,7 +1585,8 @@ class SolveDistributionShift(object):
          x_solution,
          test_mode,
          num_postprocess,
-         extra_output_columns) = tup
+         extra_output_columns,
+         org_samples) = tup
 
         self.__init__(num_step,
                       param0,
@@ -1575,7 +1611,8 @@ class SolveDistributionShift(object):
                       x_solution,
                       test_mode,
                       num_postprocess,
-                      extra_output_columns)
+                      extra_output_columns,
+                      org_samples)
 
         return self.param
 

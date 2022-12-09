@@ -613,6 +613,16 @@ class Extremes():
     num_cpu : int : optional : Default = None
         None : use the number of cpu's available minus one
         int : use num_cpu if it is <= number of cpu's available minus one
+        
+    test_markov : bool : optional : Default = False
+        Set to true if you want to override raised errors due to only running
+        a small time frame. This is for test purposes only. MEWS ussually
+        needs 50+ years of run to create distributions on the markov process
+        
+    confidence_interval : str : optional : Default = ""
+        String to add to the output files for the IPCC confidence interval
+        selected. If this is left blank, then files will overwrite eachother if
+        more than one confidence interval is being calculated.
     
     Returns
     -------
@@ -664,7 +674,8 @@ class Extremes():
                  baseline_year=2014,
                  norms_hourly=None,
                  num_cpu=None,
-                 test_markov=False):
+                 test_markov=False,
+                 confidence_interval=""):
         
         self._num_cpu = filter_cpu_count(num_cpu)
         self.use_global = use_global
@@ -749,7 +760,7 @@ class Extremes():
                                 frac_long_wave,min_steps,test_shape_func,doe2_input,
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
                                 new_input_format,climate_temp_func,averaging_steps,rng,
-                                no_climate_trend,norms_hourly,key_name,test_markov)
+                                no_climate_trend,norms_hourly,key_name,test_markov,confidence_interval)
                         results[key_name] = pool.apply_async(self._process_wfile,
                                                          args=args)
                     else:
@@ -764,7 +775,7 @@ class Extremes():
                                 max_E_dist,del_max_E_dist,min_E_dist,del_min_E_dist,
                                 new_input_format,climate_temp_func,averaging_steps,
                                 self.rng,no_climate_trend,norms_hourly,key_name,
-                                test_markov)
+                                test_markov,confidence_interval)
         
         if run_parallel:
             results_get = {}
@@ -856,7 +867,7 @@ class Extremes():
                        test_shape_func,doe2_in, max_E_dist,del_max_E_dist,
                        min_E_dist,del_min_E_dist, new_input_format,
                        climate_temp_func,averaging_steps,rng, no_climate_trend,
-                       norms_hourly,key_name,test_markov):
+                       norms_hourly,key_name,test_markov,confidence_interval):
         # THIS IS USUALLY IN A PARALLEL mode so debugging can be hard unless
         # you set run_parallel to False.
         objDM_dict = {}
@@ -1051,7 +1062,8 @@ class Extremes():
             
             new_wfile_name = (os.path.basename(wfile)[:-4] 
                          + results_append_to_name 
-                         + "_{0:d}".format(year) 
+                         + "_{0:d}".format(year)
+                         + "_{0}".format(confidence_interval)
                          + "_r{0:d}".format(id0)
                          + wfile[-4:])
             

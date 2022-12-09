@@ -770,7 +770,8 @@ class ExtremeTemperatureWaves(Extremes):
                  baseline_year=base_year,
                  norms_hourly=self.df_norms_hourly,
                  num_cpu=self._num_cpu,
-                 test_markov=self._test_markov)
+                 test_markov=self._test_markov,
+                 confidence_interval=increase_factor_ci)
         results_dict[year] = self.results
     
         self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
@@ -986,7 +987,11 @@ class ExtremeTemperatureWaves(Extremes):
                                        x_solution=opt_val['x_solution'],
                                        test_mode=opt_val['test_mode'],
                                        num_postprocess=opt_val['num_postprocess'],
-                                       extra_output_columns=extra_columns)
+                                       extra_output_columns=extra_columns,
+                                       org_samples={"Temperature":{'hw':stats['heat wave'][month]['historical delTmax'],
+                                                                   'cs':stats['cold snap'][month]['historical delTmax']},
+                                                    "Duration":{'hw':stats['heat wave'][month]['historical durations'],
+                                                                'cs':stats['cold snap'][month]['historical durations']}})
 
                 if opt_val['test_mode']:
                     # this makes all other runs just be evaluations when 
@@ -1017,12 +1022,16 @@ class ExtremeTemperatureWaves(Extremes):
                           "hours_per_year":int(frac_hours_per_year[month-1] * HOURS_IN_YEAR),
                           "x_solution":x_solution,
                           "out_path":out_path_month,
-                          "extra_output_columns":extra_columns}
+                          "extra_output_columns":extra_columns,
+                          "org_samples":{"Temperature":{'hw':stats['heat wave'][month]['historical delTmax'],
+                                                      'cs':stats['cold snap'][month]['historical delTmax']},
+                                       "Duration":{'hw':stats['heat wave'][month]['historical durations'],
+                                                   'cs':stats['cold snap'][month]['historical durations']}}}
                 param = obj_solve.reanalyze(inputs, write_csv)
             
             for wt1, wt2 in WAVE_MAP.items():
                 new_stats[wt1][month] = param[wt2]
-            sobj_dict[month] = obj_solve
+            sobj_dict[month] = deepcopy(obj_solve)
             
             
         self.hist_obj_solve = sobj_dict
@@ -1848,6 +1857,9 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['historical temperatures (hist0)'] = np.histogram(extreme_temp,
                                                              range=(extreme_temp.min()-0.5*bin_delT,extreme_temp.max()+0.5*bin_delT),
                                                              bins=nbins)
+            temp_dict['historical delTmax'] = extreme_temp
+            temp_dict['historical durations'] = month_duration_hr
+            
             stats[month] = temp_dict
             
             col+=1

@@ -23,6 +23,8 @@ from scipy.optimize import curve_fit, bisect
 from scipy.interpolate import splev, splrep
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+from scipy import stats
 
 
 def pdf_density_given_value(x, pdf):
@@ -121,3 +123,43 @@ def fit_exponential_distribution(month_duration_hr,include_plots):
     P0 = 1 - lamb[0]
     
     return P0,lamb,lcov,pvalue
+
+
+def chi_squared_of_histograms(hist,hist_observed):
+
+
+    # Creation of data
+    data = [['CDU', 0.415, 57], ['SPD', 0.257, 26], ['Others', 0.328, 40]] 
+    df = pd.DataFrame(data, columns = ['Varname', 'prob_dist', 'observed_freq']) 
+    df['expected_freq'] = df['observed_freq'].sum() * df['prob_dist']
+
+    # significance level
+    alpha = 0.05
+
+    # Calcualtion of Chisquare
+    chi_square = 0
+    for i in range(len(df)):
+        O = df.loc[i, 'observed_freq']
+        E = df.loc[i, 'expected_freq']
+        chi_square += (O-E)**2/E
+
+    # The p-value approach
+    print("Approach 1: The p-value approach to hypothesis testing in the decision rule")
+    p_value = 1 - stats.chi2.cdf(chi_square, df['Varname'].nunique() - 1)
+    conclusion = "Failed to reject the null hypothesis."
+    if p_value <= alpha:
+        conclusion = "Null Hypothesis is rejected."
+            
+    print("chisquare-score is:", chi_square, " and p value is:", p_value)
+    print(conclusion)
+        
+    # The critical value approach
+    print("\n--------------------------------------------------------------------------------------")
+    print("Approach 2: The critical value approach to hypothesis testing in the decision rule")
+    critical_value = stats.chi2.ppf(1-alpha, df['Varname'].nunique() - 1)
+    conclusion = "Failed to reject the null hypothesis."
+    if chi_square > critical_value:
+        conclusion = "Null Hypothesis is rejected."
+            
+    print("chisquare-score is:", chi_square, " and critical value is:", critical_value)
+    print(conclusion)

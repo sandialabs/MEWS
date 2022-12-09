@@ -36,6 +36,7 @@ from scipy.optimize import curve_fit
 import multiprocessing as mp
 import threading as thr
 import logging
+import pandas as pd
 
 from mews.utilities.utilities import filter_cpu_count
 
@@ -974,13 +975,6 @@ class CMIP_Data(object):
             
             df.to_csv(write_png + ".csv")
                 
-            
-                
-                
-                
-                
-            
-            
             plot_box = ax.get_position()
             ax.set_position([plot_box.x0, plot_box.y0,plot_box.width*0.8,plot_box.height])
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))

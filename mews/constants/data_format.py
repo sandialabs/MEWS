@@ -38,7 +38,8 @@ VALID_SOLVE_INPUTS = ['num_step',    #0
                  'x_solution',#20
                  'test_mode',#21
                  'num_postprocess',#22
-                 'extra_output_columns']#23
+                 'extra_output_columns',#23
+                 "org_samples"]#24
 
 RESIDUAL_TERM_NAMES = ["Future temperature thresholds","Penalty on high temperatures",
                        "Penalty on inverted waves (i.e. cold heat waves and hot cold snaps)",

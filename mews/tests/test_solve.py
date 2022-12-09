@@ -20,6 +20,7 @@ from numpy.random import default_rng
 from matplotlib import pyplot as plt
 from mews.utilities.utilities import find_extreme_intervals
 from mews.constants.data_format import DEFAULT_NONE_DECAY_FUNC, ABREV_WAVE_NAMES
+from shutil import rmtree
 
 import numpy as np
 import unittest
@@ -37,7 +38,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
         cls.rng = default_rng(23985)
         plt.close('all')
         if os.path.exists("testing_output"):
-            os.removedirs(("testing_output"))
+            rmtree(("testing_output"))
         os.mkdir("testing_output")
         
     
@@ -45,7 +46,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
     def tearDownClass(cls):
         
         if os.path.exists("testing_output"):
-            os.removedirs(("testing_output"))
+            rmtree(("testing_output"))
         pass
     
     
@@ -642,7 +643,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
                                     'decay_func_type': {'cs': 'quadratic_times_exponential_decay_with_cutoff', 'hw': "quadratic_times_exponential_decay_with_cutoff"},
                                     'test_mode': False,
                                     'min_num_waves': 10,
-                                    'out_path': os.path.join("temp_out", "worcester_future_6_50%_2014_SSP245.png")}
+                                    'out_path': os.path.join("testing_output", "worcester_future_6_50%_2014_SSP245.png")}
         opt_val['problem_bounds'] = {'cs':{'delT_mu': (-4.0, 10.0),
                              'delT_sig multipliers': (0.05,3),
                              'P_event': (0.001, 0.02),
@@ -696,7 +697,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
         resid1 = obj_solve.residuals[1]
         inputs = obj_solve.inputs
         
-        inputs['out_path'] = os.path.join("temp_out", "worcester_future_6_50%_2014_SSP245_ADJUSTED.png")
+        inputs['out_path'] = os.path.join("testing_output", "worcester_future_6_50%_2014_SSP245_ADJUSTED.png")
         
         inputs['x_solution'] =  np.array([-1, -0.15605901e+00, 0.12737277e+00, -.25912986e-00,
                5.39332295e-03, 5.34034912e-03, 9.89053004e-01, 9.60857492e-01,

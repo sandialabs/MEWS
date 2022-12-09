@@ -13,6 +13,7 @@ import os
 from matplotlib import pyplot as plt
 from matplotlib import rc
 import numpy as np
+from shutil import rmtree
 
 import warnings
 
@@ -65,7 +66,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             cls.test_weather_path, "erase_me_file.epw")
         if os.path.exists(erase_me_file_path):
             os.remove(erase_me_file_path)
-
+            
         cls.test_weather_file_path = os.path.join(".",
                                                   cls.test_weather_path,
                                                   "USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw")
@@ -98,6 +99,18 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                   + " and the ./mews/tests folder has residual "
                                   + "*.bin, *.epw, *.EXE, or *.DAT files"
                                   + " that need to be removed!")
+            
+        file_dir = os.path.join(os.path.dirname(__file__))
+        
+        rmtree(os.path.join(file_dir,"temp_out"),)
+        
+        for name in os.listdir(file_dir):
+            if "_future_month_" in name or "_historic_month_" in name:
+                os.remove(os.path.join(file_dir,name))
+            elif ".log" in name or ".csv" in name or ".txt" in name or ".png" in name:
+                os.remove(os.path.join(file_dir,name))
+                
+                
         if os.path.exists(os.path.join(".", "mews_results")):
             for file_name in os.listdir(os.path.join(".", "mews_results")):
                 if (".epw" in file_name):
@@ -109,14 +122,14 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                       + "*.epw files in ./mews/tests/mews_results"
                                       + " that need to be removed!")
         try:
-            os.removedirs("mews_results")
-            os.removedirs("temp_out")
+            os.rmdir("mews_results")
+            os.rmdir("temp_out")
         except:
             warnings.warn(
                 "The testing could not remove the temporary directory ./mews/tests/mews_results or ./mews/tests/temp_out")
-
-        if cls.from_main_dir:
-            os.chdir(os.path.join("..", ".."))
+        if hasattr(cls,"from_main_dir"):
+            if cls.from_main_dir:
+                os.chdir(os.path.join("..", ".."))
 
     def test_albuquerque_extreme_waves(self):
         run_test = self.run_all_tests
