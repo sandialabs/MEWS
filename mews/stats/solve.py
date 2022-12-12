@@ -1626,7 +1626,7 @@ class SolveDistributionShift(object):
                                 "font.family": "Helvetica"})
         else:
             plt.rcParams.update({
-                        "text.usetex": True,
+                        "text.usetex": False,
                         "font.family": "Helvetica"})
 
     def _check_ipcc_shift(self, ipcc_shift, key, ukey):

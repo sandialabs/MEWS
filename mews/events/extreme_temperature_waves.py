@@ -445,7 +445,7 @@ class ExtremeTemperatureWaves(Extremes):
                                 "font.family": "Helvetica"})
         else:
             plt.rcParams.update({
-                        "text.usetex": True,
+                        "text.usetex": False,
                         "font.family": "Helvetica"})
         
 

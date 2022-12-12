@@ -38,7 +38,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
         cls.rng = default_rng(23985)
         plt.close('all')
         if os.path.exists("testing_output"):
-            rmtree(("testing_output"))
+            rmtree(("testing_output",ignore_errors=False,onerror=None))
         os.mkdir("testing_output")
         
     
@@ -46,7 +46,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
     def tearDownClass(cls):
         
         if os.path.exists("testing_output"):
-            rmtree(("testing_output"))
+            rmtree(("testing_output",ignore_errors=False,onerror=None))
         pass
     
     

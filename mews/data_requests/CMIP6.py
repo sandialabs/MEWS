@@ -971,7 +971,7 @@ class CMIP_Data(object):
                  for yr,val in zip(year_dict[scenario], 
                                    self.total_model_data[scenario].avg_list)]
                 
-            df = pd.DataFrame(flat_df_list, columns=["Year","$\Delta T (^{\circ}C)","Type","Scenario"])
+            df = pd.DataFrame(flat_df_list, columns=["Year","Change in Temperature (°C)","Type","Scenario"])
             
             df.to_csv(write_png + ".csv")
                 
@@ -979,7 +979,7 @@ class CMIP_Data(object):
             ax.set_position([plot_box.x0, plot_box.y0,plot_box.width*0.8,plot_box.height])
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             plt.xlabel("Year",fontdict={'fontsize': 26})
-            plt.ylabel("$\Delta$°C Change from {0:d}".format(self.baseline_year),fontdict={'fontsize': 26})
+            plt.ylabel("Change in Temperature from {0:d} (°C)".format(self.baseline_year),fontdict={'fontsize': 26})
             plt.title("Surface Temperature Change at lat=({0:.4f}, lon={1:.4f})".format(self.lat_desired,self.lon_desired,self.baseline_year),y=1.02,x=0.7,fontdict={'fontsize': 30})
             plt.xlim(plot_begin_year,self.end_year)
             plt.grid()
