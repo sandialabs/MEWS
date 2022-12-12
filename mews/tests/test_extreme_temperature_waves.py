@@ -102,7 +102,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             
         file_dir = os.path.join(os.path.dirname(__file__))
         
-        rmtree(os.path.join(file_dir,"temp_out"),ignore_errors=False,onerror=None)
+        if os.path.exists(os.path.join(file_dir,"temp_out")):
+            rmtree(os.path.join(file_dir,"temp_out"),ignore_errors=False,onerror=None)
         
         for name in os.listdir(file_dir):
             if "_future_month_" in name or "_historic_month_" in name:

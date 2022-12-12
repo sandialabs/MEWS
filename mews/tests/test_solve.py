@@ -32,7 +32,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # clean this up HOW MUCH of this from Test_Alter is needed?
-        cls.plot_results = True
+        cls.plot_results = False
         cls.write_results = False
         cls._run_all_tests = True
         cls.rng = default_rng(23985)
@@ -47,7 +47,6 @@ class Test_SolveDistributionShift(unittest.TestCase):
         
         if os.path.exists("testing_output"):
             rmtree(("testing_output"),ignore_errors=False,onerror=None)
-        pass
     
     
     def test_calculated_hist0_stretched(self):

@@ -2003,7 +2003,7 @@ class ExtremeTemperatureWaves(Extremes):
             p_hw.append(modat['hourly prob of heat wave'])
             ps_hw.append(modat['hourly prob stay in heat wave'])
         
-        fontsize={'font.size':16,'text.usetex':True}
+        fontsize={'font.size':16}
         
         plt.rcParams.update(fontsize)    
            

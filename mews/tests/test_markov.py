@@ -357,7 +357,8 @@ class Test_Markov(unittest.TestCase):
         self.assertAlmostEqual(yy[0.9][ind1],0.9)
         self.assertAlmostEqual(yy[1.1][ind1],1.1)
         self.assertAlmostEqual(yy[1.1][ind8], 0.6143431087434705)
-        self.assertTrue((yy_py[1.1]==yy[1.1]).all())
+        [self.assertAlmostEqual(y_py,y) for y_py,y in zip(yy_py[1.1],yy[1.1])]
+        #self.assertTrue((yy_py[1.1]==yy[1.1]).all())
         
         
         
