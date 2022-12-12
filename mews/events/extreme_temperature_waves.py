@@ -36,6 +36,7 @@ from scipy.optimize import bisect, fsolve
 from mews.constants.physical import (HOURS_IN_YEAR, DAYS_IN_YEAR, HOURS_IN_DAY)
 from mews.constants.analysis import (DEFAULT_SOLVER_NUMBER_STEPS, 
                                      DEFAULT_RANDOM_SEED)
+from shutil import which
 
 import io
 import pandas as pd
@@ -361,6 +362,9 @@ class ExtremeTemperatureWaves(Extremes):
                  test_markov=False,
                  solve_options=None,
                  solution_file=""):
+        
+        self._config_latex()
+
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
@@ -434,7 +438,16 @@ class ExtremeTemperatureWaves(Extremes):
         self._test_markov = test_markov
         self._solution_file = solution_file
 
-
+    def _config_latex(self):
+        if not which("latex") is None:
+            plt.rcParams.update({
+                                "text.usetex": True,
+                                "font.family": "Helvetica"})
+        else:
+            plt.rcParams.update({
+                        "text.usetex": True,
+                        "font.family": "Helvetica"})
+        
 
     def create_solutions(self,future_years,scenarios,ci_intervals,historic_solution,scen_dict,cold_snap_shift=None,filename=""):
         """

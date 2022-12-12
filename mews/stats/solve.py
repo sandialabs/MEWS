@@ -34,6 +34,7 @@ import numpy as np
 import pandas as pd
 import os
 import numbers
+from shutil import which
 
 
 def x_offset_for_func_type_combo(decay_func, events):
@@ -1212,6 +1213,8 @@ class SolveDistributionShift(object):
                     calculated by this function
 
         """
+        self._config_latex()
+        
         if not hasattr(self, 'inputs'):
             self.df = None
             self._write_csv = False
@@ -1615,6 +1618,16 @@ class SolveDistributionShift(object):
                       org_samples)
 
         return self.param
+
+    def _config_latex(self):
+        if not which("latex") is None:
+            plt.rcParams.update({
+                                "text.usetex": True,
+                                "font.family": "Helvetica"})
+        else:
+            plt.rcParams.update({
+                        "text.usetex": True,
+                        "font.family": "Helvetica"})
 
     def _check_ipcc_shift(self, ipcc_shift, key, ukey):
         if not key in ipcc_shift:
