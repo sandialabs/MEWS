@@ -828,19 +828,15 @@ class CMIP_Data(object):
                 sigma0[-1] = 0.001 # fix the last point to zero target
             else:
                 scen_avg = np.mean(self.total_model_data[scenario].year_temp_dict[self.baseline_year+1])
-                scen_avg_p1 = np.mean(self.total_model_data[scenario].year_temp_dict[self.baseline_year+2])
-                scen_slope = scen_avg_p1 - scen_avg
+                # we give + 10 years so that the net trend is observed rather than local variations
+                scen_avg_p1 = np.mean(self.total_model_data[scenario].year_temp_dict[self.baseline_year+10])
+                scen_slope = (scen_avg_p1 - scen_avg)/9
                 
                 years = future_years
                 sigma0=np.ones(len(years))
                 if self._align_gcm_to_historical:
                     sigma0[0] = 0.001 # fix the first point to zero target
-                
-                    # add 2014 data to the future scenario regressions
-                    self.total_model_data[scenario].year_temp_dict[
-                        self.baseline_year] = self.total_model_data[
-                            self._historical_scen_str].year_temp_dict[self.baseline_year]
-                            
+                    
                     # big assumption to give a smooth result!, Re-baseline to the 2014 historical average as
                     # the start for all scenarios - IS Shifting the data like this
                     # justified? The model groups for different scenarios are different
@@ -852,6 +848,12 @@ class CMIP_Data(object):
                     offset_fact = target_temp - scen_avg
                     for key,val in self.total_model_data[scenario].year_temp_dict.items():
                         self.total_model_data[scenario].year_temp_dict[key] = val + offset_fact
+                        
+                    
+                    # add 2014 data to the future scenario regressions
+                    self.total_model_data[scenario].year_temp_dict[
+                        self.baseline_year] = self.total_model_data[
+                            self._historical_scen_str].year_temp_dict[self.baseline_year]
                             
                 else:
                     # add 2014 as a continuation of the slope for the first two years

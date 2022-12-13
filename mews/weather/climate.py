@@ -240,7 +240,8 @@ class ClimateScenario(object):
                 scen_func_dict = {}
             self.cmip = {}
             self.p_coef = {}
-
+            max_poly_order = np.array([val for key,val in self._polynomial_order.items()]).max()
+            
             for scen,cmip_data_obj in obj.total_model_data.items():
                 # this gives a function that only needs the year as an input
                 # to get SSP deltaT from the 1850-1900 baseline.
@@ -249,7 +250,7 @@ class ClimateScenario(object):
                 
                 scen_func_dict[scen] = np.poly1d(polycoef)
 
-                self.table.append(np.concatenate((np.zeros(6-len(polycoef)),polycoef,np.array([cmip_data_obj.R2]))))
+                self.table.append(np.concatenate((np.zeros(max_poly_order-len(polycoef)),polycoef,np.array([cmip_data_obj.R2]))))
                 self.scenarios.append(scen)
                 self.p_coef[scen] = polycoef
                 self.cmip[scen] = cmip_data_obj
