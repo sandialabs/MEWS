@@ -89,19 +89,16 @@ class Input():
     
     building_area = 4982.19 #m2
     
-    plot_locations = r"./from_python/plots"
+    plot_locations = r"./from_python/plots/worcester"
     
     #mews
-    station = {'summaries':os.path.join("example_data","ClimateZone4B_Albuquerque","USW00023050.csv"),
-               'norms':os.path.join("example_data","ClimateZone4B_Albuquerque","USW00023050_norms.csv")}
-    weather_file_name = os.path.join("ClimateZone4B_Albuquerque","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw") 
+    station = {'summaries':os.path.join("example_data","Worcester","USW00094746.csv"),
+               'norms':os.path.join("example_data","Worcester","USW00094746_norms.csv")}
+    
+    weather_file_name = os.path.join("Worcester","USA_MA_Worcester.Rgnl.AP.725095_TMY3.epw") 
     weather_files = [os.path.join("example_data",weather_file_name)]
     #random_seed = 54564863
-    # recommend keeping num_year = 1 and adding to start year if greater resolution is desired.
-    num_year = 1
-    #start_years_local = [2020,2025,2030,2035,2045,2050,2055,2060]
-    #scenarios_local = ['SSP5-8.5','SSP3-7.0','SSP2-4.5','SSP1-2.6','SSP1-1.9']
-    num_realizations = 2
+
     
     # Energy Plus
     # ****************************************************************
@@ -110,7 +107,7 @@ class Input():
     # The the files can be copied from there in the simulation folders.
     path_mews_files_HW = os.path.join(main_path,'mews_results')
     #give an absolute path here.
-    path_idf_files = [os.path.join(main_path,'example_data',"ASHRAE901_OfficeMedium_STD2019_Albuquerque.idf")]
+    path_idf_files = [os.path.join(main_path,'example_data',"IECC_OfficeMedium_STD2018_Buffalo_ClimateZone_5A.idf")]
     # Parameters to be set for the plots
     zn = ['CLASSROOM_BOT']
     vn = ['Temperature']
@@ -439,33 +436,6 @@ class EnergyPlusWrapper(Input):
             self.results = results
 
         
-class MEWSWrapper(Input):
-    def __init__(self,Inp):
-        self.start_years = Inp.start_years
-        self.scenarios = Inp.scenarios
-        self.random_seed = Inp.random_seed
-        
-        
-        # run MEWS only if it has not been run before and the needed files 
-        # do not exist
-        if not os.path.exists("mews_results"):
-            os.makedirs("mews_results")
-        
-        clim_scen = ClimateScenario()
-        obj = ExtremeTemperatureWaves(self.station, 
-                                      self.weather_files,
-                                         use_local=True,random_seed=self.random_seed,
-                                         include_plots=False,run_parallel=False,unit_conversion=(1/10,0))
-        
-        for start_year in self.start_years:
-            for scenario in self.scenarios:
-            
-                clim_scen.calculate_coef(scenario)
-                climate_temp_func = clim_scen.climate_temp_func
-                # no need to process results, they are being written
-                obj.create_scenario(scenario, start_year, self.num_year, climate_temp_func, num_realization=self.num_realizations)
-        self.wfile_names = obj.wfile_names
-        
 class FinalPostProcess(Input):
     def __init__(self,objEP,objMEWS):
         # show error bared plots of various variables with scenario in the 
@@ -621,7 +591,7 @@ class FinalPostProcess(Input):
 if __name__ == "__main__":
      run_local = True
      if run_local:
-         scenarios = ["SSP5-8.5"]
+         scenarios = ["SSP585"]
          start_years = [2025]
          random_seed = 519419765
      else:
@@ -650,16 +620,9 @@ if __name__ == "__main__":
       # run MEWS
      Inp = Input(start_years,scenarios,random_seed) 
      
-     if not Inp.only_post_process:
-         objMEWS = MEWSWrapper(Inp)
- 
-         Inp.wfile_names = objMEWS.wfile_names
-     else:
-         objMEWS = None
-         Inp.wfile_names = None
-     
-     if True: #not os.path.exists("study_results.pkl"):
-         
+
+
+     if True    
          objEP = EnergyPlusWrapper(Inp)
     
          pkl.dump([objEP,objMEWS],open('study_results.pkl','wb'))

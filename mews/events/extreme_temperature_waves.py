@@ -627,7 +627,7 @@ class ExtremeTemperatureWaves(Extremes):
         
     def create_scenario(self,scenario_name,year,climate_temp_func,
                         num_realization=1,climate_baseyear=None,increase_factor_ci="50%",
-                        cold_snap_shift=None,solution_file=""):
+                        cold_snap_shift=None,solution_file="",random_seed=None):
         
         """
         >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func,
@@ -700,6 +700,10 @@ class ExtremeTemperatureWaves(Extremes):
             problem that takes significant computational resources so that
             MEWS can implement a solution already computed quickly
             
+        random_seed : int : optional : Default = None
+            Use this input if this function is being called repeatedly to avoid
+            using the same original random seed every time.
+            
         Returns
         -------    
         results_dict : dict : 
@@ -707,6 +711,10 @@ class ExtremeTemperatureWaves(Extremes):
             
         
         """
+        if not random_seed is None:
+            self._random_seed = random_seed
+            np.random.seed(random_seed)
+        
         self.extreme_results[scenario_name] = {}
         self.extreme_delstats[scenario_name] = {}
         
@@ -733,6 +741,8 @@ class ExtremeTemperatureWaves(Extremes):
         self.extreme_delstats[scenario_name][increase_factor_ci] = {}
         
 
+        # If you are using a solution_file, then self.stats is changed
+        # by the function the "delta" and "del" values below will be zero.
         (transition_matrix, 
          transition_matrix_delta,
          del_E_dist,
@@ -744,7 +754,7 @@ class ExtremeTemperatureWaves(Extremes):
                                                                  increase_factor_ci, 
                                                                  cold_snap_shift,
                                                                  solution_file)
-        
+
         if self.use_global == False:
             base_year = climate_baseyear
         else:
@@ -1255,6 +1265,10 @@ class ExtremeTemperatureWaves(Extremes):
             del_E_dist[month] = obj.del_E_dist
             del_delTmax_dist[month] = obj.del_delTmax_dist
             self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
+            
+            # IMPORTANT! - THIS IS HOW CHANGES ARE TRANSFERRED WHEN USING
+            # The solution file!
+            self.stats = stats
 
 
         return (transition_matrix,
