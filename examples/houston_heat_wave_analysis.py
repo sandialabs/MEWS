@@ -55,7 +55,8 @@ from warnings import warn
 
 from matplotlib import rc
 
-
+font = {'size':18,'family':'Times New Roman'}
+rc('font', **font)
 class Input():
     """
     All input to this scripting is contained in this class so that the entire 
@@ -83,19 +84,19 @@ class Input():
     
     building_area = 4982.19 #m2
     
-    study_results_name = "worcester_study_results"
+    study_results_name = "houston_study_results"
     
-    pre_string = "WorcesterStudy"
+    pre_string = "HoustonStudy"
     
-    plot_locations = r"./from_python/plots/worcester"
+    plot_locations = r"./from_python/plots/houston"
     
     #mews
-    station = {'summaries':os.path.join("example_data","Worcester","USW00094746.csv"),
-               'norms':os.path.join("example_data","Worcester","USW00094746_norms.csv")}
+    station = {'summaries':os.path.join("example_data","ClimateZone2A_Houston","Houston.csv"),
+               'norms':os.path.join("example_data","ClimateZone2A_Houston","Houston_norms.csv")}
     
-    base_weather_file_name = os.path.join("USA_MA_Worcester.Rgnl.AP.725095_TMY3.epw") 
+    base_weather_file_name = os.path.join("USA_TX_Houston-Bush.Intercontinental.AP.722430_TMY3.epw") 
     
-    scenarios = ["SSP585", "SSP370","SSP245"]
+    scenarios = ["SSP370","SSP245","SSP585"]
     years = [2025,2050,2075,2100]
     confidence_intervals = ['5%','50%','95%']
     weather_files = []
@@ -114,8 +115,8 @@ class Input():
     path_mews_files_HW = os.path.join(main_path,'mews_results')
     #give an absolute path here.
     path_idf_files = [os.path.join(main_path,'example_data',
-                                   "Worcester",
-                                   "IECC_OfficeMedium_STD2018_Buffalo_ClimateZone_5A_EPV9_6.idf")]
+                                   "ClimateZone2A_Houston",
+                                   "IECC_OfficeMedium_STD2018_Tampa.idf")]
     # Parameters to be set for the plots
     zn = ['CLASSROOM_BOT']
     vn = ['Temperature']
@@ -456,13 +457,13 @@ class FinalPostProcess(Input):
         # show error bared plots of various variables with scenario in the 
         # legend, year as the x axis and variable as the y axis where perhaps 
         # several variables can be added to a 2-yaxis type plot.
-        if not os.path.exists("worcester_study_results_step2.pkl"):
+        if not os.path.exists("houston_study_results_step2.pkl"):
             df_list = self._stack_tables(objEP)
             
             df_stats_list = self._table_realization_stats(df_list)
-            pkl.dump([df_stats_list],open("worcester_study_results_step2.pkl",'wb'))
+            pkl.dump([df_stats_list],open("houston_study_results_step2.pkl",'wb'))
         else:
-            df_stats_list = pkl.load(open("worcester_study_results_step2.pkl",'rb'))[0]
+            df_stats_list = pkl.load(open("houston_study_results_step2.pkl",'rb'))[0]
         #1000 goes from GJ to kWh
         GJ_to_kWh = 277.778
         W_to_kW = 0.001

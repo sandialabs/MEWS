@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # with proper proxy settings.
 
     # HERE CS stands for climate scenario (not cold snap)
-    future_years = [2025,2050,2075,2100]#[2020,2040,2060,2080] #2014, 2020, 2040, 2060, 
+    future_years = [2100]#2025,2050,2075[2020,2040,2060,2080] #2014, 2020, 2040, 2060, 
 
     # CI interval valid = ['5%','50%','95%']
     ci_intervals = ["5%","50%","95%"]
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     # No need to input "historical"
     # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
-    scenarios = ['SSP585',"SSP245", 'SSP370'] 
+    scenarios = ["SSP245", 'SSP370', 'SSP585'] 
     output_folder_cs = os.path.join(
         "example_data", "ClimateZone2A_Houston", "climate_scenario_results")
 
@@ -192,6 +192,4 @@ if __name__ == "__main__":
 
         results,filenames = obj.create_solutions(future_years, scenarios, ci_intervals, historical_solution, scen_dict)
     
-
-
     #
