@@ -26,7 +26,6 @@ from mews.graphics.plotting2D import Graphics
 from copy import deepcopy
 rng = default_rng()
 
-
 class Test_ExtremeTemperatureWaves(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -131,6 +130,40 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         if hasattr(cls,"from_main_dir"):
             if cls.from_main_dir:
                 os.chdir(os.path.join("..", ".."))
+
+    def test_repeated_date(self):
+        run_test = self.run_all_tests
+        
+        if run_test:
+            # this test assures MEWS will reject files with a repeated date in them.
+     
+            station = {'summaries':os.path.join("data_for_testing", "example_with_repeated_date.csv"),
+                       'norms':os.path.join("data_for_testing", "repeated_date_norms.csv")}
+            
+    
+            # change this to the appropriate unit conversion (5/9, -(5/9)*32) is for F going to C
+            unit_conversion = (5/9, -(5/9)*32)
+            unit_conv_norms = (5/9, -(5/9)*32)
+    
+            # gives consistency in run results
+            random_seed = 564489
+    
+            # plot_results
+            plot_results = False
+            run_parallel = False
+            num_cpu = 30
+    
+            weather_files = [os.path.join(
+                "data_for_testing", "USA_AK_Kodiak.AP.703500_TMY3.epw")]
+            
+            with self.assertRaises(ValueError):
+                # I had to manually add the daily summaries and norms
+                ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
+                                              use_local=True, random_seed=random_seed,
+                                              include_plots=plot_results,
+                                              run_parallel=run_parallel, use_global=False, delT_ipcc_min_frac=1.0,
+                                              num_cpu=num_cpu, write_results=True, test_markov=False,
+                                              norms_unit_conversion=unit_conv_norms)
 
     def test_albuquerque_extreme_waves(self):
         run_test = self.run_all_tests

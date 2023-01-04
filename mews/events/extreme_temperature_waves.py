@@ -1458,7 +1458,17 @@ class ExtremeTemperatureWaves(Extremes):
             df_temp.append(df_new)
         df_daily = df_temp[0]
         df_norms = df_temp[1]
-
+        
+        # Assure no repeat dates are present. DAte gaps are addressed in _extend_boundary_df_to_daily_range.
+        for df_,dtype in zip([df_daily,df_norms],['daily summaries', 'climater norms']):
+        # assure no duplicate datres occur:
+            first_duplicate_index = df_.index.duplicated().argmax()
+            if first_duplicate_index != 0:
+                raise ValueError("The following date is duplicated in the {1}.\n\n {0}".format(
+                    str(df_.index[first_duplicate_index]),dtype)
+                                 +"\n\nThis is not allowed. Please clean the data!")
+        
+        # projects the norms on the daily summaries date range it a repetitive cycle.
         self.NOAA_data = self._extend_boundary_df_to_daily_range(df_norms,df_daily)
     
     def _check_NOAA_url_validity(self):
@@ -1504,6 +1514,7 @@ class ExtremeTemperatureWaves(Extremes):
         df_list = []
     
         for year in unique_year:
+
             # change the df_norms so that it reflects the current year being focussed on 
             df_norms.index = pd.DatetimeIndex([datetime(year,date.month,date.day) for date in df_norms.index])
             
@@ -1537,7 +1548,7 @@ class ExtremeTemperatureWaves(Extremes):
     
         df_norms_overlaid = pd.concat(df_list,axis=0)
         df_combined = pd.concat([df_daily,df_norms_overlaid],axis=1)
-        
+
         return df_combined
     
     def _isolate_waves(self,season,extreme_days):
