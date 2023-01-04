@@ -1874,7 +1874,7 @@ class ExtremeTemperatureWaves(Extremes):
                     self._plot_linear_fit(log_prob_duration,num_hour_passed,results.params,results.pvalues,
                                     "Month=" + str(month)+" Markov probability")
                 warn(results.summary())
-                raise ValueError("The weather data has produced a low p-value fit"+
+                warn("The weather data has produced a low p-value fit"+
                                  " for Markov process fits! More data is needed "+
                                  "to produce a statistically significant result!")
                 
