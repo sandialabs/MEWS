@@ -17,6 +17,7 @@ STEP1 - set "step = 1"
 """
 import os
 import numpy as np
+from numpy import poly1d
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
 import pickle as pkl
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     # Station - Worcester Regional Airport
     station = os.path.join("example_data", "Worcester", "USW00094746.csv")
     
-    first_try_solution_location = os.path.join("example_data","Worcester","results2","worcester_historical_solution.txt")
+    first_try_solution_location = os.path.join("example_data","Worcester","results2_2x","worcester_historical_solution.txt")
 
     # change this to the appropriate unit conversion (5/9, -(5/9)*32) is for F going to C
     unit_conversion = (5/9, -(5/9)*32)
@@ -72,8 +73,8 @@ if __name__ == "__main__":
 
     # plot_results
     plot_results = True
-    run_parallel = True
-    num_cpu = 40
+    run_parallel = False
+    num_cpu = 55
 
     # No need to input "historical"
     # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
@@ -111,17 +112,17 @@ if __name__ == "__main__":
         if not os.path.exists("temp_pickles"):
             os.mkdir("temp_pickles")
         pkl.dump([cs_obj], open(os.path.join(
-            "temp_pickles", "cs_obj_worcester.pickle"), 'wb'))
+            "temp_pickles", "cs_obj_worcester_2x.pickle"), 'wb'))
 
     else:
-        scen_dict = {'historical': np.poly1d([1.35889778e-10, 7.56034740e-08, 1.55701410e-05, 1.51736807e-03,
-                                              7.20591313e-02, 4.26377339e-06]),
-                     'SSP245': np.poly1d([-0.00019697,  0.04967771, -0.09146572]),
-                     'SSP370': np.poly1d([0.00017505,  0.03762937, -0.07095332]),
-                     'SSP585': np.poly1d([0.00027245, 0.05231527, 0.0031547])}
+        scen_dict = {'historical': poly1d([1.35889778e-10, 7.56034740e-08, 1.55701410e-05, 1.51736807e-03,
+                7.20591313e-02, 4.26377339e-06]),
+         'SSP585': poly1d([ 4.00596448e-04,  4.52765361e-02, -6.44939852e-07]),
+         'SSP245': poly1d([-6.96226200e-05,  4.12639281e-02, -7.51405631e-08]),
+         'SSP370': poly1d([ 2.23138299e-04,  3.47465086e-02, -7.67683705e-07])}
 
         cs_obj = pkl.load(
-            open(os.path.join("temp_pickles", "cs_obj_worcester.pickle"), 'rb'))[0]
+            open(os.path.join("temp_pickles", "cs_obj_worcester_2x.pickle"), 'rb'))[0]
     """
     # STEP 2. FIT THE HISTORIC DATA.
     # USE THESE TO CONTROL OPTIMIZATION...
@@ -131,7 +132,7 @@ if __name__ == "__main__":
     if step == 2:
         solve_options = {'historic': {'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
                                       'decay_func_type': {'cs': 'quadratic_times_exponential_decay_with_cutoff', 'hw': "quadratic_times_exponential_decay_with_cutoff"},
-                                      'max_iter': 30,
+                                      'max_iter': 60,
                                       'limit_temperatures': False,
                                       'num_cpu': -1,
                                       'plot_results': plot_results,
@@ -139,9 +140,9 @@ if __name__ == "__main__":
                                       'test_mode': False,
                                       'min_num_waves': 10,
                                       'weights': np.array([1, 1, 1, 1, 1]),
-                                      'out_path': os.path.join("example_data", "Worcester", "results2", "worcester.png")},
+                                      'out_path': os.path.join("example_data", "Worcester", "results2_2x", "worcester.png")},
                          'future': {'delT_above_shifted_extreme': {'cs': -10, 'hw': 10},
-                                    'max_iter': 30,
+                                    'max_iter': 60,
                                     'limit_temperatures': False,
                                     'num_cpu': -1,
                                     'num_step': 2500000,
@@ -149,7 +150,7 @@ if __name__ == "__main__":
                                     'decay_func_type': {'cs': 'quadratic_times_exponential_decay_with_cutoff', 'hw': "quadratic_times_exponential_decay_with_cutoff"},
                                     'test_mode': False,
                                     'min_num_waves': 10,
-                                    'out_path': os.path.join("example_data", "Worcester", "results2", "worcester_future.png")}}
+                                    'out_path': os.path.join("example_data", "Worcester", "results2_2x", "worcester_future.png")}}
 
         # I had to manually add the daily summaries and norms
         obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
@@ -168,10 +169,10 @@ if __name__ == "__main__":
         if not os.path.exists("temp_pickles"):
             os.mkdir("temp_pickles")
         pkl.dump([obj, solve_options], open(
-            os.path.join("temp_pickles", "obj_worcester.pickle"), 'wb'))
+            os.path.join("temp_pickles", "obj_worcester_2x.pickle"), 'wb'))
     else:
 
-        blob = pkl.load(open(os.path.join("temp_pickles", "obj_worcester.pickle"), 'rb'))
+        blob = pkl.load(open(os.path.join("temp_pickles", "obj_worcester_2x.pickle"), 'rb'))
         obj = blob[0]
         solve_options = blob[1]
 
@@ -183,15 +184,6 @@ if __name__ == "__main__":
     
     """
     if step == 3:
-        """
-        Worst case error questioning - see if there is a bug
-        
-        """
-        future_years = [2020]
-        ci_intervals = ["5%"]
-        scenarios = ["SSP370"]
-        
-        
         inp_dir = os.path.join(os.path.dirname(__file__),"example_data","Worcester")
         
         station = os.path.join(inp_dir, "USW00094746.csv")
@@ -203,8 +195,13 @@ if __name__ == "__main__":
         # No need to input "historical"
         # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
         
-        results,filenames = obj.create_solutions(future_years, scenarios, ci_intervals, historical_solution, scen_dict)
-    
-
-
-    #
+        results,filenames = obj.create_solutions(future_years, 
+                                                 scenarios, 
+                                                 ci_intervals, 
+                                                 historical_solution, 
+                                                 scen_dict,
+                                                 cold_snap_shift=None,
+                                                 filename="worcester_",
+                                                 run_parallel=run_parallel,
+                                                 num_cpu=num_cpu,
+                                                 overwrite=True)

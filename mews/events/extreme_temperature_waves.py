@@ -50,7 +50,7 @@ from warnings import warn
 
 import matplotlib.pyplot as plt
 
-def _calculate_shift(obj2,first_try_solution_location,month_factors,sol_dir,cii):
+def _calculate_shift(obj2,first_try_solution_location,month_factors,sol_dir,cii,new_solution_name):
 
     stats = obj2.read_solution(first_try_solution_location)
     stats_new = deepcopy(stats)
@@ -103,7 +103,7 @@ def _calculate_shift(obj2,first_try_solution_location,month_factors,sol_dir,cii)
         stat_new['max energy per duration'] = stat_new['max energy per duration'] + delb_E
     
     obj2.stats = stats_new
-    obj2.write_solution(os.path.join(sol_dir,"iterate.txt"))
+    obj2.write_solution(os.path.join(sol_dir,new_solution_name))
 
 
 def _assemble_x_solution(stats,month):
@@ -448,8 +448,125 @@ class ExtremeTemperatureWaves(Extremes):
                         "text.usetex": False,
                         "font.family": "Helvetica"})
         
+    
+    def _parallel_create_solution_func(self,
+                                       syear,
+                                       scen,
+                                       cii,
+                                       obj,
+                                       historic_solution,
+                                       scen_dict,
+                                       cold_snap_shift,
+                                       sol_dir,
+                                       filename,
+                                       overwrite):
+        """
+        Calculate solutions in parallel
+        
+        """
+        # restart capability
+        
+        fname = filename+"final_solution_{0:d}_{1}_{2}.txt".format(syear,scen,cii)
+        if (os.path.exists(fname) and not overwrite):
+            return None, None
+        
+        # start fresh with the historical solution
+        obj2 = deepcopy(obj)
+        
+        if not os.path.exists(historic_solution):
+            obj2.write_solution(os.path.join(historic_solution))
+        
+        # reduces the number of iterations.
+        obj2.solve_options['future']['num_postprocess'] = 1
+        
+        file_path = historic_solution
+    
+        # Question - do you want to look across the extreme event confidence
+        #            intervals or just stick to the 50%?
+        #          - do you want a cold snap shift? I don't have information for
+        #            how much cold snaps will change with increasing global warming
+        
+        # THIS IS THE HISTORICAL SOLUTION
+        obj2._write_results = False
+        result = obj2.create_scenario(scenario_name=scen,
+                                                        year=syear,
+                                                        climate_temp_func=scen_dict,
+                                                        num_realization=1,
+                                                        climate_baseyear=2014,
+                                                        increase_factor_ci=cii,
+                                                        cold_snap_shift=cold_snap_shift,
+                                                        solution_file=file_path)
+        # These must be one for the calculation to work!
+        month_factors = [1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         1.0]
+        
+        temp_new_solution_name = "iterate_{0}_{1}_{2}.txt".format(str(scen),str(syear),str(cii))
+        
+        obj2_hist = deepcopy(obj2)
+        # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
+        # This writes a solution file used by the next create_scenario command
+        _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii,temp_new_solution_name)
+        
+        result = obj2.create_scenario(scenario_name=scen,
+                                                        year=syear,
+                                                        climate_temp_func=scen_dict,
+                                                        num_realization=1,
+                                                        climate_baseyear=2014,
+                                                        increase_factor_ci=cii,
+                                                        cold_snap_shift=cold_snap_shift,
+                                                        solution_file=os.path.join(sol_dir,temp_new_solution_name))
 
-    def create_solutions(self,future_years,scenarios,ci_intervals,historic_solution,scen_dict,cold_snap_shift=None,filename=""):
+
+        # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
+        # variation.
+        new_month_factors = []
+        for month in np.arange(1,13):
+            h_thresh = obj2_hist.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
+            f_thresh = obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
+            
+            h_gap = 0.5*((h_thresh['target'][0] - h_thresh['actual'][0]) + (h_thresh['target'][1] - h_thresh['actual'][1]))       
+            f_gap = 0.5*((f_thresh['target'][0] - f_thresh['actual'][0]) + (f_thresh['target'][1] - f_thresh['actual'][1]))
+            
+            new_month_factors.append(h_gap / (h_gap - f_gap))
+            
+        # now produce a solution that is reasonably good only based on changing temperature distribution parameters from the 
+        # historic solution.
+        # This writes a solution file used by the next create_scenario command
+        _calculate_shift(obj2_hist,historic_solution,new_month_factors,sol_dir,cii,temp_new_solution_name)
+        
+        
+        result = obj2_hist.create_scenario(scenario_name=scen,
+                                                        year=syear,
+                                                        climate_temp_func=scen_dict,
+                                                        num_realization=1,
+                                                        climate_baseyear=2014,
+                                                        increase_factor_ci=cii,
+                                                        cold_snap_shift=cold_snap_shift,
+                                                        solution_file=os.path.join(sol_dir,temp_new_solution_name))
+        
+        
+        obj2_hist.write_solution(os.path.join(sol_dir,fname))
+        
+        # remove the temporary file
+        if os.path.exists(os.path.join(sol_dir,temp_new_solution_name)):
+            os.remove(os.path.join(sol_dir,temp_new_solution_name))
+        
+        return result,fname
+        
+    
+    
+    def create_solutions(self,future_years,scenarios,ci_intervals,historic_solution,scen_dict,cold_snap_shift=None,filename="",
+                         run_parallel=None,num_cpu=None,overwrite=True):
         """
         
         Write solution files for a broad range of future years, ssp scenarios, 
@@ -476,6 +593,17 @@ class ExtremeTemperatureWaves(Extremes):
             cold snaps will be kept at their historical values
         filename : str, optional
             string to prepend to the filename output The default is "".
+        run_parallel : bool : Optional : default = None
+            None - use the original objects input for run_parallel
+            Value - overide and use a local run_parallel with the 
+            number of processors from num_processor input
+        num_cpu : int : Optional : default = None
+            None = use the original objects input for num_cpu
+            Value - override with a new number of processors
+        overwrite : bool : Optional : default = True
+            If true overwrite existing files, otherwise,
+            do not overwrite, just move on to the next file that doesn't exist
+        
 
         Raises
         ------
@@ -493,7 +621,22 @@ class ExtremeTemperatureWaves(Extremes):
             a list of all the filenames with MEWS solution parameters written.
 
         """
-        
+        if run_parallel is None:
+            run_parallel = self._run_parallel
+        if num_cpu is None:
+            num_cpu = self._num_cpu 
+        else:
+            num_cpu = filter_cpu_count(num_cpu)
+            
+        try:
+            import multiprocessing as mp
+            pool = mp.Pool(num_cpu)
+        except:
+            warnings.warn("Something went wrong with importing "
+                        +"multiprocessing and creating a pool "
+                        +"of asynchronous processes reverting to"
+                        +" non-parallel run!",UserWarning)
+            run_parallel = False
         
         results = {}
 
@@ -519,110 +662,40 @@ class ExtremeTemperatureWaves(Extremes):
                 results[syear][scen] = {}
                 for cii in ci_intervals:
                     
-                    # restart capability
-                    if syear in results:
-                        if scen in results[syear]:
-                            if cii in results[syear][scen]:
-                                continue
-                           
-                    # start fresh with the historical solution
-                    obj2 = deepcopy(obj)
+                    tup = (syear,
+                            scen,
+                            cii,
+                            obj,
+                            historic_solution,
+                            scen_dict,
+                            cold_snap_shift,
+                            sol_dir,
+                            filename,
+                            overwrite)
+                    if run_parallel:
+                        results[syear][scen][cii] = pool.apply_async(self._parallel_create_solution_func,
+                                                          args=tup)
+                    else:
+                        results[syear][scen][cii],fname = self._parallel_create_solution_func(*tup)
+                        filenames.append(fname)
                     
-                    if not os.path.exists(historic_solution):
-                        obj2.write_solution(os.path.join(historic_solution))
-                    
-                    # reduces the number of iterations.
-                    obj2.solve_options['future']['num_postprocess'] = 1
-                    
-                    file_path = historic_solution
-                
-                    # Question - do you want to look across the extreme event confidence
-                    #            intervals or just stick to the 50%?
-                    #          - do you want a cold snap shift? I don't have information for
-                    #            how much cold snaps will change with increasing global warming
-                    
-                    # THIS IS THE HISTORICAL SOLUTION
-                    obj2._write_results = False
-                    results[syear][scen][cii] = obj2.create_scenario(scenario_name=scen,
-                                                                    year=syear,
-                                                                    climate_temp_func=scen_dict,
-                                                                    num_realization=1,
-                                                                    climate_baseyear=2014,
-                                                                    increase_factor_ci=cii,
-                                                                    cold_snap_shift=cold_snap_shift,
-                                                                    solution_file=file_path)
-                    # These must be one for the calculation to work!
-                    month_factors = [1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0,
-                                     1.0]
-                    
-                    obj2_hist = deepcopy(obj2)
-                    # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
-                    _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii)
-                    
-                    #month_factors = [1.6,
-                    #                 2.5,
-                    #                 2.5,
-                    #                 2.5,
-                    #                 2.0,
-                    #                 1.75,
-                    #                 3.0,
-                    #                 2.5,
-                    #                 3.0,
-                    #                 2.5,
-                    #                 2.25,
-                    #                 2.25]
+        if run_parallel:
+            presults = {}
+            for syear in future_years:
+                presults[syear] = {}
+                for scen in scenarios:
+                    presults[syear][scen] = {}
+                    for cii in ci_intervals:
+                        poolObj = results[syear][scen][cii]
+                        try:
+                            presults[syear][scen][cii],fname = poolObj.get()
+                            filenames.append(fname)
+                        except AttributeError:
+                            raise AttributeError("The multiprocessing module will not"
+                                                 +" handle lambda functions or any"
+                                                 +" other locally defined functions!")
 
-                    
-                    
-                    results[syear][scen][cii] = obj2.create_scenario(scenario_name=scen,
-                                                                    year=syear,
-                                                                    climate_temp_func=scen_dict,
-                                                                    num_realization=1,
-                                                                    climate_baseyear=2014,
-                                                                    increase_factor_ci=cii,
-                                                                    cold_snap_shift=cold_snap_shift,
-                                                                    solution_file=os.path.join(sol_dir,"iterate.txt"))
-            
 
-                    # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
-                    # variation.
-                    new_month_factors = []
-                    for month in np.arange(1,13):
-                        h_thresh = obj2_hist.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
-                        f_thresh = obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
-                        
-                        h_gap = 0.5*((h_thresh['target'][0] - h_thresh['actual'][0]) + (h_thresh['target'][1] - h_thresh['actual'][1]))       
-                        f_gap = 0.5*((f_thresh['target'][0] - f_thresh['actual'][0]) + (f_thresh['target'][1] - f_thresh['actual'][1]))
-                        
-                        new_month_factors.append(h_gap / (h_gap - f_gap))
-                        
-                    # now produce a solution that is reasonably good only based on changing temperature distribution parameters from the 
-                    # historic solution.
-
-                    _calculate_shift(obj2_hist,historic_solution,new_month_factors,sol_dir,cii)
-                    
-                    
-                    results[syear][scen][cii] = obj2_hist.create_scenario(scenario_name=scen,
-                                                                    year=syear,
-                                                                    climate_temp_func=scen_dict,
-                                                                    num_realization=1,
-                                                                    climate_baseyear=2014,
-                                                                    increase_factor_ci=cii,
-                                                                    cold_snap_shift=cold_snap_shift,
-                                                                    solution_file=os.path.join(sol_dir,"iterate.txt"))
-                    fname = filename+"final_solution_{0:d}_{1}_{2}.txt".format(syear,scen,cii)
-                    filenames.append(fname)
-                    obj2_hist.write_solution(os.path.join(sol_dir,fname))
         return results,filenames
         
     def create_scenario(self,scenario_name,year,climate_temp_func,
