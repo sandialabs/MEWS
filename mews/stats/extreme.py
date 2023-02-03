@@ -40,6 +40,13 @@ from mews.utilities.utilities import filter_cpu_count
 from mews.utilities.utilities import find_extreme_intervals
 from copy import deepcopy
 
+
+def _transform_fit_sup(value,maxval,minval):
+    return 2 * (value - minval)/(maxval - minval) - 1
+
+def _inverse_transform_fit(norm_signal, signal_max, signal_min):
+    return (norm_signal + 1)*(signal_max - signal_min)/2.0 + signal_min 
+
 class DiscreteMarkov():
     """
     >>> obj = MarkovChain(transition_matrix,
@@ -1290,31 +1297,53 @@ class Extremes():
             norm_temperature = param['normalizing extreme temp']
             alpha_T = param['normalized extreme temp duration fit slope']
             beta_T = param['normalized extreme temp duration fit intercept']
-            Sm1_E = 0.0
-            Sm1_T = 0.0
-            S_E = 0.0
-            S_T = 0.0
+            
+            # changes to the -1..1 boundary of the distributions.
+            if self.use_global:
+                Sm1_E = 0.0
+                Sm1_T = 0.0
+                S_E = 0.0
+                S_T = 0.0
+            else:
+                # remember we are looking for the difference from the -1..1 interval
+                # so -(-1) on the minus 1 (m1) entries and -1 on the positive side entries S_E and S_T
+                Sm1_E = _transform_fit_sup(param['min energy per duration'],
+                                           param['hist max energy per duration'],
+                                           param['hist min energy per duration']) + 1
+                Sm1_T = _transform_fit_sup(param['min extreme temp per duration'],
+                                           param['hist max extreme temp per duration'],
+                                           param['hist min extreme temp per duration']) + 1
+                S_E = _transform_fit_sup(param['max energy per duration'],
+                                           param['hist max energy per duration'],
+                                           param['hist min energy per duration']) - 1
+                S_T = _transform_fit_sup(param['max extreme temp per duration'],
+                                           param['hist max extreme temp per duration'],
+                                           param['hist min extreme temp per duration']) - 1 
+                
             abs_maxval_delT = param['normalizing extreme temp']
 
-            # introduce a delta if it exists.
-            if not integral_delta is None:
-                param_delta = integral_delta[s_month]
-                mu_E += param_delta['del_mu']
-                sig_E += param_delta['del_sig']
-                Sm1_E += param_delta['del_a']
-                S_E += param_delta['del_b']
-            if not peak_delta is None:
-                peak_param_delta = peak_delta[s_month]
-                mu_T += peak_param_delta['del_mu']
-                sig_T += peak_param_delta['del_sig']
-                Sm1_T += peak_param_delta['del_a']
-                S_T += peak_param_delta['del_b']   
-                # Temperature increase limit.
-                # this is a use_global issue.
-                if isinstance(peak_param_delta['delT_increase_abs_max'],float):
-                    abs_maxval_delT += peak_param_delta['delT_increase_abs_max']
-                else:
-                    abs_maxval_delT += peak_param_delta['delT_increase_abs_max'][wstr]
+            # introduce a delta if it exists.  - this feature is not used
+            # by the new analysis which just changes the actual param values
+            # rather than supplying deltas.
+            if self.use_global:
+                if not integral_delta is None:
+                    param_delta = integral_delta[s_month]
+                    mu_E += param_delta['del_mu']
+                    sig_E += param_delta['del_sig']
+                    Sm1_E += param_delta['del_a']
+                    S_E += param_delta['del_b']
+                if not peak_delta is None:
+                    peak_param_delta = peak_delta[s_month]
+                    mu_T += peak_param_delta['del_mu']
+                    sig_T += peak_param_delta['del_sig']
+                    Sm1_T += peak_param_delta['del_a']
+                    S_T += peak_param_delta['del_b']   
+                    # Temperature increase limit.
+                    # this is a use_global issue.
+                    if isinstance(peak_param_delta['delT_increase_abs_max'],float):
+                        abs_maxval_delT += peak_param_delta['delT_increase_abs_max']
+                    else:
+                        abs_maxval_delT += peak_param_delta['delT_increase_abs_max'][wstr]
 
             # integral_dist - includes the inverse transform back to 
             # energy per duration from the -1..1 space (-1..1 gets shifted so it
@@ -1339,6 +1368,7 @@ class Extremes():
                                                    1+S_T,
                                                    minval_T,
                                                    maxval_T)
+            
             # columns = "HLY-TEMP-10PCTL","HLY-TEMP-NORMAL","HLY-TEMP-90PCTL"
             # not adjustment here because 
             if self.use_global == False:

@@ -1445,6 +1445,11 @@ class SolveDistributionShift(object):
                                                                                           pval['maxval_T'],
                                                                                           pval['minval_T'])
             param_new[wave_type]['decay function coef'] = coef[wave_type]
+            
+            
+            
+            # TODO - shift energy HERE the same as in _calculate_shift for the ExtremeTemperatureWaves._create_shift
+            # centralize this function. For now MEWS assumes the historic sample means and bounds are sufficient.
 
             del_shifts[wave_type] = {"del_mu_T": del_mu_T,
                                      "del_sig_T": del_sig_T,

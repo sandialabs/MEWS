@@ -20,6 +20,8 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
+from mews.graphics.plotting2D import Graphics
+from matplotlib import pyplot as plt
 
 def create_smirnov_table(obj):
     
@@ -168,11 +170,33 @@ def quantify_event_errors_in_temperature(file_path,base_name,ssp,ci_,years):
                             columns = pd.MultiIndex.from_tuples(multi_col))
     final_df.T.to_latex("future_temperature_errors.tex")
 
+def plot_results(obj):
+
+    cases = ['worcester_final_solution_2020_SSP585_95%.txt','worcester_final_solution_2040_SSP585_95%.txt',
+             'worcester_final_solution_2060_SSP585_95%.txt','worcester_final_solution_2080_SSP585_95%.txt']
+    
+    fig,axl = plt.subplots(4,1,figsize=(10,10))
+    
+    for idx, case in enumerate(cases):
+        year = case.split("_")[-3]
+        sub_obj = obj[case]
+
+        fig,axl[idx] = Graphics.plot_realization(sub_obj, "Dry Bulb Temperature", 2,ax=axl[idx],
+                                  fig=fig,ylabel=year,legend_labels=year)
+    plt.tight_layout()
+    plt.savefig("worcester_2020_2080_single_realization.png",dpi=300)
+    return fig, axl
+
 
 if __name__ == "__main__":
+    
+    obj_alter = pickle.load(open("temp_pickles/obj_worcester_alter.pickle","rb"))[0]
+    
+    fig, axl = plot_results(obj_alter)
+
     results_file = os.path.join("temp_pickles","obj_worcester_2x.pickle")
     
-    file_path = os.path.join("example_data","Worcester","results2")
+    file_path = os.path.join("example_data","Worcester","results2_2x")
     ssp = ["SSP245","SSP370","SSP585"]
     ci_ = ["5%","50%","95%"]
     years = [2020,2040,2060,2080]
@@ -183,5 +207,7 @@ if __name__ == "__main__":
     quantify_event_errors_in_temperature(file_path,base_name,ssp,ci_,years)
     
     obj = tup[0]
+    
+    
     
     create_smirnov_table(obj)

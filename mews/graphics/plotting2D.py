@@ -14,7 +14,7 @@ class Graphics():
 
     @staticmethod
     def plot_realization(extremes_result, column, realization_number, ax=None, title="", ylabel="",
-                         grid_status=True, rc_input={}, legend_labels=None):
+                         grid_status=True, rc_input={}, legend_labels=None,fig=None):
 
         # change fontsize and graphical attributes of the figure see documentation
         # for matplotlib.rc

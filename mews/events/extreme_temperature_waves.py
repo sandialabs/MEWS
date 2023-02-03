@@ -51,7 +51,8 @@ from warnings import warn
 import matplotlib.pyplot as plt
 
 def _calculate_shift(obj2,first_try_solution_location,month_factors,sol_dir,cii,new_solution_name):
-
+    
+    # brings in the historic solution
     stats = obj2.read_solution(first_try_solution_location)
     stats_new = deepcopy(stats)
     
@@ -463,8 +464,21 @@ class ExtremeTemperatureWaves(Extremes):
         """
         Calculate solutions in parallel
         
+        This function is just an interative process. The location of change is in
+        _calculate_shift where obj.stats values are changed and a solution file 
+        is written. The function then uses obj.create_scenario with the new solution 
+        file to assess if a shift has improved the fit.
+        
+        COLD SNAP SHIFT IS NOT IMPLEMENTED HERE AND WOULD REQUIRE A LOOP 
+        OVER COLD SNAP FOLLOWED BY THE CURRENTLY IMPLEMENTED LOOP OVER 
+        HEAT WAVES. IMPLEMENT A UNIT TEST FOR THIS CAPABILITY!
+        
         """
         # restart capability
+        num_cases = 3  # the stochastic nature of the model requires 
+                       # evaluating the model 8 times to get different actual
+                       # shift results.
+        
         
         fname = filename+"final_solution_{0:d}_{1}_{2}.txt".format(syear,scen,cii)
         if (os.path.exists(fname) and not overwrite):
@@ -476,10 +490,12 @@ class ExtremeTemperatureWaves(Extremes):
         if not os.path.exists(historic_solution):
             obj2.write_solution(os.path.join(historic_solution))
         
-        # reduces the number of iterations.
-        obj2.solve_options['future']['num_postprocess'] = 1
-        
-        file_path = historic_solution
+        # look at three cases to make a better interpolation.
+        obj2.solve_options['future']['num_postprocess'] = num_cases
+        ## ONLY FOR TROUBLESHOOTING!!
+        #obj2.solve_options['future']['test_mode'] = True
+        #obj2.solve_options['future']['num_steps'] = 1e5 # much fewer steps to reduce run time.
+
     
         # Question - do you want to look across the extreme event confidence
         #            intervals or just stick to the 50%?
@@ -495,8 +511,10 @@ class ExtremeTemperatureWaves(Extremes):
                                                         climate_baseyear=2014,
                                                         increase_factor_ci=cii,
                                                         cold_snap_shift=cold_snap_shift,
-                                                        solution_file=file_path)
-        # These must be one for the calculation to work!
+                                                        solution_file=historic_solution)
+        
+        obj2_iter_prev = deepcopy(obj2)
+        # These are an initial guess with positive value to represent stepping forward.
         month_factors = [1.0,
                          1.0,
                          1.0,
@@ -512,50 +530,64 @@ class ExtremeTemperatureWaves(Extremes):
         
         temp_new_solution_name = "iterate_{0}_{1}_{2}.txt".format(str(scen),str(syear),str(cii))
         
-        obj2_hist = deepcopy(obj2)
-        # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
-        # This writes a solution file used by the next create_scenario command
-        _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii,temp_new_solution_name)
-        
-        result = obj2.create_scenario(scenario_name=scen,
-                                                        year=syear,
-                                                        climate_temp_func=scen_dict,
-                                                        num_realization=1,
-                                                        climate_baseyear=2014,
-                                                        increase_factor_ci=cii,
-                                                        cold_snap_shift=cold_snap_shift,
-                                                        solution_file=os.path.join(sol_dir,temp_new_solution_name))
+        error_more_than_1_percent = True
+        max_iter = 5
+        iter_ = 0
 
+        while error_more_than_1_percent:
+            # historical is just the previous iteration
+            
+            # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
+            # This writes a solution file used by the next create_scenario command
+            # calculate_shift always goes to the historic average
+            _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii,temp_new_solution_name)
+            
+            
+            result = obj2.create_scenario(scenario_name=scen,
+                                                            year=syear,
+                                                            climate_temp_func=scen_dict,
+                                                            num_realization=1,
+                                                            climate_baseyear=2014,
+                                                            increase_factor_ci=cii,
+                                                            cold_snap_shift=cold_snap_shift,
+                                                            solution_file=os.path.join(sol_dir,temp_new_solution_name))
+            
+            # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
+            # variation.
+            new_month_factors = []
+            for month in np.arange(1,13):
+                # h_thresh is the previous iteration's solution (first time through its the historical solution)
+                h_thresh = [obj2_iter_prev.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[case+1]['hw']
+                            for case in range(num_cases)]
+                # next iteration.
+                f_thresh = [obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
+                            for case in range(num_cases)]
+                
+                h_gap = np.array([0.5*((h_thresh[case]['target'][0] - h_thresh[case]['actual'][0]) 
+                                       + (h_thresh[case]['target'][1] - h_thresh[case]['actual'][1]))
+                                  for case in range(num_cases)]).mean()
+                f_gap = np.array([0.5*((f_thresh[case]['target'][0] - f_thresh[case]['actual'][0]) 
+                                       + (f_thresh[case]['target'][1] - f_thresh[case]['actual'][1]))
+                                  for case in range(num_cases)]).mean()
+                
+                new_month_factors.append(month_factors[month-1] * h_gap / (h_gap - f_gap))
+                
+            max_percent_error = np.abs(100*(np.array(new_month_factors) - np.array(month_factors))/np.array(month_factors)).max()
+            #print("\n\n")
+            #print("max_percent_error: {0:5.2f}".format(max_percent_error))
+            #print("f_gap: {0:5.2f}".format(f_gap))
 
-        # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
-        # variation.
-        new_month_factors = []
-        for month in np.arange(1,13):
-            h_thresh = obj2_hist.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
-            f_thresh = obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
-            
-            h_gap = 0.5*((h_thresh['target'][0] - h_thresh['actual'][0]) + (h_thresh['target'][1] - h_thresh['actual'][1]))       
-            f_gap = 0.5*((f_thresh['target'][0] - f_thresh['actual'][0]) + (f_thresh['target'][1] - f_thresh['actual'][1]))
-            
-            new_month_factors.append(h_gap / (h_gap - f_gap))
-            
-        # now produce a solution that is reasonably good only based on changing temperature distribution parameters from the 
-        # historic solution.
-        # This writes a solution file used by the next create_scenario command
-        _calculate_shift(obj2_hist,historic_solution,new_month_factors,sol_dir,cii,temp_new_solution_name)
+            if iter_ > max_iter:
+                error_more_than_1_percent = False
+            elif max_percent_error < 1.0:
+                error_more_than_1_percent = False
+            else:
+                iter_ += 1
+                
+            month_factors = new_month_factors
         
         
-        result = obj2_hist.create_scenario(scenario_name=scen,
-                                                        year=syear,
-                                                        climate_temp_func=scen_dict,
-                                                        num_realization=1,
-                                                        climate_baseyear=2014,
-                                                        increase_factor_ci=cii,
-                                                        cold_snap_shift=cold_snap_shift,
-                                                        solution_file=os.path.join(sol_dir,temp_new_solution_name))
-        
-        
-        obj2_hist.write_solution(os.path.join(sol_dir,fname))
+        obj2.write_solution(os.path.join(sol_dir,fname))
         
         # remove the temporary file
         if os.path.exists(os.path.join(sol_dir,temp_new_solution_name)):
@@ -584,11 +616,14 @@ class ExtremeTemperatureWaves(Extremes):
         ci_intervals : array-like maximum of 3 elements
             list of confidence intervals to calculate ['5%','50%', and '95%'] are the
             only valid entries
-        historic_solution : TYPE
-            DESCRIPTION.
-        scen_dict : TYPE
-            DESCRIPTION.
+        historic_solution : str
+            Must provide a path to a solution_file generated by "write_solution"
+            of the historic optimization solution
+        scen_dict : dict
+            Must provide a dictionary with keys = {historic, ssp names...} of 
+            numpy.poly1d climate surface temperature change polynomials 
         cold_snap_shift : dict, optional
+            NOT YET IMPLEMENTED 
             manually input equivalent to the IPCC heat wave shift table. If none, 
             cold snaps will be kept at their historical values
         filename : str, optional
@@ -627,16 +662,17 @@ class ExtremeTemperatureWaves(Extremes):
             num_cpu = self._num_cpu 
         else:
             num_cpu = filter_cpu_count(num_cpu)
-            
-        try:
-            import multiprocessing as mp
-            pool = mp.Pool(num_cpu)
-        except:
-            warnings.warn("Something went wrong with importing "
-                        +"multiprocessing and creating a pool "
-                        +"of asynchronous processes reverting to"
-                        +" non-parallel run!",UserWarning)
-            run_parallel = False
+        
+        if run_parallel:
+            try:
+                import multiprocessing as mp
+                pool = mp.Pool(num_cpu)
+            except:
+                warn("Something went wrong with importing "
+                            +"multiprocessing and creating a pool "
+                            +"of asynchronous processes reverting to"
+                            +" non-parallel run!",UserWarning)
+                run_parallel = False
         
         results = {}
 
@@ -700,7 +736,7 @@ class ExtremeTemperatureWaves(Extremes):
         
     def create_scenario(self,scenario_name,year,climate_temp_func,
                         num_realization=1,climate_baseyear=None,increase_factor_ci="50%",
-                        cold_snap_shift=None,solution_file="",random_seed=None):
+                        cold_snap_shift=None,solution_file="",random_seed=None,output_dir=None):
         
         """
         >>> obj.create_scenario(scenario_name,start_year,num_year, climate_temp_func,
@@ -753,6 +789,9 @@ class ExtremeTemperatureWaves(Extremes):
             all other strings will raise a ValueError
             
         cold_snap_shift : dict : optional : Default = None
+            NOT YET FUNCTIONAL - must calculate cold snap shift and assure
+                                 cold snap thresholds become part of the 
+                                 optimization problem.
             MEWS does not include a shift in statistics for cold snaps due to
             lack of information. This feature allows the user to enter a dictionary 
             of the required form:
@@ -777,6 +816,12 @@ class ExtremeTemperatureWaves(Extremes):
             Use this input if this function is being called repeatedly to avoid
             using the same original random seed every time.
             
+        output_dir : str :optional : Default = None
+            indicate where to put the output .epw results from the creation of 
+            this scenario.
+            If not entered use the original value provided results_folder input
+            to the instantiation of this object.
+            
         Returns
         -------    
         results_dict : dict : 
@@ -784,6 +829,9 @@ class ExtremeTemperatureWaves(Extremes):
             
         
         """
+        if not output_dir is None:
+            self._results_folder = output_dir
+        
         if not random_seed is None:
             self._random_seed = random_seed
             np.random.seed(random_seed)
@@ -1736,12 +1784,12 @@ class ExtremeTemperatureWaves(Extremes):
         
     
     def _transform_fit(self,signal):
-        # this function maps a logarithm from 0 to interval making for a good log-normal fit
+        # this function maps linearly from -1 to 1
         return 2 *  (signal - signal.min())/(signal.max() - signal.min()) - 1
     
     def _inverse_transform_fit(self,norm_signal, signal_max, signal_min):
         return (norm_signal + 1)*(signal_max - signal_min)/2.0 + signal_min 
-        #(np.exp(norm_signal/interval) - 1.0)/(np.exp(1.0) - 1) * (signal_max - signal_min) + signal_min
+        
     
     def _calculate_wave_stats(self,waves,
                               waves_other,
@@ -1890,6 +1938,8 @@ class ExtremeTemperatureWaves(Extremes):
             temp_dict['hist min extreme temp per duration'] = extreme_temp_per_duration.min()
             temp_dict['max energy per duration'] = wave_energy_per_duration.max()
             temp_dict['min energy per duration'] = wave_energy_per_duration.min()
+            temp_dict['hist max energy per duration'] = wave_energy_per_duration.max()
+            temp_dict['hist min energy per duration'] = wave_energy_per_duration.min()
             temp_dict['energy linear slope'] = par[0][0]
             temp_dict['normalized extreme temp duration fit slope'] = par[1][1]
             temp_dict['normalized extreme temp duration fit intercept'] = par[1][0]
@@ -2390,8 +2440,9 @@ class _DeltaTransition_IPCC_FigureSPM6():
             if future_tempanomal > 4.0:
                 warn("The mews analysis allows extrapolation beyond the IPCC info that gives factors to 4.0C. The growth in the "+
                      "IPCC data is nearly linear. Your temperature anomaly is at {0:5.2f}C".format(future_tempanomal))
-            if future_tempanomal > 6.0:
-                raise ValueError("The current MEWS analysis only allows extrapolation to 6C and the IPCC info only goes to 4C")
+            if future_tempanomal > 6.05:
+
+                raise ValueError("The current MEWS analysis only allows extrapolation to 6.05C and the IPCC info only goes to 4C")
         
             
         ipcc_num = ipcc_data.drop(["Event","Units"],axis=1) 

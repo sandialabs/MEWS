@@ -40,7 +40,7 @@ if __name__ == "__main__":
     
     """
     
-    step = 3
+    step = 2
     # STEP 1 to using MEWS, create a climate increase in surface temperature
     #        set of scenarios,
     #
@@ -73,8 +73,8 @@ if __name__ == "__main__":
 
     # plot_results
     plot_results = True
-    run_parallel = False
-    num_cpu = 55
+    run_parallel = True
+    num_cpu = 59
 
     # No need to input "historical"
     # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
