@@ -87,7 +87,7 @@ class Input():
     
     pre_string = "WorcesterStudy"
     
-    plot_locations = r"./from_python/plots/worcester"
+    plot_locations = r"./from_python/plots/worcester_rerun02052023"
     
     #mews
     station = {'summaries':os.path.join("example_data","Worcester","USW00094746.csv"),
@@ -111,7 +111,7 @@ class Input():
     # DEFINE THE PATHS FOR THE IDFs AND THE EPWS. 
     # Of course, the MEWS code needs to be previously run to create all the EPWS. 
     # The the files can be copied from there in the simulation folders.
-    path_mews_files_HW = os.path.join(main_path,'mews_results')
+    path_mews_files_HW = os.path.join(main_path,'example_data','Worcester','mews_results_krissy2')
     #give an absolute path here.
     path_idf_files = [os.path.join(main_path,'example_data',
                                    "Worcester",

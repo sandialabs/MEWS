@@ -84,11 +84,11 @@ class Input():
     
     building_area = 4982.19 #m2
     
-    study_results_name = "houston_study_results"
+    study_results_name = "houston_study_results_rerun02052022"
     
     pre_string = "HoustonStudy"
     
-    plot_locations = r"./from_python/plots/houston"
+    plot_locations = r"./from_python/plots/houston_rerun02052022"
     
     #mews
     station = {'summaries':os.path.join("example_data","ClimateZone2A_Houston","Houston.csv"),
@@ -112,7 +112,7 @@ class Input():
     # DEFINE THE PATHS FOR THE IDFs AND THE EPWS. 
     # Of course, the MEWS code needs to be previously run to create all the EPWS. 
     # The the files can be copied from there in the simulation folders.
-    path_mews_files_HW = os.path.join(main_path,'mews_results')
+    path_mews_files_HW = os.path.join(main_path,"example_data","ClimateZone2A_Houston","results","mews_epw_results")
     #give an absolute path here.
     path_idf_files = [os.path.join(main_path,'example_data',
                                    "ClimateZone2A_Houston",

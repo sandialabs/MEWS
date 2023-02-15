@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # with proper proxy settings.
 
     # HERE CS stands for climate scenario (not cold snap)
-    future_years = [2100]#2025,2050,2075[2020,2040,2060,2080] #2014, 2020, 2040, 2060, 
+    future_years = [2025,2050,2075,2100]#[2020,2040,2060,2080] #2014, 2020, 2040, 2060, 
 
     # CI interval valid = ['5%','50%','95%']
     ci_intervals = ["5%","50%","95%"]
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # plot_results
     plot_results = True
     run_parallel = True
-    num_cpu = 40
+    num_cpu = 30
 
     # No need to input "historical"
     # valid names for scenarios are: ["historical","SSP119","SSP126","SSP245","SSP370","SSP585"]
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                                  write_graphics_path=output_folder_cs,
                                  num_cpu=num_cpu,
                                  run_parallel=run_parallel,
-                                 model_guide=os.path.join(
+                                 model_guide=os.path.join(os.path.dirname(__file__),
                                      "example_data", "Models_Used_alpha.xlsx"),
                                  data_folder=os.path.join(
                                      "..", "..", "CMIP6_Data_Files"),
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         if not os.path.exists("temp_pickles"):
             os.mkdir("temp_pickles")
         pkl.dump([cs_obj], open(os.path.join(
-            "temp_pickles", "cs_obj.pickle"), 'wb'))
+            "temp_pickles", "cs_obj_houston.pickle"), 'wb'))
 
     else:
         # this is the results obtained by dlvilla 12/13/2022
@@ -125,7 +125,7 @@ if __name__ == "__main__":
          'SSP370': poly1d([ 9.95348537e-08,  1.16654213e-04,  3.27642362e-02, -3.22124297e-07])}
 
         cs_obj = pkl.load(
-            open(os.path.join("temp_pickles", "cs_obj.pickle"), 'rb'))[0]
+            open(os.path.join("temp_pickles", "cs_obj_houston.pickle"), 'rb'))[0]
     """
     # STEP 2. FIT THE HISTORIC DATA.
     # USE THESE TO CONTROL OPTIMIZATION...

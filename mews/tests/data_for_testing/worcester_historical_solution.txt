@@ -7,13 +7,15 @@
                  'sig': 0.4154535225139539}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.020210708394367293,
-                 'sig': 0.5917150493018618}
+                {'mu': 0.014149732687680116,
+                 'sig': 0.520568746102973}
             ,
-             'max extreme temp per duration': 1.7567441432670683,
-             'min extreme temp per duration': 0.23874483901984211,
-	     'hist max extreme temp per duration':1.4307574699210692,
-	     'hist min extreme temp per duration':0.5585639494466237,
+             'max extreme temp per duration': 1.66352976137855,
+             'min extreme temp per duration': 0.32805080857937263,
+             'hist max extreme temp per duration': 1.4307574699210692,
+             'hist min extreme temp per duration': 0.5585639494466237,
+             'hist max energy per duration': 1.3562919483136582,
+             'hist min energy per duration': 0.3990299129968476,
              'max energy per duration': 1.3562919483136582,
              'min energy per duration': 0.3990299129968476,
              'energy linear slope': 0.9768230669124248,
@@ -23,8 +25,8 @@
              'normalizing extreme temp': -25.3125,
              'normalizing duration': 384,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9877196747426721,
-             'hourly prob of heat wave': 0.0050587406799157105,
+             'hourly prob stay in heat wave': 0.9874436936128209,
+             'hourly prob of heat wave': 0.00530443187691687,
              'historical durations (durations0)': (np.array([53, 59, 37, 19,  9,  3,  2,  3,  1,  0,  0,  0,  0,  0,  0,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
        276., 300., 324., 348., 372., 396.])),
@@ -35,8 +37,6 @@
        -17.75623269, -16.75207756, -15.74792244, -14.74376731,
        -13.73961219, -12.73545706, -11.73130194, -10.72714681,
         -9.72299169,  -8.71883657,  -7.71468144,  -6.71052632])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([336.3304364 ,   0.9805176 , 772.69035211]),
              'historical delTmax': np.array([-11.66435185, -14.10648148, -13.45833333, -17.28240741,
        -17.77546296, -14.5787037 , -16.29861111, -13.2962963 ,
        -13.23148148, -11.07638889, -11.35416667, -15.7962963 ,
@@ -98,7 +98,9 @@
         72,  96,  72,  48,  24,  72,  72,  48,  96,  24,  48,  24,  48,
         24,  24,  72,  24,  48,  24,  24,  96,  72,  48,  96,  24,  24,
         72,  24,  24,  24,  48,  72,  72,  48,  24,  72,  96,  24,  72,
-        48,  48,  48,  24,  24])}
+        48,  48,  48,  24,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([243.05454915,   0.97491759, 520.06569093])}
         ,
          2: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -107,15 +109,17 @@
                  'sig': 0.37922854235906844}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.18126961131205532,
-                 'sig': 0.5750735082102892}
+                {'mu': -0.1926890863054257,
+                 'sig': 0.5075199547427719}
             ,
-             'max extreme temp per duration': 1.6838728781825094,
-             'min extreme temp per duration': 0.5469022432760138,
-             'hist max extreme temp per duration':1.465256047900526,
-             'hist min extreme temp per duration':0.6849746759825092,
+             'max extreme temp per duration': 1.599599767861567,
+             'min extreme temp per duration': 0.5961884179501069,
+             'hist max extreme temp per duration': 1.465256047900526,
+             'hist min extreme temp per duration': 0.6849746759825092,
              'max energy per duration': 1.4796170383263565,
              'min energy per duration': 0.3853468519196989,
+             'hist max energy per duration': 1.4796170383263565,
+             'hist min energy per duration': 0.3853468519196989,
              'energy linear slope': 0.6758505573382239,
              'normalized extreme temp duration fit slope': 0.5973210781562328,
              'normalized extreme temp duration fit intercept': 0.4689576580970465,
@@ -123,8 +127,8 @@
              'normalizing extreme temp': -23.33101851851852,
              'normalizing duration': 240,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9816606979692415,
-             'hourly prob of heat wave': 0.004835311414423669,
+             'hourly prob stay in heat wave': 0.9804492069645427,
+             'hourly prob of heat wave': 0.005112055853874164,
              'historical durations (durations0)': (np.array([63, 47, 29, 13,  9,  1,  0,  0,  0,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.])),
              'historical temperatures (hist0)': (np.array([ 1,  1,  2,  4,  4,  5,  7,  8,  7, 19, 23, 20, 26, 22,  6,  5,  3]),
@@ -133,8 +137,6 @@
        -16.35349785, -15.42659474, -14.49969163, -13.57278851,
        -12.6458854 , -11.71898228, -10.79207917,  -9.86517605,
         -8.93827294,  -8.01136983])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([148.0043139 ,   0.9903884 , 403.59751201]),
              'historical delTmax': np.array([-11.02777778, -13.65046296,  -9.7337963 , -14.15740741,
        -21.59259259, -19.05787037, -14.19907407, -11.66435185,
        -11.5462963 , -10.56481481, -18.12731481, -18.25      ,
@@ -188,7 +190,9 @@
         24,  24,  96,  48,  48,  24,  24,  48,  24,  24,  24, 120,  48,
         24,  24,  48,  72,  48,  24,  24,  24,  24,  24,  24,  48,  72,
         24,  24,  24,  48,  48, 120,  96,  48,  24, 120,  72,  48,  72,
-       120,  24,  48,  24,  24,  24,  24])}
+       120,  24,  48,  24,  24,  24,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([381.73804625,   0.97819   , 286.56615416])}
         ,
          3: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -197,15 +201,17 @@
                  'sig': 0.34858006251503754}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.1469833825639733,
-                 'sig': 0.3278966669393315}
+                {'mu': 0.07420646829676364,
+                 'sig': 0.3171425166192652}
             ,
-             'max extreme temp per duration': 1.64904804021247,
-             'min extreme temp per duration': 0.4378116227422719,
-             'hist max extreme temp per duration':1.5784279822684224,
-             'hist min extreme temp per duration':0.3764024551476161,
+             'max extreme temp per duration': 1.5861776753402999,
+             'min extreme temp per duration': 0.414666634246139,
+             'hist max extreme temp per duration': 1.5784279822684224,
+             'hist min extreme temp per duration': 0.3764024551476161,
              'max energy per duration': 1.6648299127933046,
              'min energy per duration': 0.20058543495071943,
+             'hist max energy per duration': 1.6648299127933046,
+             'hist min energy per duration': 0.20058543495071943,
              'energy linear slope': 0.7992317597484396,
              'normalized extreme temp duration fit slope': 0.39696125920226927,
              'normalized extreme temp duration fit intercept': 0.4646798548525639,
@@ -213,8 +219,8 @@
              'normalizing extreme temp': -21.872685185185183,
              'normalizing duration': 144,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9714004797492086,
-             'hourly prob of heat wave': 0.0033031733581914496,
+             'hourly prob stay in heat wave': 0.9608859830601828,
+             'hourly prob of heat wave': 0.0036131097922634196,
              'historical durations (durations0)': (np.array([62, 40, 26, 14,  6,  2]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])),
              'historical temperatures (hist0)': (np.array([ 1,  2,  2,  5, 14, 13, 27, 34, 13, 24,  2,  6,  4,  1,  2]),
@@ -222,8 +228,6 @@
        -17.47765947, -16.23305041, -14.98844136, -13.7438323 ,
        -12.49922325, -11.2546142 , -10.01000514,  -8.76539609,
         -7.52078704,  -6.27617798,  -5.03156893,  -3.78695988])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([169.83875901,   0.97759747, 145.96156833]),
              'historical delTmax': np.array([-13.69675926, -18.5787037 , -20.55324074, -13.65277778,
        -14.77083333,  -8.33101852, -12.9837963 , -10.25      ,
        -10.09490741, -11.21759259, -10.40046296, -13.43518519,
@@ -273,7 +277,9 @@
         48,  72,  48,  24,  48,  24,  24,  48,  48,  24,  48,  24,  48,
         48,  48,  48,  24,  24,  96,  24,  24,  48,  72,  24,  24,  24,
         72,  24,  24,  48,  24,  48,  48,  96,  24,  72,  72,  24,  48,
-        72,  48,  48,  72,  96,  48,  72])}
+        72,  48,  48,  72,  96,  48,  72]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 45.10250408,   0.9759211 , 210.59686059])}
         ,
          4: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -282,15 +288,17 @@
                  'sig': 0.3284076742757632}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.09599865285250747,
-                 'sig': 0.31368130203936373}
+                {'mu': -0.06194884718543375,
+                 'sig': 0.386631967570364}
             ,
-             'max extreme temp per duration': 1.495609232788974,
-             'min extreme temp per duration': 0.5952082208746273,
-             'hist max extreme temp per duration':1.5077701802804904,
-             'hist min extreme temp per duration':0.5827383749330574,
+             'max extreme temp per duration': 1.626419717569739,
+             'min extreme temp per duration': 0.5166187425817408,
+             'hist max extreme temp per duration': 1.5077701802804904,
+             'hist min extreme temp per duration': 0.5827383749330574,
              'max energy per duration': 1.6135724386847485,
              'min energy per duration': -0.24783761085285622,
+             'hist max energy per duration': 1.6135724386847485,
+             'hist min energy per duration': -0.24783761085285622,
              'energy linear slope': 0.7230333381361158,
              'normalized extreme temp duration fit slope': 0.3445775250744987,
              'normalized extreme temp duration fit intercept': 0.47690092568952824,
@@ -298,8 +306,8 @@
              'normalizing extreme temp': -17.833333333333336,
              'normalizing duration': 168,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9772716194320241,
-             'hourly prob of heat wave': 0.0077381225183368145,
+             'hourly prob stay in heat wave': 0.9714539383578934,
+             'hourly prob of heat wave': 0.006328136449919494,
              'historical durations (durations0)': (np.array([94, 52, 43, 12,  8,  6,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180.])),
              'historical temperatures (hist0)': (np.array([ 1,  0,  2,  1,  0,  3,  2,  7,  8,  8, 13, 21, 24, 34, 31, 30,  9,
@@ -310,8 +318,6 @@
        -11.06283479, -10.47520661,  -9.88757844,  -9.29995026,
         -8.71232208,  -8.12469391,  -7.53706573,  -6.94943756,
         -6.36180938,  -5.77418121,  -5.18655303])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([150.45051375,   0.98906877, 473.12838707]),
              'historical delTmax': np.array([-10.11342593, -12.76157407, -10.18287037, -12.27777778,
         -8.30324074,  -9.4837963 ,  -8.99305556,  -9.78009259,
         -8.78240741,  -9.07175926, -10.36111111,  -9.53935185,
@@ -382,7 +388,9 @@
         48,  24,  24,  24,  24, 144,  48,  48,  24,  48,  48,  24,  48,
         24,  72,  96,  24,  24,  24,  24,  72,  72,  48,  24,  72,  96,
         48,  72,  24, 120,  24,  48,  96,  48,  24,  24,  24,  24,  96,
-        72,  24,  24,  24,  24,  72,  24,  24])}
+        72,  24,  24,  24,  24,  72,  24,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 26.00024933,   0.99999315, 251.25579602])}
         ,
          5: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -391,15 +399,17 @@
                  'sig': 0.44871120539793946}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.10511005694699752,
-                 'sig': 0.43484166551048176}
+                {'mu': -0.13268523548550862,
+                 'sig': 0.42810088628773746}
             ,
-             'max extreme temp per duration': 1.8589179898739117,
-             'min extreme temp per duration': 0.3933346191912747,
-             'hist max extreme temp per duration':1.5715990700655624,
-             'hist min extreme temp per duration':0.5727689462174218,
+             'max extreme temp per duration': 1.832137088255228,
+             'min extreme temp per duration': 0.38927273168247256,
+             'hist max extreme temp per duration': 1.5715990700655624,
+             'hist min extreme temp per duration': 0.5727689462174218,
              'max energy per duration': 1.4916786894554908,
              'min energy per duration': 0.0625879170400907,
+             'hist max energy per duration': 1.4916786894554908,
+             'hist min energy per duration': 0.0625879170400907,
              'energy linear slope': 0.737509321209894,
              'normalized extreme temp duration fit slope': 0.3732055240692941,
              'normalized extreme temp duration fit intercept': 0.542993217934229,
@@ -407,8 +417,8 @@
              'normalizing extreme temp': -16.462962962962962,
              'normalizing duration': 192,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.973086098621327,
-             'hourly prob of heat wave': 0.006394634658944347,
+             'hourly prob stay in heat wave': 0.9816588540323211,
+             'hourly prob of heat wave': 0.0071946106087933835,
              'historical durations (durations0)': (np.array([95, 63, 38, 21,  5,  7,  1,  3]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204.])),
              'historical temperatures (hist0)': (np.array([ 1,  0,  2,  0,  4,  4,  7,  8, 11, 10, 10, 28, 22, 15, 19, 21, 31,
@@ -420,8 +430,6 @@
         -9.51167052,  -9.06377797,  -8.61588542,  -8.16799286,
         -7.72010031,  -7.27220775,  -6.8243152 ,  -6.37642265,
         -5.92853009])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([174.11692407,   0.98560386, 212.93400481]),
              'historical delTmax': np.array([ -9.95601852,  -9.47685185, -10.30555556, -13.17592593,
         -8.4375    , -13.96759259, -12.08564815, -12.65509259,
        -10.01851852,  -7.74537037, -11.55787037, -10.49768519,
@@ -498,7 +506,9 @@
         24,  72,  72, 144,  24,  72,  96,  24,  24,  24,  24,  24,  48,
         24,  24, 120,  24,  48,  72,  24,  72,  24,  48,  48,  24,  24,
         72,  48,  96,  48,  72,  24,  72,  72,  48,  24,  24,  48,  24,
-        48,  72,  24,  24,  24,  24,  96,  48, 144,  48,  96,  24])}
+        48,  72,  24,  24,  24,  24,  96,  48, 144,  48,  96,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([281.60047689,   0.99811027, 560.05324556])}
         ,
          6: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -507,15 +517,17 @@
                  'sig': 0.3865940662591064}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.005627858152035502,
-                 'sig': 0.4275008320785113}
+                {'mu': 0.012788133108490495,
+                 'sig': 0.4573432258477171}
             ,
-             'max extreme temp per duration': 1.608954726010716,
-             'min extreme temp per duration': 0.39864422061167604,
-             'hist max extreme temp per duration':1.4476391212634052,
-             'hist min extreme temp per duration':0.5527145957901738,
+             'max extreme temp per duration': 1.6544796212851032,
+             'min extreme temp per duration': 0.3596814144013293,
+             'hist max extreme temp per duration': 1.4476391212634052,
+             'hist min extreme temp per duration': 0.5527145957901738,
              'max energy per duration': 1.6589417225644925,
              'min energy per duration': -0.025886010311640867,
+             'hist max energy per duration': 1.6589417225644925,
+             'hist min energy per duration': -0.025886010311640867,
              'energy linear slope': 0.8396179089345742,
              'normalized extreme temp duration fit slope': 0.47674102276569175,
              'normalized extreme temp duration fit intercept': 0.5526128780127326,
@@ -523,8 +535,8 @@
              'normalizing extreme temp': -15.113425925925927,
              'normalizing duration': 264,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9620999848956929,
-             'hourly prob of heat wave': 0.008562370372471777,
+             'hourly prob stay in heat wave': 0.9823399870233075,
+             'hourly prob of heat wave': 0.00808976905437744,
              'historical durations (durations0)': (np.array([79, 71, 46, 18,  8,  3,  4,  4,  0,  0,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
        276.])),
@@ -537,8 +549,6 @@
         -8.4615162 ,  -8.03291377,  -7.60431134,  -7.17570891,
         -6.74710648,  -6.31850405,  -5.88990162,  -5.46129919,
         -5.03269676])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([371.14256144,   0.97562259, 514.84736129]),
              'historical delTmax': np.array([-11.65509259,  -9.69675926, -10.00694444,  -8.39814815,
         -8.94212963, -11.4375    ,  -9.28472222, -10.55324074,
         -8.84953704,  -7.75925926, -14.45138889, -10.34027778,
@@ -615,7 +625,9 @@
        120,  24,  72,  48,  24,  48,  48,  48,  72,  72,  72,  24,  24,
         48,  48,  48,  72,  72,  48,  24,  72,  48,  48,  72,  48,  24,
         24,  24,  24,  48,  48,  72,  24,  72,  48,  72,  48,  48,  72,
-        24,  72,  96,  24,  96,  24,  48,  72,  48,  24,  24,  72,  24])}
+        24,  72,  96,  24,  96,  24,  48,  72,  48,  24,  24,  72,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([113.43439839,   0.99387141, 655.81312447])}
         ,
          7: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -624,15 +636,17 @@
                  'sig': 0.3827278042699421}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.11663650083565258,
-                 'sig': 0.4572205511997161}
+                {'mu': 0.09673479393221551,
+                 'sig': 0.5199636980805096}
             ,
-             'max extreme temp per duration': 1.7537427873315878,
-             'min extreme temp per duration': 0.3054593763447291,
-             'hist max extreme temp per duration':1.4754714067827663,
-             'hist min extreme temp per duration':0.5014379120950879,
+             'max extreme temp per duration': 1.8412737043972505,
+             'min extreme temp per duration': 0.19424625501988507,
+             'hist max extreme temp per duration': 1.4754714067827663,
+             'hist min extreme temp per duration': 0.5014379120950879,
              'max energy per duration': 1.7267349396563705,
              'min energy per duration': 0.04497372103287066,
+             'hist max energy per duration': 1.7267349396563705,
+             'hist min energy per duration': 0.04497372103287066,
              'energy linear slope': 0.9048944852818644,
              'normalized extreme temp duration fit slope': 0.5674231969728206,
              'normalized extreme temp duration fit intercept': 0.5222266977545519,
@@ -640,8 +654,8 @@
              'normalizing extreme temp': -14.233796296296298,
              'normalizing duration': 288,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9771564940017592,
-             'hourly prob of heat wave': 0.012058576455736048,
+             'hourly prob stay in heat wave': 0.9766467830894073,
+             'hourly prob of heat wave': 0.00799339906390759,
              'historical durations (durations0)': (np.array([96, 63, 47, 19, 16, 13,  4,  3,  0,  0,  1,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
        276., 300.])),
@@ -654,8 +668,6 @@
         -8.17286015,  -7.78228198,  -7.39170382,  -7.00112565,
         -6.61054749,  -6.21996933,  -5.82939116,  -5.438813  ,
         -5.04823483,  -4.65765667,  -4.26707851,  -3.87650034])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([ 22.68184811,   0.98883509, 735.87679554]),
              'historical delTmax': np.array([-11.77777778,  -7.92824074, -10.07638889,  -9.55787037,
         -9.66435185,  -5.21064815,  -7.85416667,  -9.55555556,
        -10.21064815, -10.16203704,  -8.17824074,  -7.50694444,
@@ -742,7 +754,9 @@
         24,  24,  24,  48,  24,  48, 264,  24,  48,  72,  24,  48,  24,
         24,  72,  24,  48,  24,  48,  24,  24,  72,  24,  48,  48,  48,
         72,  48,  24,  24,  48,  96,  24,  24,  48,  24,  24,  24,  24,
-        96,  48,  72])}
+        96,  48,  72]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([177.17175755,   0.98390696, 676.39474343])}
         ,
          8: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -751,15 +765,17 @@
                  'sig': 0.37227083272387523}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.12821850288276643,
-                 'sig': 0.4212926246263383}
+                {'mu': 0.17047866188342858,
+                 'sig': 0.5038786176777285}
             ,
-             'max extreme temp per duration': 1.6048941210542853,
-             'min extreme temp per duration': 0.34081789197547224,
-             'hist max extreme temp per duration':1.5023982840637677,
-             'hist min extreme temp per duration':0.40488922357611656,
+             'max extreme temp per duration': 1.7419564182903216,
+             'min extreme temp per duration': 0.23008332648759425,
+             'hist max extreme temp per duration': 1.5023982840637677,
+             'hist min extreme temp per duration': 0.40488922357611656,
              'max energy per duration': 1.5629467840859885,
              'min energy per duration': -0.014885207467485596,
+             'hist max energy per duration': 1.5629467840859885,
+             'hist min energy per duration': -0.014885207467485596,
              'energy linear slope': 0.8959282167418882,
              'normalized extreme temp duration fit slope': 0.5240459454314004,
              'normalized extreme temp duration fit intercept': 0.44007089997060467,
@@ -767,8 +783,8 @@
              'normalizing extreme temp': -16.333333333333332,
              'normalizing duration': 288,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9820660223349273,
-             'hourly prob of heat wave': 0.009574316861475137,
+             'hourly prob stay in heat wave': 0.9774079484044228,
+             'hourly prob of heat wave': 0.009858771764333757,
              'historical durations (durations0)': (np.array([100,  57,  31,  22,  20,   4,   3,   3,   0,   4,   0,   1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
        276., 300.])),
@@ -781,8 +797,6 @@
         -7.85385556,  -7.30747037,  -6.76108519,  -6.2147    ,
         -5.66831481,  -5.12192963,  -4.57554444,  -4.02915926,
         -3.48277407,  -2.93638889])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([428.67275344,   0.99198108, 789.03914499]),
              'historical delTmax': np.array([-10.77777778,  -7.87268519, -10.09722222, -11.59259259,
        -10.77777778,  -9.31018519,  -8.78472222, -11.65046296,
         -5.71064815,  -8.34953704,  -9.77546296,  -7.97685185,
@@ -863,7 +877,9 @@
        120,  48,  48,  24,  24,  72,  24,  72,  24,  48,  24, 120,  24,
         24,  72,  24,  72,  24,  72,  24,  96,  24,  48,  24,  96,  24,
         72,  24,  48,  48,  96,  48,  48,  24,  24,  48,  24,  24,  24,
-        48,  24,  24,  24,  24,  72,  24,  24,  24,  24,  24])}
+        48,  24,  24,  24,  24,  72,  24,  24,  24,  24,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([184.96482784,   0.99172416, 405.36574608])}
         ,
          9: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -872,15 +888,17 @@
                  'sig': 0.3264733404186261}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.06005490359967713,
-                 'sig': 0.39666722317469927}
+                {'mu': 0.07214418064690341,
+                 'sig': 0.362835970282417}
             ,
-             'max extreme temp per duration': 1.6594494894156004,
-             'min extreme temp per duration': 0.3967716474179176,
-             'hist max extreme temp per duration':1.5385638912687816,
-             'hist min extreme temp per duration':0.4559543071467816,
+             'max extreme temp per duration': 1.6122886476590506,
+             'min extreme temp per duration': 0.4573030244744435,
+             'hist max extreme temp per duration': 1.5385638912687816,
+             'hist min extreme temp per duration': 0.4559543071467816,
              'max energy per duration': 1.6472897019326833,
              'min energy per duration': 0.040872601626899464,
+             'hist max energy per duration': 1.6472897019326833,
+             'hist min energy per duration': 0.040872601626899464,
              'energy linear slope': 1.0936159413435067,
              'normalized extreme temp duration fit slope': 0.5690272372833309,
              'normalized extreme temp duration fit intercept': 0.4853747822115938,
@@ -888,8 +906,8 @@
              'normalizing extreme temp': -16.664351851851855,
              'normalizing duration': 264,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9888904648133034,
-             'hourly prob of heat wave': 0.008279914919786427,
+             'hourly prob stay in heat wave': 0.9878699492553634,
+             'hourly prob of heat wave': 0.0077219539304079435,
              'historical durations (durations0)': (np.array([70, 66, 54, 28, 12, 11,  2,  1,  0,  1,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
        276.])),
@@ -902,8 +920,6 @@
         -8.54055185,  -8.01708519,  -7.49361852,  -6.97015185,
         -6.44668519,  -5.92321852,  -5.39975185,  -4.87628519,
         -4.35281852,  -3.82935185])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([496.13293693,   0.97922579, 543.62359613]),
              'historical delTmax': np.array([ -9.15046296, -12.21527778,  -9.66203704, -10.47685185,
         -9.9375    , -13.90277778,  -9.92592593, -11.24768519,
        -13.52546296,  -7.875     , -15.56944444,  -9.54166667,
@@ -984,7 +1000,9 @@
         48,  48,  24,  24,  24,  48,  72,  24,  72,  48,  24,  48,  48,
         24,  24,  72,  72,  24,  48,  24,  24,  24,  48,  48,  48,  48,
         24,  24,  24,  72,  24,  24,  24, 120,  96,  48,  72,  48,  24,
-        24,  48,  48, 120,  24,  72,  72,  72,  48,  48,  24,  96])}
+        24,  48,  48, 120,  24,  72,  72,  72,  48,  48,  24,  96]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 91.34534885,   0.98986136, 368.47513167])}
         ,
          10: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -993,15 +1011,17 @@
                  'sig': 0.36453507192996637}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.16964978995749289,
-                 'sig': 0.3763104781561026}
+                {'mu': 0.17904275777049047,
+                 'sig': 0.40534202679833903}
             ,
-             'max extreme temp per duration': 1.621496372549617,
-             'min extreme temp per duration': 0.23989063677712238,
-             'hist max extreme temp per duration':1.4550158441591354,
-             'hist min extreme temp per duration':0.4073237500999125,
+             'max extreme temp per duration': 1.6728179014877125,
+             'min extreme temp per duration': 0.18462423779195292,
+             'hist max extreme temp per duration': 1.4550158441591354,
+             'hist min extreme temp per duration': 0.4073237500999125,
              'max energy per duration': 1.628723572218398,
              'min energy per duration': 0.21750076670161464,
+             'hist max energy per duration': 1.628723572218398,
+             'hist min energy per duration': 0.21750076670161464,
              'energy linear slope': 0.8610964017780097,
              'normalized extreme temp duration fit slope': 0.5711294507365763,
              'normalized extreme temp duration fit intercept': 0.5430968949952549,
@@ -1009,8 +1029,8 @@
              'normalizing extreme temp': -16.039351851851855,
              'normalizing duration': 240,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9852946594472636,
-             'hourly prob of heat wave': 0.007965758574675862,
+             'hourly prob stay in heat wave': 0.9825820018659303,
+             'hourly prob of heat wave': 0.007533380509340248,
              'historical durations (durations0)': (np.array([81, 75, 48, 17, 12,  4,  4,  0,  1,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.])),
              'historical temperatures (hist0)': (np.array([ 2,  3,  4,  8,  7, 13, 12, 15, 20, 16, 18, 15, 35, 29, 17, 12,  7,
@@ -1022,8 +1042,6 @@
         -8.21593519,  -7.71182407,  -7.20771296,  -6.70360185,
         -6.19949074,  -5.69537963,  -5.19126852,  -4.68715741,
         -4.1830463 ,  -3.67893519])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([384.12422549,   0.97100084, 472.08645416]),
              'historical delTmax': np.array([-10.98842593, -12.31712963, -11.4537037 , -11.15046296,
         -8.71064815,  -9.25694444,  -8.19675926, -13.59722222,
         -6.48842593, -11.55555556, -11.54398148, -11.32175926,
@@ -1103,7 +1121,9 @@
         72, 144,  72,  96,  48,  24,  48,  96,  24,  24,  24,  24,  24,
         72,  48,  48,  96,  72, 240,  24,  24,  24,  24,  72,  48,  24,
         48,  24,  24,  24,  24,  48,  72,  72,  48,  48,  24,  48,  72,
-        72,  48,  24,  72,  24,  24,  24,  24,  48])}
+        72,  48,  24,  72,  24,  24,  24,  24,  48]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([254.11101613,   0.98364601, 538.35636004])}
         ,
          11: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1112,15 +1132,17 @@
                  'sig': 0.31604408534749007}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.19654732086446944,
-                 'sig': 0.40567318908785543}
+                {'mu': 0.18771171523899186,
+                 'sig': 0.39207005664976696}
             ,
-             'max extreme temp per duration': 1.6234320781701537,
-             'min extreme temp per duration': 0.23433832452185144,
-             'hist max extreme temp per duration':1.434504088816639,
-             'hist min extreme temp per duration':0.42029859081932974,
+             'max extreme temp per duration': 1.598954193859247,
+             'min extreme temp per duration': 0.2564398711619684,
+             'hist max extreme temp per duration': 1.434504088816639,
+             'hist min extreme temp per duration': 0.42029859081932974,
              'max energy per duration': 1.6079473687159922,
              'min energy per duration': 0.1863833364154469,
+             'hist max energy per duration': 1.6079473687159922,
+             'hist min energy per duration': 0.1863833364154469,
              'energy linear slope': 0.8924182693814166,
              'normalized extreme temp duration fit slope': 0.5155801357715971,
              'normalized extreme temp duration fit intercept': 0.49232331245646244,
@@ -1128,8 +1150,8 @@
              'normalizing extreme temp': -17.379629629629626,
              'normalizing duration': 168,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9746353099832825,
-             'hourly prob of heat wave': 0.004772705422588725,
+             'hourly prob stay in heat wave': 0.9781678540173091,
+             'hourly prob of heat wave': 0.005101294233197594,
              'historical durations (durations0)': (np.array([71, 66, 35, 11,  2,  2,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180.])),
              'historical temperatures (hist0)': (np.array([ 3,  0,  6,  5,  5, 10, 20, 11, 24, 29, 22, 32, 12,  5,  1,  2,  0,
@@ -1139,8 +1161,6 @@
        -11.85766774, -11.12385221, -10.39003668,  -9.65622114,
         -8.92240561,  -8.18859008,  -7.45477455,  -6.72095901,
         -5.98714348,  -5.25332795,  -4.51951241,  -3.78569688])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([ 77.84477671,   0.98288148, 452.32818797]),
              'historical delTmax': np.array([ -9.55787037, -13.10185185, -15.49074074,  -9.90277778,
        -10.87962963, -13.44675926, -11.86111111,  -9.43518519,
        -15.3287037 , -13.59259259, -10.16435185,  -9.10416667,
@@ -1202,7 +1222,9 @@
         24,  24,  96,  48,  72,  48,  72,  72,  24,  48,  48,  24,  96,
         24,  24,  48,  48,  48, 168,  24,  24,  24,  72,  72,  24,  72,
         48,  72,  48,  72,  48,  48,  48,  72,  24,  24,  72,  72,  48,
-        72,  48,  48,  24,  24,  48])}
+        72,  48,  48,  24,  24,  48]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([207.16457382,   0.98099424, 211.86876176])}
         ,
          12: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1211,15 +1233,17 @@
                  'sig': 0.33367351187294125}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.3533399521536517,
-                 'sig': 0.45045690670447985}
+                {'mu': -0.3705286376187557,
+                 'sig': 0.5068653998293167}
             ,
-             'max extreme temp per duration': 2.1224995756273133,
-             'min extreme temp per duration': 0.5035536470967342,
-             'hist max extreme temp per duration':1.8135697651556644,
-             'hist min extreme temp per duration':0.6265700963010938,
+             'max extreme temp per duration': 2.2515654970583685,
+             'min extreme temp per duration': 0.4298869676512508,
+             'hist max extreme temp per duration': 1.8135697651556644,
+             'hist min extreme temp per duration': 0.6265700963010938,
              'max energy per duration': 1.59786617708341,
              'min energy per duration': 0.26493943258502145,
+             'hist max energy per duration': 1.59786617708341,
+             'hist min energy per duration': 0.26493943258502145,
              'energy linear slope': 0.9147515369179842,
              'normalized extreme temp duration fit slope': 0.6093184608559103,
              'normalized extreme temp duration fit intercept': 0.4765308166244309,
@@ -1227,8 +1251,8 @@
              'normalizing extreme temp': -23.31712962962963,
              'normalizing duration': 456,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.975482225351611,
-             'hourly prob of heat wave': 0.005737842115737434,
+             'hourly prob stay in heat wave': 0.9838314737742025,
+             'hourly prob of heat wave': 0.005385016169356363,
              'historical durations (durations0)': (np.array([55, 68, 34, 12,  9,  3,  5,  2,  0,  1,  0,  2,  0,  0,  0,  0,  0,
         0,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
@@ -1241,8 +1265,6 @@
        -13.70575231, -12.87170718, -12.03766204, -11.2036169 ,
        -10.36957176,  -9.53552662,  -8.70148148,  -7.86743634,
         -7.0333912 ])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([857.01318968,   0.98464785, 717.53902379]),
              'historical delTmax': np.array([ -9.89583333, -16.11342593, -10.52083333, -13.38194444,
         -9.53472222, -11.52777778, -17.64583333, -18.2037037 ,
        -15.90972222, -11.9212963 , -15.90972222, -13.7337963 ,
@@ -1305,7 +1327,9 @@
         24,  24,  48,  24,  48, 120,  24,  24,  48,  24, 120,  24,  24,
        144,  24,  24,  24,  48,  48,  48,  72,  24,  24,  48,  72,  72,
         72, 120,  48,  48,  48,  48,  48,  24,  72,  48,  24,  48,  24,
-        48,  24,  48,  24, 192,  24,  48,  48,  72,  24])}
+        48,  24,  48,  24, 192,  24,  48,  48,  72,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([746.60761832,   0.98006894, 853.76318406])}
         }
     ,
      'heat wave': 
@@ -1316,15 +1340,17 @@
                  'sig': 0.26004106669177984}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.2910103813349197,
-                 'sig': 0.44567341831620383}
+                {'mu': -0.31102507108127725,
+                 'sig': 0.43731175273194856}
             ,
-             'max extreme temp per duration': 2.4524310222363908,
-             'min extreme temp per duration': 0.3061959984161749,
-             'hist max extreme temp per duration':1.8604981436271297,
-             'hist min extreme temp per duration':0.5661091912436009,
+             'max extreme temp per duration': 2.412695666500867,
+             'min extreme temp per duration': 0.3067280196361866,
+             'hist max extreme temp per duration': 1.8604981436271297,
+             'hist min extreme temp per duration': 0.5661091912436009,
              'max energy per duration': 1.8468741653468745,
              'min energy per duration': -0.284239504158205,
+             'hist max energy per duration': 1.8468741653468745,
+             'hist min energy per duration': -0.284239504158205,
              'energy linear slope': 0.7404780352640733,
              'normalized extreme temp duration fit slope': 0.4823740200889345,
              'normalized extreme temp duration fit intercept': 0.45709478834728723,
@@ -1332,8 +1358,8 @@
              'normalizing extreme temp': 23.157407407407405,
              'normalizing duration': 144,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9598546657665762,
-             'hourly prob of heat wave': 0.004716237525260743,
+             'hourly prob stay in heat wave': 0.9607130250554388,
+             'hourly prob of heat wave': 0.004902991063457917,
              'historical durations (durations0)': (np.array([92, 49, 14,  6,  2,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])),
              'historical temperatures (hist0)': (np.array([ 1,  2,  2, 11, 35, 19, 18, 19, 13, 17, 10,  8,  6,  0,  2,  0,  1]),
@@ -1341,8 +1367,6 @@
        11.58974113, 12.59320133, 13.59666154, 14.60012175, 15.60358196,
        16.60704216, 17.61050237, 18.61396258, 19.61742279, 20.62088299,
        21.6243432 , 22.62780341, 23.63126362])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([139.26312737,   0.97206699, 431.38201509]),
              'historical delTmax': np.array([15.29861111, 12.56018519, 13.14583333, 16.28935185, 18.22916667,
        16.22222222, 11.43981481, 23.15740741, 16.21296296, 15.45138889,
        11.90972222, 17.14351852, 13.40740741, 11.17824074, 10.79861111,
@@ -1388,7 +1412,9 @@
         48,  24,  72,  48,  48, 120,  48,  48,  24,  48,  96,  24,  48,
         72,  96,  24,  24,  72,  24,  72,  48,  48,  24,  48,  48,  48,
         24,  48,  24,  96,  24,  24,  24,  24,  72,  48,  24,  72,  24,
-        24,  48,  24,  48,  48,  48,  24,  48])}
+        24,  48,  24,  48,  48,  48,  24,  48]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([169.42236928,   0.97067293, 424.2950214 ])}
         ,
          2: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1397,15 +1423,17 @@
                  'sig': 0.4094950671664205}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.18137927469978193,
-                 'sig': 0.5778352733561166}
+                {'mu': -0.1850713905506724,
+                 'sig': 0.6517409934444842}
             ,
-             'max extreme temp per duration': 1.6828655442714746,
-             'min extreme temp per duration': 0.6056939601441117,
-             'hist max extreme temp per duration':1.4638370105297496,
-             'hist min extreme temp per duration':0.7108867627098019,
+             'max extreme temp per duration': 1.7663747724880272,
+             'min extreme temp per duration': 0.5514318454634337,
+             'hist max extreme temp per duration': 1.4638370105297496,
+             'hist min extreme temp per duration': 0.7108867627098019,
              'max energy per duration': 1.5103611784650635,
              'min energy per duration': 0.3568997015227314,
+             'hist max energy per duration': 1.5103611784650635,
+             'hist min energy per duration': 0.3568997015227314,
              'energy linear slope': 0.7396736610253968,
              'normalized extreme temp duration fit slope': 0.3954206442175442,
              'normalized extreme temp duration fit intercept': 0.4818485388449856,
@@ -1413,8 +1441,8 @@
              'normalizing extreme temp': 23.40740740740741,
              'normalizing duration': 144,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9704503592975875,
-             'hourly prob of heat wave': 0.005353025166265876,
+             'hourly prob stay in heat wave': 0.9632896410243474,
+             'hourly prob of heat wave': 0.004183147413277336,
              'historical durations (durations0)': (np.array([74, 43, 19,  7,  3,  2]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])),
              'historical temperatures (hist0)': (np.array([ 5, 32, 13, 20, 17, 17, 11, 13,  8,  3,  6,  1,  0,  1,  1]),
@@ -1422,8 +1450,6 @@
        14.40174897, 15.34660494, 16.29146091, 17.23631687, 18.18117284,
        19.12602881, 20.07088477, 21.01574074, 21.96059671, 22.90545267,
        23.85030864])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([111.85637273,   0.97055084, 289.77740784]),
              'historical delTmax': np.array([14.13425926, 14.65046296, 14.32407407, 11.35648148, 14.99074074,
        13.71990741, 17.9837963 , 13.71990741, 11.23148148, 10.2662037 ,
        12.6087963 , 15.07407407, 10.99537037, 10.12037037, 19.52314815,
@@ -1465,7 +1491,9 @@
         24,  48,  72,  24,  24, 120,  24,  72,  72,  48,  24,  24,  48,
         48,  24,  24,  48,  24,  24,  48,  24,  24, 120,  24,  48,  48,
         48,  24,  48,  96,  96,  72,  48,  96,  24,  48,  48,  24,  24,
-        72,  48,  72,  48,  72])}
+        72,  48,  72,  48,  72]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 22.26576837,   0.9770436 , 184.91964325])}
         ,
          3: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1474,15 +1502,17 @@
                  'sig': 0.30966616772156996}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.02420042414956934,
-                 'sig': 0.5711285927155512}
+                {'mu': -0.04887472417688875,
+                 'sig': 0.5614876841097904}
             ,
-             'max extreme temp per duration': 1.7829007788109208,
-             'min extreme temp per duration': 0.35070291015275207,
-             'hist max extreme temp per duration':1.4772369137116625,
-             'hist min extreme temp per duration':0.58185264882035,
+             'max extreme temp per duration': 1.7589544107652704,
+             'min extreme temp per duration': 0.3509326890085319,
+             'hist max extreme temp per duration': 1.4772369137116625,
+             'hist min extreme temp per duration': 0.58185264882035,
              'max energy per duration': 1.5805568379553343,
              'min energy per duration': 0.06025036910284946,
+             'hist max energy per duration': 1.5805568379553343,
+             'hist min energy per duration': 0.06025036910284946,
              'energy linear slope': 0.6326884146055997,
              'normalized extreme temp duration fit slope': 0.43634276379491116,
              'normalized extreme temp duration fit intercept': 0.48993544635826125,
@@ -1490,16 +1520,14 @@
              'normalizing extreme temp': 25.15509259259259,
              'normalizing duration': 168,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9713810387703,
-             'hourly prob of heat wave': 0.003294919988212181,
+             'hourly prob stay in heat wave': 0.9597325875352418,
+             'hourly prob of heat wave': 0.003165094292401051,
              'historical durations (durations0)': (np.array([64, 42, 17,  5,  3,  2,  2]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180.])),
              'historical temperatures (hist0)': (np.array([ 2,  1,  3, 23, 23, 22, 20, 11, 18,  4,  2,  3,  1,  2]),
              np.array([ 7.47362765,  8.78013983, 10.08665202, 11.39316421, 12.6996764 ,
        14.00618859, 15.31270077, 16.61921296, 17.92572515, 19.23223734,
        20.53874953, 21.84526172, 23.1517739 , 24.45828609, 25.76479828])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([111.14467235,   0.97332889, 439.74319856]),
              'historical delTmax': np.array([12.54398148, 13.40972222, 18.50462963, 14.08333333, 14.125     ,
        13.65509259, 11.83796296, 16.0162037 , 14.19907407, 11.83796296,
        15.75      , 14.42361111, 13.33564815, 15.31018519,  8.08333333,
@@ -1537,7 +1565,9 @@
         24,  48,  72,  48,  24,  48,  48,  24,  48,  24,  24, 120,  48,
         24,  48,  48,  96,  24,  24,  48,  72,  72, 168,  72,  48,  24,
         24,  24,  48,  24,  48,  48,  48,  24,  24,  24,  24,  48, 168,
-        24,  48,  48,  48,  24])}
+        24,  48,  48,  48,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 28.33231391,   0.98176072, 347.2565272 ])}
         ,
          4: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1546,15 +1576,17 @@
                  'sig': 0.3824961527495147}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.004942832183908872,
-                 'sig': 0.40607098627930716}
+                {'mu': 0.0034767074741781402,
+                 'sig': 0.37920501470933854}
             ,
-             'max extreme temp per duration': 1.6124745888578622,
-             'min extreme temp per duration': 0.3885311165745543,
-             'hist max extreme temp per duration':1.4860329959177088,
-             'hist min extreme temp per duration':0.5121093200097449,
+             'max extreme temp per duration': 1.5713366421212072,
+             'min extreme temp per duration': 0.42837021976432393,
+             'hist max extreme temp per duration': 1.4860329959177088,
+             'hist min extreme temp per duration': 0.5121093200097449,
              'max energy per duration': 1.5312320957502676,
              'min energy per duration': 0.2582940675887365,
+             'hist max energy per duration': 1.5312320957502676,
+             'hist min energy per duration': 0.2582940675887365,
              'energy linear slope': 0.8359281414962964,
              'normalized extreme temp duration fit slope': 0.5040817968528812,
              'normalized extreme temp duration fit intercept': 0.5201849292210735,
@@ -1562,8 +1594,8 @@
              'normalizing extreme temp': 23.833333333333332,
              'normalizing duration': 192,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9581186636645029,
-             'hourly prob of heat wave': 0.00517111350209337,
+             'hourly prob stay in heat wave': 0.9603453041756991,
+             'hourly prob of heat wave': 0.004545688756628758,
              'historical durations (durations0)': (np.array([83, 33, 13,  7,  1,  2,  1,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204.])),
              'historical temperatures (hist0)': (np.array([ 2,  1,  1,  4, 17, 24, 31, 19, 18,  3, 10,  3,  4,  1,  3]),
@@ -1571,8 +1603,6 @@
        12.50408951, 13.69273148, 14.88137346, 16.07001543, 17.25865741,
        18.44729938, 19.63594136, 20.82458333, 22.01322531, 23.20186728,
        24.39050926])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([243.51241929,   0.97981764, 513.56635824]),
              'historical delTmax': np.array([15.03009259, 16.00694444, 18.66203704, 12.31018519, 14.54398148,
        15.45138889, 13.10648148, 16.05555556, 18.79398148, 16.5625    ,
        12.65509259, 12.2662037 , 15.78703704, 14.41666667, 13.20601852,
@@ -1612,7 +1642,9 @@
         96,  24,  24,  24,  48,  24,  24,  72,  24,  24, 168,  48,  48,
         24,  24,  24,  96,  48,  24,  24,  48,  48,  24,  24,  72,  24,
         24,  48,  96,  24,  96, 192,  24,  72,  72,  48,  24,  24,  24,
-        24,  24,  24,  24,  72,  24,  48,  48,  48,  72,  24])}
+        24,  24,  24,  24,  72,  24,  48,  48,  48,  72,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 99.32164588,   0.97634504, 403.9993135 ])}
         ,
          5: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1621,15 +1653,17 @@
                  'sig': 0.3344699110976678}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.35007691513825745,
-                 'sig': 0.38377078542869936}
+                {'mu': 0.3237905278645934,
+                 'sig': 0.36865440232367236}
             ,
-             'max extreme temp per duration': 1.4691501543962555,
-             'min extreme temp per duration': 0.1353785854069236,
-             'hist max extreme temp per duration':1.319737338605727,
-             'hist min extreme temp per duration':0.38052824233828875,
+             'max extreme temp per duration': 1.4388988916740406,
+             'min extreme temp per duration': 0.15766337487251017,
+             'hist max extreme temp per duration': 1.319737338605727,
+             'hist min extreme temp per duration': 0.38052824233828875,
              'max energy per duration': 1.7449748174491615,
              'min energy per duration': 0.3141102836636638,
+             'hist max energy per duration': 1.7449748174491615,
+             'hist min energy per duration': 0.3141102836636638,
              'energy linear slope': 0.8596112591428279,
              'normalized extreme temp duration fit slope': 0.4058393979152683,
              'normalized extreme temp duration fit intercept': 0.5910296690951307,
@@ -1637,8 +1671,8 @@
              'normalizing extreme temp': 19.81944444444445,
              'normalizing duration': 144,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9593903040894561,
-             'hourly prob of heat wave': 0.003840949795568787,
+             'hourly prob stay in heat wave': 0.9677646944053799,
+             'hourly prob of heat wave': 0.00496945115796785,
              'historical durations (durations0)': (np.array([80, 40, 19,  6,  3,  2]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])),
              'historical temperatures (hist0)': (np.array([ 1,  0,  0,  2,  0,  1, 13, 37, 28, 22, 18, 11,  7,  7,  3]),
@@ -1646,8 +1680,6 @@
         9.7531893 , 10.80932099, 11.86545267, 12.92158436, 13.97771605,
        15.03384774, 16.08997942, 17.14611111, 18.2022428 , 19.25837449,
        20.31450617])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([192.51920686,   0.97258575, 155.21579433]),
              'historical delTmax': np.array([19.81944444, 12.49074074, 15.66435185, 15.34027778, 12.03935185,
        13.0462963 , 16.63425926, 12.90046296, 13.43287037, 16.69907407,
        14.98148148, 13.45601852, 13.19212963, 12.72222222, 14.78935185,
@@ -1689,7 +1721,9 @@
         48,  96,  48,  48,  48, 120,  48,  24,  48,  48,  24,  24,  24,
         24,  24,  24,  24,  96,  24,  24,  24,  48, 144,  24,  72,  24,
         24,  96,  24,  72,  72,  24,  48,  24,  24,  24,  24,  24,  24,
-        24,  48,  72,  24, 120,  48,  24])}
+        24,  48,  72,  24, 120,  48,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([177.17019018,   0.97019602, 355.86254855])}
         ,
          6: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1698,15 +1732,17 @@
                  'sig': 0.37642169697450595}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.22638722730391483,
-                 'sig': 0.40352785720952955}
+                {'mu': 0.2103700006506645,
+                 'sig': 0.3622950719065905}
             ,
-             'max extreme temp per duration': 1.6852954953069674,
-             'min extreme temp per duration': 3.289118683891257e-05,
-             'hist max extreme temp per duration':1.4274239532389936,
-             'hist min extreme temp per duration':0.3555580899317011,
+             'max extreme temp per duration': 1.6079972131325357,
+             'min extreme temp per duration': 0.09493603177236282,
+             'hist max extreme temp per duration': 1.4274239532389936,
+             'hist min extreme temp per duration': 0.3555580899317011,
              'max energy per duration': 1.6310344056194355,
              'min energy per duration': 0.1718715046306651,
+             'hist max energy per duration': 1.6310344056194355,
+             'hist min energy per duration': 0.1718715046306651,
              'energy linear slope': 0.7603350767529872,
              'normalized extreme temp duration fit slope': 0.39821590280496677,
              'normalized extreme temp duration fit intercept': 0.5579202449045396,
@@ -1714,8 +1750,8 @@
              'normalizing extreme temp': 17.3125,
              'normalizing duration': 192,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9602723049956102,
-             'hourly prob of heat wave': 0.005522261416567292,
+             'hourly prob stay in heat wave': 0.9764663459468934,
+             'hourly prob of heat wave': 0.00590346138691171,
              'historical durations (durations0)': (np.array([76, 44, 24, 15,  9,  1,  2,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204.])),
              'historical temperatures (hist0)': (np.array([ 1,  0,  0,  0,  1,  0, 10, 16, 29, 31, 25, 22, 12, 10,  9,  3,  2,
@@ -1724,8 +1760,6 @@
         7.34312128,  8.13899606,  8.93487083,  9.7307456 , 10.52662037,
        11.32249514, 12.11836991, 12.91424468, 13.71011946, 14.50599423,
        15.301869  , 16.09774377, 16.89361854, 17.68949331])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([ 35.19198609,   0.98739622, 344.30731644]),
              'historical delTmax': np.array([11.22222222, 11.42824074, 12.9375    , 10.66666667, 14.4837963 ,
        13.26851852, 12.37731481, 15.18287037, 11.9837963 , 12.83564815,
         9.79398148, 11.22222222, 10.73842593, 10.93518519, 11.23611111,
@@ -1774,7 +1808,9 @@
         48,  96,  48,  48,  48, 192,  96,  24,  48,  48,  72, 120,  24,
         24,  24,  48,  24,  24,  24,  72,  72,  72,  72,  24,  24,  48,
         24,  72,  24,  24,  24,  48,  24,  72,  24,  24,  96,  24, 120,
-        72,  96,  48])}
+        72,  96,  48]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([152.1855238 ,   0.97399723, 462.35290238])}
         ,
          7: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1783,15 +1819,17 @@
                  'sig': 0.38504266234332074}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.27089695003725356,
-                 'sig': 0.545249361601768}
+                {'mu': -0.28815687879736296,
+                 'sig': 0.5167208206105399}
             ,
-             'max extreme temp per duration': 1.4314956805193222,
-             'min extreme temp per duration': 0.7766104711380083,
-             'hist max extreme temp per duration':1.3187721428787686,
-             'hist min extreme temp per duration':0.8273708359074461,             
+             'max extreme temp per duration': 1.4050189020055925,
+             'min extreme temp per duration': 0.7843986012259123,
+             'hist max extreme temp per duration': 1.3187721428787686,
+             'hist min extreme temp per duration': 0.8273708359074461,
              'max energy per duration': 1.5394767735941755,
              'min energy per duration': 0.15094591206271651,
+             'hist max energy per duration': 1.5394767735941755,
+             'hist min energy per duration': 0.15094591206271651,
              'energy linear slope': 0.7858188628917958,
              'normalized extreme temp duration fit slope': 0.29919940890012975,
              'normalized extreme temp duration fit intercept': 0.6235894952469878,
@@ -1799,16 +1837,14 @@
              'normalizing extreme temp': 13.807870370370374,
              'normalizing duration': 144,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9604844152162926,
-             'hourly prob of heat wave': 0.005505767295890951,
+             'hourly prob stay in heat wave': 0.9619383871610017,
+             'hourly prob of heat wave': 0.00475777353013463,
              'historical durations (durations0)': (np.array([60, 44, 17, 12,  4,  3]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156.])),
              'historical temperatures (hist0)': (np.array([ 5,  6, 22, 25, 14, 17, 16,  9, 12,  3,  3,  3,  3,  2]),
              np.array([ 7.55762235,  8.01946334,  8.48130433,  8.94314531,  9.4049863 ,
         9.86682729, 10.32866827, 10.79050926, 11.25235025, 11.71419123,
        12.17603222, 12.6378732 , 13.09971419, 13.56155518, 14.02339616])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([ 43.09787213,   0.977961  , 150.17065543]),
              'historical delTmax': np.array([ 9.43981481, 10.93518519,  8.69907407, 12.90509259, 11.625     ,
        13.14351852,  9.26851852,  8.66898148,  8.43055556,  9.26851852,
         9.69675926, 11.        , 12.59722222,  9.36111111, 13.1712963 ,
@@ -1847,7 +1883,9 @@
         24,  24,  96,  48,  24,  48,  48,  96,  24,  72,  48,  48,  48,
         72,  48,  48,  72,  96,  24,  24,  72,  24,  24,  48,  96, 144,
         72,  24,  24,  24,  24,  24,  48,  96, 144,  24,  48,  24,  48,
-        48,  24,  24,  24,  48,  96,  48,  24,  24,  96])}
+        48,  24,  24,  24,  48,  96,  48,  24,  24,  96]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 38.38298592,   0.98190811, 327.18161647])}
         ,
          8: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1856,15 +1894,17 @@
                  'sig': 0.3236780938930234}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.09719496652703327,
-                 'sig': 0.5066093421203093}
+                {'mu': 0.06652327195334493,
+                 'sig': 0.5043862454545714}
             ,
-             'max extreme temp per duration': 1.721587451906633,
-             'min extreme temp per duration': 0.2405763684471558,
-             'hist max extreme temp per duration':1.4152773535911187,
-             'hist min extreme temp per duration':0.5376676005320542,
+             'max extreme temp per duration': 1.7050460132520255,
+             'min extreme temp per duration': 0.230533883775078,
+             'hist max extreme temp per duration': 1.4152773535911187,
+             'hist min extreme temp per duration': 0.5376676005320542,
              'max energy per duration': 1.674538744854376,
              'min energy per duration': 0.02704364037448006,
+             'hist max energy per duration': 1.674538744854376,
+             'hist min energy per duration': 0.02704364037448006,
              'energy linear slope': 0.8998586931652729,
              'normalized extreme temp duration fit slope': 0.513813343379943,
              'normalized extreme temp duration fit intercept': 0.5010499480241395,
@@ -1872,8 +1912,8 @@
              'normalizing extreme temp': 16.680555555555557,
              'normalizing duration': 360,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9756757185355887,
-             'hourly prob of heat wave': 0.007982536570536583,
+             'hourly prob stay in heat wave': 0.9762198792287801,
+             'hourly prob of heat wave': 0.007988745314060646,
              'historical durations (durations0)': (np.array([85, 29, 23, 14,  4,  4,  1,  2,  2,  0,  0,  0,  0,  0,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,
        276., 300., 324., 348., 372.])),
@@ -1882,8 +1922,6 @@
         8.15106369,  8.89097142,  9.63087915, 10.37078688, 11.1106946 ,
        11.85060233, 12.59051006, 13.33041779, 14.07032552, 14.81023324,
        15.55014097, 16.2900487 , 17.02995643])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([369.7120176 ,   0.97685049, 776.41274958]),
              'historical delTmax': np.array([ 7.54398148,  8.5162037 , 16.68055556, 14.90277778, 10.21064815,
         9.16435185, 13.4537037 ,  9.45833333,  9.0787037 , 10.88888889,
         7.66203704,  8.5162037 , 11.18981481,  8.34722222,  9.875     ,
@@ -1929,7 +1967,9 @@
         24,  24,  72,  24,  24,  72,  96,  24, 120,  24,  24,  72,  96,
         24,  48,  48, 192,  24,  72,  24, 120,  24,  24,  96,  24,  24,
         48,  24,  72,  48,  24,  24,  48,  24,  24,  24,  24,  24,  72,
-        72,  48,  24,  24, 144, 120,  96,  48,  96])}
+        72,  48,  24,  24, 144, 120,  96,  48,  96]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([362.6895492 ,   0.98101938, 762.92627267])}
         ,
          9: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -1938,15 +1978,17 @@
                  'sig': 0.37207632499971144}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.04618084827609843,
-                 'sig': 0.37665530695035154}
+                {'mu': 0.04666250825950875,
+                 'sig': 0.4182724757873058}
             ,
-             'max extreme temp per duration': 1.3305720294215941,
-             'min extreme temp per duration': 0.6457428370562841,
-             'hist max extreme temp per duration':1.3181819635038188,
-             'hist min extreme temp per duration':0.654945755451583,
+             'max extreme temp per duration': 1.3670495878941593,
+             'min extreme temp per duration': 0.6065526653861303,
+             'hist max extreme temp per duration': 1.3181819635038188,
+             'hist min extreme temp per duration': 0.654945755451583,
              'max energy per duration': 1.5052286176944807,
              'min energy per duration': 0.310621266335711,
+             'hist max energy per duration': 1.5052286176944807,
+             'hist min energy per duration': 0.310621266335711,
              'energy linear slope': 0.8356127457990234,
              'normalized extreme temp duration fit slope': 0.4566121859526867,
              'normalized extreme temp duration fit intercept': 0.5552675202119052,
@@ -1954,16 +1996,14 @@
              'normalizing extreme temp': 17.85648148148148,
              'normalizing duration': 216,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.963387744251587,
-             'hourly prob of heat wave': 0.0047419573350772955,
+             'hourly prob stay in heat wave': 0.9634480845450086,
+             'hourly prob of heat wave': 0.004967257242742787,
              'historical durations (durations0)': (np.array([70, 35, 15,  5,  2,  0,  0,  0,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228.])),
              'historical temperatures (hist0)': (np.array([ 3,  2,  4, 25, 37, 20, 12, 12,  8,  3,  1,  0,  1]),
              np.array([ 6.9670584 ,  7.83573033,  8.70440226,  9.57307418, 10.44174611,
        11.31041804, 12.17908996, 13.04776189, 13.91643382, 14.78510574,
        15.65377767, 16.52244959, 17.39112152, 18.25979345])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([173.98290758,   0.97340261, 351.89836661]),
              'historical delTmax': np.array([10.97222222, 11.49305556, 13.75231481, 12.63194444, 11.5625    ,
        10.9375    , 11.78935185, 10.29398148, 11.0162037 , 10.63425926,
        13.11342593, 14.03703704, 17.85648148, 12.07638889, 10.62962963,
@@ -1999,7 +2039,9 @@
         48,  48,  24,  48,  24,  24,  24,  24,  24,  48,  24,  72,  24,
         24,  72,  48,  48,  24,  96,  24,  48,  24,  72,  24,  24,  48,
         24,  24, 120,  48,  24,  24,  48,  48,  96,  72,  24,  48,  24,
-        24,  48, 120,  96,  72,  72,  24,  24,  24,  24,  24])}
+        24,  48, 120,  96,  72,  72,  24,  24,  24,  24,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([211.76564686,   0.97219312, 577.20782329])}
         ,
          10: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -2008,15 +2050,17 @@
                  'sig': 0.3986006562710924}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.14833621665970442,
-                 'sig': 0.5693222386109525}
+                {'mu': -0.1589778187707509,
+                 'sig': 0.5245294431859474}
             ,
-             'max extreme temp per duration': 1.5564093454900583,
-             'min extreme temp per duration': 0.6026364001264874,
-             'hist max extreme temp per duration':1.3560643567971096,
-             'hist min extreme temp per duration':0.7417069036349843,
+             'max extreme temp per duration': 1.5096248302983195,
+             'min extreme temp per duration': 0.6308922636977663,
+             'hist max extreme temp per duration': 1.3560643567971096,
+             'hist min extreme temp per duration': 0.7417069036349843,
              'max energy per duration': 1.344695284297616,
              'min energy per duration': 0.1955993239831209,
+             'hist max energy per duration': 1.344695284297616,
+             'hist min energy per duration': 0.1955993239831209,
              'energy linear slope': 0.9252787391551212,
              'normalized extreme temp duration fit slope': 0.3963776496243244,
              'normalized extreme temp duration fit intercept': 0.5492510314860173,
@@ -2024,8 +2068,8 @@
              'normalizing extreme temp': 18.750000000000004,
              'normalizing duration': 168,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9632086354965818,
-             'hourly prob of heat wave': 0.006011392251868807,
+             'hourly prob stay in heat wave': 0.9670449055580274,
+             'hourly prob of heat wave': 0.006229713030013746,
              'historical durations (durations0)': (np.array([87, 34, 19, 11,  6,  1,  2]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180.])),
              'historical temperatures (hist0)': (np.array([ 1,  2, 12, 25, 21, 26, 18, 21, 11,  7,  4,  3,  3,  2,  2,  2]),
@@ -2033,8 +2077,6 @@
        11.53121383, 12.21679687, 12.90237992, 13.58796296, 14.27354601,
        14.95912905, 15.64471209, 16.33029514, 17.01587818, 17.70146123,
        18.38704427, 19.07262731])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([112.14952002,   0.97247857, 463.42358252]),
              'historical delTmax': np.array([10.99305556, 12.36342593, 16.46064815, 11.88194444, 11.4837963 ,
        13.8912037 ,  9.96759259, 13.23842593, 18.75      , 10.42361111,
        10.1875    , 13.16898148, 10.40740741, 13.40509259, 10.30092593,
@@ -2079,7 +2121,9 @@
         24,  48,  24,  24,  24,  24,  48,  24,  24,  24,  96,  48,  24,
         24,  24,  96, 144,  24,  24,  24,  72,  72,  24,  24,  24,  48,
         24,  24,  24,  24,  72,  24,  24,  96,  24, 120,  24,  48,  72,
-        24,  48, 120,  48])}
+        24,  48, 120,  48]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([109.5210113 ,   0.97219135, 485.23254312])}
         ,
          11: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -2088,15 +2132,17 @@
                  'sig': 0.3437620913371053}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.043103569805765296,
-                 'sig': 0.522203871261051}
+                {'mu': 0.04349511582822102,
+                 'sig': 0.4806008395943159}
             ,
-             'max extreme temp per duration': 1.4900097263767407,
-             'min extreme temp per duration': 0.4705129372364317,
-             'hist max extreme temp per duration':1.3270991035491855,
-             'hist min extreme temp per duration':0.6450834232465429,
+             'max extreme temp per duration': 1.4511679952616119,
+             'min extreme temp per duration': 0.5128926591532665,
+             'hist max extreme temp per duration': 1.3270991035491855,
+             'hist min extreme temp per duration': 0.6450834232465429,
              'max energy per duration': 1.485164901516709,
              'min energy per duration': 0.13506861097987516,
+             'hist max energy per duration': 1.485164901516709,
+             'hist min energy per duration': 0.13506861097987516,
              'energy linear slope': 0.8129387761991221,
              'normalized extreme temp duration fit slope': 0.3962269370020447,
              'normalized extreme temp duration fit intercept': 0.6243639115909995,
@@ -2104,8 +2150,8 @@
              'normalizing extreme temp': 18.194444444444446,
              'normalizing duration': 192,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9613763566399798,
-             'hourly prob of heat wave': 0.004692707408949984,
+             'hourly prob stay in heat wave': 0.9609222794089908,
+             'hourly prob of heat wave': 0.0052979587410854545,
              'historical durations (durations0)': (np.array([84, 60,  7,  6,  0,  1,  1,  2]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204.])),
              'historical temperatures (hist0)': (np.array([ 1,  0,  4,  7, 20, 18, 20, 24, 19, 16,  8,  5,  5,  6,  3,  4,  1]),
@@ -2113,8 +2159,6 @@
        11.22725234, 11.83163527, 12.4360182 , 13.04040113, 13.64478406,
        14.24916699, 14.85354992, 15.45793285, 16.06231578, 16.66669871,
        17.27108164, 17.87546456, 18.47984749])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([325.75098384,   0.97076354, 447.89502135]),
              'historical delTmax': np.array([14.33101852, 13.25925926, 11.03703704, 11.21296296, 13.32407407,
        11.87037037, 12.70601852, 13.75      , 10.23148148, 10.06481481,
        10.86574074, 11.04861111, 17.42592593, 12.78703704, 13.14583333,
@@ -2160,7 +2204,9 @@
         24,  48,  24,  48,  24,  24,  48,  48,  48,  24,  48,  48,  48,
         24,  24,  24,  24,  24,  24,  48,  48,  24,  48,  72,  24,  24,
         24,  24,  24,  48,  96,  48,  24,  48,  48,  48,  24,  24, 192,
-        24,  24,  48,  24,  24])}
+        24,  24,  48,  24,  24]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 91.03423465,   0.97022398, 351.72726011])}
         ,
          12: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
@@ -2169,15 +2215,17 @@
                  'sig': 0.3761662661828063}
             ,
              'extreme_temp_normal_param': 
-                {'mu': -0.414961269277902,
-                 'sig': 0.45039989141941966}
+                {'mu': -0.41450828906830395,
+                 'sig': 0.5086756226654676}
             ,
-             'max extreme temp per duration': 1.7348282932415944,
-             'min extreme temp per duration': 0.6964398970597601,
-             'hist max extreme temp per duration':1.6056618887870147,
-             'hist min extreme temp per duration':0.7493661855698713,
+             'max extreme temp per duration': 1.8301187074730603,
+             'min extreme temp per duration': 0.6573767196102794,
+             'hist max extreme temp per duration': 1.6056618887870147,
+             'hist min extreme temp per duration': 0.7493661855698713,
              'max energy per duration': 1.4918141998166654,
              'min energy per duration': 0.12910763742847048,
+             'hist max energy per duration': 1.4918141998166654,
+             'hist min energy per duration': 0.12910763742847048,
              'energy linear slope': 0.8642296404774669,
              'normalized extreme temp duration fit slope': 0.4022972440636707,
              'normalized extreme temp duration fit intercept': 0.4806872353625872,
@@ -2185,8 +2233,8 @@
              'normalizing extreme temp': 22.606481481481485,
              'normalizing duration': 168,
              'historic time interval': 650040.0,
-             'hourly prob stay in heat wave': 0.9594920186238508,
-             'hourly prob of heat wave': 0.004236711189688037,
+             'hourly prob stay in heat wave': 0.9594671953347349,
+             'hourly prob of heat wave': 0.004787642833441609,
              'historical durations (durations0)': (np.array([80, 47, 18,  6,  1,  3,  1]),
              np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180.])),
              'historical temperatures (hist0)': (np.array([ 7, 19, 23, 24, 18, 19, 12, 12,  6,  8,  2,  4,  0,  0,  1,  1]),
@@ -2194,8 +2242,6 @@
        13.3693486 , 14.2466182 , 15.1238878 , 16.00115741, 16.87842701,
        17.75569661, 18.63296622, 19.51023582, 20.38750543, 21.26477503,
        22.14204463, 23.01931424])),
-             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
-             'decay function coef': np.array([211.37596181,   0.98118851, 402.91514913]),
              'historical delTmax': np.array([11.06481481, 13.90509259, 15.02314815, 15.23611111, 15.13194444,
        14.84722222,  9.39583333, 15.50925926, 11.21527778, 12.28240741,
        15.50925926, 12.32638889, 12.37731481, 12.60648148, 14.39814815,
@@ -2239,6 +2285,8 @@
         24,  24,  24,  24,  72,  72,  24,  24,  72,  24,  24,  48,  24,
         48,  48,  48,  24,  24,  24,  24,  48,  72,  48,  48,  48,  72,
         48,  24,  48,  72,  24,  48,  24,  48, 144, 144,  24,  24,  48,
-        24,  48,  48,  48,  24,  24,  24,  24,  48,  24,  24,  72,  48])}
+        24,  48,  48,  48,  24,  24,  24,  24,  48,  24,  24,  72,  48]),
+             'decay function': 'quadratic_times_exponential_decay_with_cutoff',
+             'decay function coef': np.array([ 91.00076832,   0.97306654, 395.23160145])}
         }
     }

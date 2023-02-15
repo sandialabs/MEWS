@@ -819,6 +819,7 @@ class Extremes():
                         dict_e2 = dict_e
                     
                     if list(dict_e2.keys()) != [1,2,3,4,5,6,7,8,9,10,11,12]:
+                        breakpoint()
                         raise ValueError("All dictionary inputs must have an entry for every month!")
         
         

@@ -12,7 +12,8 @@ import numpy as np
 from numpy import poly1d
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
-from mews.utilities.utilities import bin_avg, read_readable_python_dict, create_smirnov_table
+from mews.utilities.utilities import (bin_avg, read_readable_python_dict, 
+                                      create_smirnov_table, write_readable_python_dict)
 from mews.constants.data_format import (VALID_RUN_MEWS_ENTRIES, 
                                         REQUIRED_STRING, 
                                         TEMPLATE_ID_STRING,
@@ -20,7 +21,7 @@ from mews.constants.data_format import (VALID_RUN_MEWS_ENTRIES,
 
 from copy import deepcopy
 from mews.errors.exceptions import MEWSInputTemplateError
-
+from mews.utilities.utilities import filter_cpu_count
 import pickle as pkl
 import pandas as pd
 
@@ -118,7 +119,7 @@ def _check_and_arrange_run_dict_inputs(run_dict):
 
 
 def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
-                       output_dir,random_seed,scen_dict):
+                       output_dir,random_seed,scen_dict,run_parallel,num_cpu):
     """
     
     For a list of solution files, generate EnergyPlus .epw weather files.
@@ -157,27 +158,55 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
     This function creates EnergyPlus files in output_dir
 
     """
+    
+    if run_parallel:
+        import multiprocessing as mp
+        pool = mp.Pool(num_cpu)
+    
+    results = {}
     for file in solution_files:
+
         brstr = file.split(".")[0].split("_")
         
         year = int(brstr[-3])
         scen_name = brstr[-2]
         cii = brstr[-1]
+
+        args = (scen_name,
+                year,
+                scen_dict,
+                num_files_per_solution,
+                2014,
+                cii,
+                None,
+                os.path.join(solution_path,file),
+                random_seed,
+                output_dir)
         
-        obj.create_scenario(scenario_name=scen_name,
-                            year=year,
-                            climate_temp_func=scen_dict,
-                            num_realization=num_files_per_solution,
-                            climate_baseyear=2014,
-                            increase_factor_ci=cii,
-                            cold_snap_shift=None,
-                            solution_file=os.path.join(solution_path,file),
-                            output_dir=output_dir,
-                            random_seed=random_seed)
-        
-    epw_file_list = [os.path.join(os.path.abspath(output_dir),file) for file in os.listdir(output_dir) if ".epw" in file]
+        if run_parallel:
+            results[file] = pool.apply_async(obj.create_scenario,
+                                             args=args)
+        else:
+            obj.create_scenario(*args)
+
+    if run_parallel:
+        results_get = {}
+        for tup,poolObj in results.items():
+            try:
+                results_get[tup] = poolObj.get()
+            except AttributeError:
+                raise AttributeError("The multiprocessing module will not"
+                                     +" handle lambda functions or any"
+                                     +" other locally defined functions!")
+        pool.close()
+    else:
+        results_get = results
     
-    return epw_file_list
+
+    epw_file_list = [os.path.join(os.path.abspath(output_dir),file) for file 
+                     in os.listdir(output_dir) if ".epw" in file]
+    
+    return epw_file_list, results_get
 
 
 def extreme_temperature(run_dict, run_parallel=True, num_cpu=-1, 
@@ -323,8 +352,16 @@ def extreme_temperature(run_dict, run_parallel=True, num_cpu=-1,
           not work. It is recommended that files be downloaded manually and
           put in local folders for a mews analysis.
           
-    only_generate_files : list :Default = None
-         Enter any name 
+    only_generate_files : list :Default = []
+         Enter any name in the run_dict dictionary key and that run
+         will skip the historic and future solution steps that take a long time
+         and just generate the files. This is for runs that have already been
+         finished but that need new files to be generated.
+         
+    skip_runs : list : Default = []
+         Any run name in run_dict entered here will be completely skipped.
+         This is useful if one run completed but another failed and you do 
+         not want to have to reconfigure the input deck.
           
     Raises
     ------
@@ -340,17 +377,20 @@ def extreme_temperature(run_dict, run_parallel=True, num_cpu=-1,
         the fits are. It also outputs 
     
     """
+    # only change this to true for debugging. The program will not work unless
+    # you have stepped through the solution and created specific pickle file names
+    troubleshoot = False
+    
     if isinstance(run_dict,str):
         run_dict = read_readable_python_dict(run_dict)
         
     run_dict_modified = _check_and_arrange_run_dict_inputs(run_dict)
-    
+    num_cpu = filter_cpu_count(num_cpu)
     results = {}
     
     for run_name, run_val in run_dict_modified.items():
         # Keep on going if one run fails.
         try:
-            troubleshoot = False
             # unpack
             future_years = run_val["future_years"]
             ci_intervals = run_val["ci_intervals"]
@@ -373,47 +413,94 @@ def extreme_temperature(run_dict, run_parallel=True, num_cpu=-1,
             sol_dir = os.path.dirname(historic_solution_save_location)
             num_files_per_solution = run_val["num_files_per_solution"]
             epw_output_dir = run_val["epw_out_folder"]
+            scen_dict_name_path = os.path.join(sol_dir,"scen_dict_"+run_name+".dict")
             
-            
-            """
-            STEP 1 Create a climate increase in surface temperature
-                    set of scenarios,
+            if run_name in skip_runs:
+                continue
+            elif not run_name in only_generate_files:
+                if not os.path.exists(sol_dir):
+                    os.mkdir(sol_dir)
+                
+                
+                """
+                STEP 1 Create a climate increase in surface temperature
+                        set of scenarios,
+                        
+                        ~ 15 min run time on 60 processors linux server
+                """
+                if troubleshoot:
+                    # For Troubleshooting
+                    tup = pkl.load(open("temp_cs_obj.pickle",'rb'))
+                    cs_obj, scen_dict = tup
+                else:
+                    cs_obj = ClimateScenario(use_global=False,
+                                              lat=lat,
+                                              lon=lon,
+                                              end_year=future_years[-1],
+                                              output_folder=clim_scen_out_folder,
+                                              write_graphics_path=clim_scen_out_folder,
+                                              num_cpu=num_cpu,
+                                              run_parallel=run_parallel,
+                                              model_guide=cmip6_model_guide,
+                                              data_folder=cmip6_data_folder,
+                                              align_gcm_to_historical=True,
+                                              polynomial_order=polynomial_order,
+                                              proxy=proxy)
                     
-                    ~ 15 min run time on 60 processors linux server
-            """
-            if troubleshoot:
-                # For Troubleshooting
-                tup = pkl.load(open("temp_cs_obj.pickle",'rb'))
-                cs_obj, scen_dict = tup
-            else:
-                cs_obj = ClimateScenario(use_global=False,
-                                          lat=lat,
-                                          lon=lon,
-                                          end_year=future_years[-1],
-                                          output_folder=clim_scen_out_folder,
-                                          write_graphics_path=clim_scen_out_folder,
-                                          num_cpu=num_cpu,
-                                          run_parallel=run_parallel,
-                                          model_guide=cmip6_model_guide,
-                                          data_folder=cmip6_data_folder,
-                                          align_gcm_to_historical=True,
-                                          polynomial_order=polynomial_order,
-                                          proxy=proxy)
+                    
+                    scen_dict = cs_obj.calculate_coef(scenarios)
+                    write_readable_python_dict(scen_dict_name_path, scen_dict)
+                    
+                """
+                STEP 2 FIT THE HISTORIC DATA. - This takes 6 hours on 60 processors!
+                       It is the longest operation and uses optimization.
+                 
+                """
+                if troubleshoot:
+                    # For troubleshooting
+                    obj = pkl.load(open("obj_pickle.pkl",'rb'))
+                else:
+                    obj = ExtremeTemperatureWaves(daily_and_norms_paths, 
+                                                  weather_files, 
+                                                  unit_conversion=daily_summaries_unit_conversion,
+                                                  use_local=True, 
+                                                  random_seed=random_seed,
+                                                  include_plots=plot_results,
+                                                  run_parallel=run_parallel, 
+                                                  use_global=False, 
+                                                  delT_ipcc_min_frac=1.0,
+                                                  num_cpu=num_cpu, 
+                                                  write_results=True, 
+                                                  test_markov=False,
+                                                  solve_options=solve_options, 
+                                                  proxy=proxy,
+                                                  norms_unit_conversion=climate_normals_unit_conversion)
+                    
+                    obj.write_solution(historic_solution_save_location)
+        
                 
-                
-                scen_dict = cs_obj.calculate_coef(scenarios)
-            
-
     
-            """
-            STEP 2 FIT THE HISTORIC DATA. - This takes 6 hours on 60 processors!
-                   It is the longest operation and uses optimization.
-             
-            """
-            if troubleshoot:
-                # For troubleshooting
-                obj = pkl.load(open("obj_pickle.pkl",'rb'))
-            else:
+                
+                smirnov_df = create_smirnov_table(obj, os.path.join(sol_dir,run_name + "_kolmogorov_smirnov_test_statistic.tex" ))
+                    
+                """
+                STEP 3 Create future solutions (and epw files if requested)
+                """
+                if troubleshoot:
+                    # For Troubleshooting
+                    solution_files = ["final_solution_2020_SSP245_5%.txt","final_solution_2080_SSP245_50%.txt"]
+                    alter_results = None       
+                else:
+                    alter_results,solution_files = obj.create_solutions(future_years, scenarios, 
+                                                                   ci_intervals, 
+                                                                   historic_solution_save_location, 
+                                                                   scen_dict)
+            else: # gain context from only_generate_files
+                alter_results = None
+                cs_obj = None
+                # adding the solution file shortens this to a matter of minutes
+                # instead of hours. The solution file must exist though!
+                scen_dict = read_readable_python_dict(scen_dict_name_path)
                 obj = ExtremeTemperatureWaves(daily_and_norms_paths, 
                                               weather_files, 
                                               unit_conversion=daily_summaries_unit_conversion,
@@ -428,35 +515,18 @@ def extreme_temperature(run_dict, run_parallel=True, num_cpu=-1,
                                               test_markov=False,
                                               solve_options=solve_options, 
                                               proxy=proxy,
-                                              norms_unit_conversion=climate_normals_unit_conversion)
+                                              norms_unit_conversion=climate_normals_unit_conversion,
+                                              solution_file=historic_solution_save_location)
+                solution_files = [file for file in os.listdir(sol_dir) if "final_solution_" in file]
                 
-                obj.write_solution(historic_solution_save_location)
-    
-            
-
-            
-            smirnov_df = create_smirnov_table(obj, os.path.join(sol_dir,run_name + "_kolmogorov_smirnov_test_statistic.tex" ))
                 
-            """
-            STEP 3 Create future solutions (and epw files if requested)
-            """
-            if troubleshoot:
-                # For Troubleshooting
-                solution_files = ["final_solution_2020_SSP245_5%.txt","final_solution_2080_SSP245_50%.txt"]
-                alter_results = None       
-            else:
-                alter_results,solution_files = obj.create_solutions(future_years, scenarios, 
-                                                               ci_intervals, 
-                                                               historic_solution_save_location, 
-                                                               scen_dict)
-            
-
-            
+            # begin where only generate files is executed
             if generate_epw and len(weather_files) > 0:
-                epw_files = generate_epw_files(obj,solution_files,sol_dir,num_files_per_solution,
-                                               epw_output_dir,random_seed, scen_dict)
+                epw_files, results_get = generate_epw_files(obj,solution_files,sol_dir,num_files_per_solution,
+                                               epw_output_dir,random_seed, scen_dict,run_parallel,num_cpu)
             else:
                 epw_files = []
+                results_get = {}
                 
             
             results[run_name] = {"Alter objects dict":alter_results,
@@ -466,7 +536,8 @@ def extreme_temperature(run_dict, run_parallel=True, num_cpu=-1,
                        "ClimateScenario object":cs_obj,
                        "scen_dict":scen_dict,
                        "run input values":run_val,
-                       "kolomogorov smirnov":smirnov_df}
+                       "kolomogorov smirnov":smirnov_df,
+                       "epw alter results":results_get}
             
         except Exception as excep:
             results[run_name] = {"Run Failed Exception":excep}
@@ -520,11 +591,19 @@ if __name__ == "__main__":
      "Phoenix":{"template_id":"Chicago",
                 "weather_files":[os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","USA_AZ_Phoenix-Sky.Harbor.Intl.AP.722780_TMY3.epw")],
                 "latitude_longitude":(33.4352,360-112.0101),
-                "daily_summaries_path":os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","Chicago_daily.csv"),
-                "climate_normals_path":os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","Chicago_norms.csv"),
+                "daily_summaries_path":os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","Phoenix_daily.csv"),
+                "climate_normals_path":os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","Phoenix_norms.csv"),
                 "historic_solution_save_location":os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","results","phoenix_airport_historical_solution.txt"),
-                "solve_options":{'historic': {'out_path': os.path.join(example_dir,"example_data", "ClimateZone2B_Phoenix", "results", "phoenix_airport.png")},
-                                 'future': {'out_path': os.path.join(example_dir,"example_data", "ClimateZone2B_Phoenix", "results", "phoenix_airport_future.png")}},
+                "solve_options":{'historic': {'out_path': os.path.join(example_dir,"example_data", "ClimateZone2B_Phoenix", "results", "phoenix_airport.png"),
+                                              'weights':np.array([1, 1, 1, 5, 1]),
+                                              'max_iter':60,
+                                              'decay_func_type':{'cs':'exponential_cutoff',
+                                                                 'hw':'exponential_cutoff'}},
+                                 'future': {'out_path': os.path.join(example_dir,"example_data", "ClimateZone2B_Phoenix", "results", "phoenix_airport_future.png"),
+                                            'weights':np.array([1, 1, 1, 5, 1]),
+                                            'max_iter':60,
+                                            'decay_func_type':{'cs':'exponential_cutoff',
+                                                               'hw':'exponential_cutoff'}}},
                 "clim_scen_out_folder": os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","clim_scen_results"),
                 "epw_out_folder": os.path.join(example_dir,"example_data","ClimateZone2B_Phoenix","mews_epw_results")},
      "Minneapolis":{"template_id":"Chicago",
@@ -552,26 +631,6 @@ if __name__ == "__main__":
     
     # This runs in several hours and is too long for making into a unit test
     #input_file = os.path.join(os.path.dirname(__file__),"..","examples","mews_input_example.txt")
-    extreme_temperature(run_dict)
+    results = extreme_temperature(run_dict,only_generate_files=[],skip_runs=["Chicago","Baltimore","Minneapolis"])
     
     
-    invalid_input = True
-    while invalid_input:
-        yesno = input("Are you sure that you want to start this study?"+
-                      " It takes several days to run on 60 processors. Enter (y/n)")
-        if yesno == "y":
-            
-            extreme_temperature(run_dict)
-            invalid_input = False
-        elif yesno == "n":
-            invalid_input = False
-        else:
-            print("You must enter 'y' or 'n'\n\n.")
-    
-    
-        
-
-
-
-
-

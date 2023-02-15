@@ -19,3 +19,6 @@ class MaxVsAvgDistributionError(Exception):
 
 class ExtremesIntegrationError(Exception):
     pass
+
+class MEWSInputTemplateError(ValueError):
+    pass

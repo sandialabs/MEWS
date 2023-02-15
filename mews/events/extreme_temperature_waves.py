@@ -200,11 +200,15 @@ class ExtremeTemperatureWaves(Extremes):
     Parameters
     ----------
     
-    station : str
-        Must be a valid NOAA station number that has both daily-summary
+    station : str or dict
+        str: Must be a valid NOAA station number that has both daily-summary
         and 1991-2020 hourly climate norms data. If use_local=True, then
         this can be the path to a local csv file and <station>_norms.csv
         is expected in the same location for the climate norm data.
+        
+        dict: must be a dictionary of the following form
+            {'norms':<str with path to norms file>,
+             'summaries':<str with path to the daily summaries file>}
     
     weather_files : list
         List of path and file name strings that include all the weather files
@@ -491,7 +495,15 @@ class ExtremeTemperatureWaves(Extremes):
             obj2.write_solution(os.path.join(historic_solution))
         
         # look at three cases to make a better interpolation.
+        if 'future' in obj2.solve_options:
+            if 'num_postprocess' in obj2.solve_options['future']:
+                org_num_postprocess = obj2.solve_options['future']['num_postprocess']
+            if 'plot_results' in obj2.solve_options['future']:
+                org_plot_results = obj2.solve_options['future']['plot_results']
+                
         obj2.solve_options['future']['num_postprocess'] = num_cases
+        obj2.solve_options['future']['plot_results'] = False
+        
         ## ONLY FOR TROUBLESHOOTING!!
         #obj2.solve_options['future']['test_mode'] = True
         #obj2.solve_options['future']['num_steps'] = 1e5 # much fewer steps to reduce run time.
@@ -503,6 +515,7 @@ class ExtremeTemperatureWaves(Extremes):
         #            how much cold snaps will change with increasing global warming
         
         # THIS IS THE HISTORICAL SOLUTION
+        org_write_results = obj2._write_results
         obj2._write_results = False
         result = obj2.create_scenario(scenario_name=scen,
                                                         year=syear,
@@ -593,6 +606,23 @@ class ExtremeTemperatureWaves(Extremes):
         if os.path.exists(os.path.join(sol_dir,temp_new_solution_name)):
             os.remove(os.path.join(sol_dir,temp_new_solution_name))
         
+        if 'future' in obj2.solve_options:
+            if 'num_postprocess' in obj2.solve_options['future']:
+                org_num_postprocess = obj2.solve_options['future']['num_postprocess']
+            if 'plot_results' in obj2.solve_options['future']:
+                org_plot_results = obj2.solve_options['future']['plot_results']
+        
+        # restore original solve options
+        if 'future' in obj2.solve_options:
+            if 'num_postprocess' in obj2.solve_options['future']:
+                if "org_num_postprocess" in locals():
+                    obj2.solve_options['future']['num_postprocess'] = org_num_postprocess 
+            if 'plot_results' in obj2.solve_options['future']:
+                if "org_plot_results" in locals():
+                    obj2.solve_options['future']['plot_results'] = org_plot_results 
+
+        obj2._write_results = org_write_results
+        
         return result,fname
         
     
@@ -660,8 +690,8 @@ class ExtremeTemperatureWaves(Extremes):
             run_parallel = self._run_parallel
         if num_cpu is None:
             num_cpu = self._num_cpu 
-        else:
-            num_cpu = filter_cpu_count(num_cpu)
+            
+        num_cpu = filter_cpu_count(num_cpu)
         
         if run_parallel:
             try:
@@ -1374,21 +1404,25 @@ class ExtremeTemperatureWaves(Extremes):
                                                self._random_seed,
                                                solve_options,
                                                cold_snap_shift,
-                                               write_csv=True,
+                                               write_csv=self._write_results,
                                                extra_columns=extra_columns,
                                                solve_obj=solve_obj)
-            solve_obj = obj.obj_solve
-            solution_obtained = True
             
-            self.future_solve_obj[scenario][increase_factor_ci][year][month] = deepcopy(obj)
-
-            transition_matrix_delta[month] = obj.transition_matrix_delta
-            del_E_dist[month] = obj.del_E_dist
-            del_delTmax_dist[month] = obj.del_delTmax_dist
-            self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
-            
+            if not obj.cancel_run:
+                
+                solve_obj = obj.obj_solve
+                solution_obtained = True
+                
+                self.future_solve_obj[scenario][increase_factor_ci][year][month] = deepcopy(obj)
+    
+                transition_matrix_delta[month] = obj.transition_matrix_delta
+                del_E_dist[month] = obj.del_E_dist
+                del_delTmax_dist[month] = obj.del_delTmax_dist
+                self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
+                
             # IMPORTANT! - THIS IS HOW CHANGES ARE TRANSFERRED WHEN USING
             # The solution file!
+            
             self.stats = stats
 
 
@@ -2311,6 +2345,12 @@ class _DeltaTransition_IPCC_FigureSPM6():
                  write_csv=False,
                  extra_columns=None,
                  solve_obj=None):
+        if not scenario is None:
+            identifier = scenario
+            identifier = identifier + "_" + str(year)
+        if not month is None:
+            identifier = identifier + "_" + str(month) + increase_factor_ci
+        
         if solve_obj is None:
             self.obj_solve = None
         else:
@@ -2366,61 +2406,72 @@ class _DeltaTransition_IPCC_FigureSPM6():
         ipcc_data =  pd.read_csv(os.path.join(os.path.dirname(__file__),"data","IPCC_FigureSPM_6.csv"))
         
 
-
-        if use_global:
-            # This is change in global temperature from 2020!
-            delta_TG = climate_temp_func[scenario](year)
-            
-            # now interpolate from the IPCC tables 
-            
-            (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
-            
-        else:
-            delta_TG = climate_temp_func[scenario](year-baseline_year)
-            (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
-
-        f_ipcc_ci_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]] 
-        f_ipcc_ci_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
-
-        #bring the multiplication factors to the surface.
-        dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
-        dfraw.columns = ["10 year event","50 year event"]
-        self.ipcc_fact = dfraw
-
-       
-        if use_global:
-            tup = self._old_analysis(use_global,f_ipcc_ci_50,f_ipcc_ci_10,
-                               hot_param,cold_param,delT_ipcc_frac_month,
-                               ipcc_val_10,ipcc_val_50,increase_factor_ci,
-                               delta_TG)
+        try:
+            if use_global:
+                # This is change in global temperature from 2020!
+                delta_TG = climate_temp_func[scenario](year)
+                
+                # now interpolate from the IPCC tables 
+                
+                (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
+                
+            else:
+                delta_TG = climate_temp_func[scenario](year-baseline_year)
+                (ipcc_val_10, ipcc_val_50) = self._interpolate_ipcc_data(ipcc_data, delta_TG, hw_delT, baseline_delT)
+            cancel_run = False
+        except ValueError as excep:
+            cancel_run = True
+            warn(excep.with_traceback(ValueError))
+        except Exception as excep:
+            raise excep
         
-        else:
-            tup = self._new_analysis(hot_param,cold_param,delT_ipcc_frac_month,
-                               ipcc_val_10,ipcc_val_50,increase_factor_ci,
-                               delta_TG, solve_options,random_seed, 
-                               month_hours_per_year,cold_snap_shift,write_csv,
-                               extra_columns)
+        self.cancel_run = cancel_run
+        
+        if not cancel_run:
             
-        
-        (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
-           P_prime_hwsm, del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
-           del_b_E_hw_m, del_mu_delT_max_hwm, del_sig_delT_max_hwm,
-           del_a_delT_max_hwm, del_b_delT_max_hwm, delT_abs_max 
-         ) = tup
-        
-        self.transition_matrix_delta = np.array(
-            [[Phwm + Pcsm - P_prime_hwm - P_prime_csm, P_prime_csm - Pcsm, P_prime_hwm - Phwm],
-             [Pcssm - P_prime_cssm, P_prime_cssm - Pcssm, 0.0],
-             [Phwsm - P_prime_hwsm, 0.0, P_prime_hwsm - Phwsm]])
-        self.del_E_dist = {'del_mu':del_mu_E_hw_m,
-                 'del_sig':del_sig_E_hw_m,
-                 'del_a':del_a_E_hw_m,
-                 'del_b':del_b_E_hw_m}
-        self.del_delTmax_dist = {'del_mu':del_mu_delT_max_hwm,
-                 'del_sig':del_sig_delT_max_hwm,
-                 'del_a':del_a_delT_max_hwm,
-                 'del_b':del_b_delT_max_hwm,
-                 'delT_increase_abs_max':delT_abs_max}
+            f_ipcc_ci_10 = ipcc_val_10[self._valid_increase_factor_tracks[increase_factor_ci][1]] 
+            f_ipcc_ci_50 = ipcc_val_50[self._valid_increase_factor_tracks[increase_factor_ci][1]]
+    
+            #bring the multiplication factors to the surface.
+            dfraw = pd.concat([ipcc_val_10,ipcc_val_50],axis=1)
+            dfraw.columns = ["10 year event","50 year event"]
+            self.ipcc_fact = dfraw
+    
+           
+            if use_global:
+                tup = self._old_analysis(use_global,f_ipcc_ci_50,f_ipcc_ci_10,
+                                   hot_param,cold_param,delT_ipcc_frac_month,
+                                   ipcc_val_10,ipcc_val_50,increase_factor_ci,
+                                   delta_TG)
+            
+            else:
+                tup = self._new_analysis(hot_param,cold_param,delT_ipcc_frac_month,
+                                   ipcc_val_10,ipcc_val_50,increase_factor_ci,
+                                   delta_TG, solve_options,random_seed, 
+                                   month_hours_per_year,cold_snap_shift,write_csv,
+                                   extra_columns, identifier)
+                
+            
+            (Phwm, Pcsm, P_prime_hwm, P_prime_csm, Pcssm, P_prime_cssm, Phwsm, 
+               P_prime_hwsm, del_mu_E_hw_m, del_sig_E_hw_m, del_a_E_hw_m, 
+               del_b_E_hw_m, del_mu_delT_max_hwm, del_sig_delT_max_hwm,
+               del_a_delT_max_hwm, del_b_delT_max_hwm, delT_abs_max 
+             ) = tup
+            
+            self.transition_matrix_delta = np.array(
+                [[Phwm + Pcsm - P_prime_hwm - P_prime_csm, P_prime_csm - Pcsm, P_prime_hwm - Phwm],
+                 [Pcssm - P_prime_cssm, P_prime_cssm - Pcssm, 0.0],
+                 [Phwsm - P_prime_hwsm, 0.0, P_prime_hwsm - Phwsm]])
+            self.del_E_dist = {'del_mu':del_mu_E_hw_m,
+                     'del_sig':del_sig_E_hw_m,
+                     'del_a':del_a_E_hw_m,
+                     'del_b':del_b_E_hw_m}
+            self.del_delTmax_dist = {'del_mu':del_mu_delT_max_hwm,
+                     'del_sig':del_sig_delT_max_hwm,
+                     'del_a':del_a_delT_max_hwm,
+                     'del_b':del_b_delT_max_hwm,
+                     'delT_increase_abs_max':delT_abs_max}
+            
 
 
     def _interpolate_ipcc_data(self,ipcc_data,delta_TG,hw_delT,baseline_delT=None):
@@ -2575,7 +2626,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
                       ipcc_val_10, ipcc_val_50,
                       increase_factor_ci, delta_TG, solve_options, random_seed,
                       frac_month_hours_per_year,cold_snap_shift,write_csv,
-                      extra_columns):
+                      extra_columns,identifier):
 
         # 1. arrange inputs
         if random_seed is None:
@@ -2637,7 +2688,8 @@ class _DeltaTransition_IPCC_FigureSPM6():
                                    x_solution=opt_val['x_solution'],
                                    test_mode=opt_val['test_mode'],
                                    num_postprocess=opt_val["num_postprocess"],
-                                   extra_output_columns=extra_columns)
+                                   extra_output_columns=extra_columns,
+                                   identifier=identifier)
             self.obj_solve = obj_solve
         else:
             inputs = {"param0":param0,

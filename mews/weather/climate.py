@@ -38,7 +38,7 @@ class ClimateScenario(object):
                       lon=None,
                       end_year=2060,
                       model_guide="Models_Used_alpha.xlsx",
-                      data_folder="data",
+                      data_folder="",
                       run_parallel=True,
                       output_folder=None,
                       proxy=None,
@@ -69,6 +69,15 @@ class ClimateScenario(object):
                 more recent in comparison to the 1850-1900 baseline.
         end_year: int, optional
             Indicates the end year for which CMIP6 evaluations will stop
+        model_guide : str, optional Default = "Models_Used_alpha.xlsx"
+            Must give the name of an excel spreadsheet that has the same format as
+            data/Models_used_alpha.xlsx from the location of this file in the
+            mews repostory. This guide controls what CMIP6 models are included
+            in a mews analysis. An ensemble of models is required in order for 
+            mews to make reasonable polynomial estimates of future and historic
+            temperature changes.
+        data_folder : str, optional Default = "data"
+            the folder where the model_guide is contained in.
         run_parallel : bool, optional
             Indicates whether to speed up process by parallelization by asyncrhonous pool
             and threading. 
@@ -204,7 +213,7 @@ class ClimateScenario(object):
 
                 if not self._valid_scenario_names[0] in scenario:
                     scenario.insert(0,self._valid_scenario_names[0])
-                        
+
             obj = CMIP_Data(lat_desired = lat,
                                         lon_desired=lon,
                                         baseline_year=self.baseline_year,

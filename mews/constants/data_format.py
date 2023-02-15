@@ -6,6 +6,7 @@ Created on Thu Oct 27 15:40:43 2022
 @author: dlvilla
 """
 import numpy as np
+import os
 from mews.constants.analysis import DEFAULT_SOLVER_NUMBER_STEPS
 
 ABREV_WAVE_NAMES = ["cs","hw"]
@@ -99,3 +100,36 @@ DECAY_FUNC_NAMES.insert(0,None)
 DEFAULT_NONE_DECAY_FUNC = {}
 for awn in ABREV_WAVE_NAMES:
     DEFAULT_NONE_DECAY_FUNC[awn] = None
+
+REQUIRED_STRING = "Required Property"
+TEMPLATE_ID_STRING = "template_id"
+SOLVE_OPTIONS_STRING = "solve_options"
+# If None, then a value is not optional 
+
+# SET A LIST WITH FIRST ENTRY "REQUIRED_STRING" if an entry must be included
+# in either the template or in the actual entry itself
+VALID_RUN_MEWS_ENTRIES = {TEMPLATE_ID_STRING:["",str],
+              "future_years":[REQUIRED_STRING,list],
+              "ci_intervals":[REQUIRED_STRING,list], 
+              "latitude_longitude":[REQUIRED_STRING,(tuple,list)],
+            "scenarios":[REQUIRED_STRING,list],     
+            "polynomial_order" :[{'historical':7,
+                                 'SSP119':4,
+                                 'SSP126':4,
+                                 'SSP585':4,
+                                 'SSP245':4,
+                                 'SSP370':4},dict],
+            "weather_files" :[[],list],
+            "daily_summaries_path" : [REQUIRED_STRING,str],
+            "climate_normals_path" : [REQUIRED_STRING,str],
+            "daily_summaries_unit_conversion": [REQUIRED_STRING,tuple],
+            "climate_normals_unit_conversion": [REQUIRED_STRING,tuple],
+            "historic_solution_save_location": [REQUIRED_STRING,str],
+            "random_seed" : [REQUIRED_STRING,int],
+            "cmip6_model_guide" : [os.path.join("data","Models_Used_alpha.xlsx"),str],
+            "cmip6_data_folder" : [REQUIRED_STRING,str],
+            SOLVE_OPTIONS_STRING: [REQUIRED_STRING,dict],
+            "num_files_per_solution":[REQUIRED_STRING,int],
+            "clim_scen_out_folder" : [REQUIRED_STRING,str],
+            "epw_out_folder" :["",str]}
+VALID_RUN_MEWS_ENTRIES_LIST = [val for key,val in VALID_RUN_MEWS_ENTRIES.items()]

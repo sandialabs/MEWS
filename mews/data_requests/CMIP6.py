@@ -330,6 +330,10 @@ class CMIP_Data(object):
         else:
             folder_path = self.data_folder
         
+        if not os.path.isabs(self.model_guide):
+            self.model_guide = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                            self.model_guide))
+        
         model_guide_wb = openpyxl.load_workbook(self.model_guide)
         #Downloads necessary files for each scenario
         for scenario in self.scenario_list:

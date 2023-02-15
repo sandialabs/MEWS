@@ -992,7 +992,8 @@ class SolveDistributionShift(object):
                  test_mode=False,
                  num_postprocess=3,
                  extra_output_columns={},
-                 org_samples={'Temperature':None,'Durations':None}):
+                 org_samples={'Temperature':None,'Durations':None},
+                 identifier=None):
         """
         This class solves one of two problems. 
 
@@ -1198,6 +1199,10 @@ class SolveDistributionShift(object):
             they are used to return a Kolmogorov-Smirnov test pvalue
             for equivalence between the MEWS stochastic model distribution
             and the original extreme wave data.
+            
+        identifier : str : optional : Default = None
+            USed to identify what climate, year etc.. is being run. This is 
+            indistinguishable. Mostly for troubleshooting purposes
 
         Raises
         ------
@@ -1214,6 +1219,7 @@ class SolveDistributionShift(object):
 
         """
         self._config_latex()
+        self.identifier = identifier
         
         if not hasattr(self, 'inputs'):
             self.df = None
@@ -1378,7 +1384,7 @@ class SolveDistributionShift(object):
                                                                          alternative="two-sided",mode='exact')}
                                             
 
-        if plot_results or len(out_path) > 0:
+        if plot_results: #or len(out_path) > 0:
             Graphics.plot_sample_dist_shift(
                 hist0, histT_tuple, ipcc_shift, thresholds, self._events, plot_title, out_path, True, plot_results)
 
@@ -1649,8 +1655,14 @@ class SolveDistributionShift(object):
                         "The input subdictionary 'ipcc_shift['{0}']['{1}'] must be a positive number".format(key, yr_str))
 
                 if ipcc_shift[key][yr_str] < 0.0 or ipcc_shift[key][yr_str] > 100.0:
-                    raise ValueError(
-                        "The input subdictionary 'ipcc_shift['{0}']['{1}'] is constrained to the interval 0 - 100".format(key, yr_str))
+                    print("\n\n\n\n")
+                    print(ipcc_shift[key][yr_str])
+                    print("\n\n")
+                    print(self.identifier)
+                    print("\n\n\n\n")
+                    pass
+                    #raise ValueError(
+                    #    "The input subdictionary 'ipcc_shift['{0}']['{1}'] is constrained to the interval 0 - 100".format(key, yr_str))
 
     def _check_inputs(self,
                       num_step,

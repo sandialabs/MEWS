@@ -13,6 +13,7 @@ import os
 from mews.events import ExtremeTemperatureWaves
 import numpy as np
 from numpy import poly1d
+from mews.run_mews import generate_epw_files
 
 
 """
@@ -74,12 +75,12 @@ unit_conv_norms = (5/9, -(5/9)*32)
 random_seed = 548941
 
 # this will be the number of files output per solution file need 100+ for statistical studies.
-num_realization_per_scenario = 100 
+num_files_per_solution = 100 
 
 # plot_results
 plot_results = True
 run_parallel = True
-num_cpu = 40
+num_cpu = 30
 
 # this is the file that serves as the base-weather 
 weather_files = [os.path.join(
@@ -109,35 +110,18 @@ CODE
 
 """
 
-obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
-                              use_local=True, random_seed=random_seed,
-                              include_plots=plot_results,
-                              run_parallel=run_parallel, use_global=False, delT_ipcc_min_frac=1.0,
-                              num_cpu=num_cpu, write_results=True, test_markov=False,
-                              solve_options=None,
-                              norms_unit_conversion=unit_conv_norms,
-                              solution_file=historical_solution)
+run_anyway = True
+if not "obj" in locals() or run_anyway:
+    obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=unit_conversion,
+                                  use_local=True, random_seed=random_seed,
+                                  include_plots=plot_results,
+                                  run_parallel=run_parallel, use_global=False, delT_ipcc_min_frac=1.0,
+                                  num_cpu=num_cpu, write_results=True, test_markov=False,
+                                  solve_options=None,
+                                  norms_unit_conversion=unit_conv_norms,
+                                  solution_file=historical_solution)
 
-for file in solution_files:
-    brstr = file.split(".")[0].split("_")
-    
-    year = int(brstr[2])
-    scen_name = brstr[3]
-    cii = brstr[-1]
-    
-    obj.create_scenario(scenario_name=scen_name,
-                        year=year,
-                        climate_temp_func=scen_dict,
-                        num_realization=num_realization_per_scenario,
-                        climate_baseyear=2014,
-                        increase_factor_ci=cii,
-                        cold_snap_shift=None,
-                        solution_file=os.path.join(inp_dir,file))
-    
-"""
-output - results .epw will be output to the mews_results file that is created 
-         Also output are *.png showing the closeness of fit, and *.csv with
-         all of the actual data output for the *.png files so that someone 
-         can plot the closeness of fit themselves.
+generate_epw_files(obj, solution_files, inp_dir, num_files_per_solution, 
+                   os.path.join(inp_dir,"mews_epw_results"), random_seed, scen_dict, run_parallel, num_cpu)
 
-"""
+
