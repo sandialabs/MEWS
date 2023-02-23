@@ -424,14 +424,20 @@ def write_readable_python_dict(filepath,dictionary,overwrite=True):
         with open(filepath,'w') as fref:
             fref.write(newstr)
             
-def read_readable_python_dict(filepath):
+def read_readable_python_dict(filepath,var={}):
     """
     Parameters
     ----------
     filepath : str 
         Valid file path to a text file that contains a readable python dictionary
         string written by "write_readable_python_dict"
-
+        
+    var : dict
+       This is only certain to handle string inputs
+       It provides a way to put variable names in the readable python dict
+       that can then be filled in. Local versions of all variables in
+       kwargs are generated.
+       
     Raises
     ------
     FileNotFoundError
@@ -449,6 +455,9 @@ def read_readable_python_dict(filepath):
     
     if os.path.exists(filepath):
         try:
+            for key,val in var.items():
+                exec("{0} = '{1}'".format(key,str(val)))
+            
             with open(filepath,'r') as file:
                 fstr = file.read()
             
@@ -481,8 +490,9 @@ def read_readable_python_dict(filepath):
                 raise ValueError("The string read did not create a dictionary")
             
             return pdict
-        except: 
-            SyntaxError("The designated file '{0}' does not contain a readable python dictionary from write_readable_python_dict.")
+        except Exception as e: 
+            raise SyntaxError("The designated file '{0}' does not contain a ".format(filepath)+
+                              "readable python dictionary from write_readable_python_dict.") from e
     else:
         raise FileNotFoundError("The file\n\n  '{0}'\n\ndoes not exist!".format(filepath))
             

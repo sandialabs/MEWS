@@ -37,7 +37,7 @@ from mews.constants.physical import (HOURS_IN_YEAR, DAYS_IN_YEAR, HOURS_IN_DAY)
 from mews.constants.analysis import (DEFAULT_SOLVER_NUMBER_STEPS, 
                                      DEFAULT_RANDOM_SEED)
 from shutil import which
-
+import traceback
 import io
 import pandas as pd
 import numpy as np
@@ -2421,7 +2421,8 @@ class _DeltaTransition_IPCC_FigureSPM6():
             cancel_run = False
         except ValueError as excep:
             cancel_run = True
-            warn(excep.with_traceback(ValueError))
+            warn("A value error occured when trying to interpolate the ipcc table.!\n\n Traceback:\n\n" + 
+                 traceback.print_stack() + "\n\n" + str(excep))
         except Exception as excep:
             raise excep
         
