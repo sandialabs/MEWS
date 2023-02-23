@@ -134,8 +134,9 @@ cities = ["Chicago",
           'McAllen',
           'Kodiak',
           'Worcester']
+ ```
          
-and the extreme_mews input parameters can be used to only generate files from the solutions rather than running the lengthy optimization process again.
+The extreme_mews input parameters can be used to only generate files from the solutions rather than running the lengthy optimization process again.
 
 Inside "MEWS/examples/examplecd _data" are folders for each city and inside these folders you can find the solution files in "results" and "mews_epw_results" folder for EnergyPlus epw files. 
 
