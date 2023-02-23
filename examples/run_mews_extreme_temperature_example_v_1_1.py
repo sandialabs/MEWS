@@ -12,6 +12,7 @@ start_time = time()
 
 import os
 import pickle as pkl
+import numpy as np
 
 from mews.run_mews import extreme_temperature
 
@@ -29,7 +30,7 @@ example_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 run_dict_file_path = os.path.join(os.path.dirname(__file__),"example_data","mews_run_only1file.dict")
 
 # ONLY SET TO TRUE IF YOU WANT TO SEE HOW LONG DIFFERENT FUNCTIONS IN MEWS TAKE
-profile = True
+profile = False
 
 if profile:
     import cProfile
@@ -38,6 +39,9 @@ if profile:
     
     pr = cProfile.Profile()
     pr.enable()
+    
+
+
 
 """
 This is the way to run mews. All the names available are

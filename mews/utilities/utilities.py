@@ -456,7 +456,7 @@ def read_readable_python_dict(filepath,var={}):
     if os.path.exists(filepath):
         try:
             for key,val in var.items():
-                exec("{0} = '{1}'".format(key,str(val)))
+                exec("{0} = r'{1}'".format(key,str(val)))
             
             with open(filepath,'r') as file:
                 fstr = file.read()
