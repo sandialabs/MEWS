@@ -1,11 +1,7 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 import os
 import re
 import numpy as np
-from distutils.core import setup
-from distutils.extension import Extension
-
-
 
 DISTNAME = 'mews'
 PACKAGES = find_packages()
@@ -78,6 +74,7 @@ setup(name=DISTNAME,
       packages=PACKAGES,
       ext_modules=ext_modules,
       description=DESCRIPTION,
+      long_description_content_type="text/markdown",
       long_description=LONG_DESCRIPTION,
       author=AUTHOR,
       author_email=MAINTAINER_EMAIL,
