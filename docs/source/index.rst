@@ -9,11 +9,17 @@ MEWS Documentation
 .. figure:: images/logo.png
 
 The Multi-scenario Extreme Weather Simulator (MEWS) is a python-based software in development to predict the increased frequency
-and severity of various natural weather phenomena including: heat waves, cold snaps, and eventually hurricanes. This is the 
-initial build of MEWS documentation and is still currently being worked on. Overview contains general information about the
-software, API Documentation contains information about the source code, and License contains software licensing information. 
-Examples coming soon.
+and severity of various natural weather phenomena including: heat waves and cold snaps. A simplified kinematic model of Hurricanes is coming in the next version. 
 
+The software has one major use case that is supported by the run_mews module. After installation (see the MEWS GitHub repository (https://github.com/sandialabs/MEWS), one can use the extreme_temperature function to create new analyses or to generate EnergyPlus files for existing ones.
+
+```
+from mews.run_mews import extreme_temperature
+
+
+
+
+```
 
 .. toctree::
    :maxdepth: 1

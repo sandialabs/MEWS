@@ -46,7 +46,7 @@ Directories
   * mews - Python package
   * docs - UNDER CONSTRUCTION - inital build available on ReadTheDocs (https://mews.readthedocs.io/en/latest/)
   * information - contains general information about MEWS
-  * examples - current working example is worcester_example.py. All others are depricated
+  * examples - current working example is run_mews_extreme_temperature_example_v_1_1.py. All others are deprecated or use older techniques
 
 Installation
 ------------
@@ -85,7 +85,7 @@ Installation
     pytest
     ```
     
-    All tests should pass. If not, contact the dlvilla@sandia.gov.
+    All tests should pass. If not, contact the dlvilla@sandia.gov. Sometimes failures are driven by a tex failure if you have tex on your computer.
     
     The API for MEWS is not yet documented and has many inputs. The best example of how to use the latest version is available in examples/worcester_example.py
     the other examples are either depricated or are not being kept up to date presently.
@@ -102,6 +102,43 @@ Download the CMIP6_Data_Files file and then make its local path equal to the "ou
 
 mews.weather.climate.ClimateScenario
 
+Using MEWS
+--------
+MEWS has many classes that have their API's documented but that have specialized functions that most users will not want to work with.
+The MEWS function for heat waves is:
+
+```
+from mews.run_mews import extreme_temperature
+```
+
+The example in MEWS/examples/run_mews_extreme_temperature_v_1_1.py provides an example of how to use extreme_temperature. The repository now contains
+pre-processed solution files for the following cities            
+
+```
+cities = ["Chicago",
+          "Baltimore",
+          "Minneapolis",
+          "Phoenix",
+          'Miami',
+          'Houston'
+          'Atlanta', 
+          'LasVegas',
+          'LosAngeles',
+          'SanFrancisco',
+          'Albuquerque',
+          'Seattle', 
+          'Denver',
+          'Helena', 
+          'Duluth',
+          'Fairbanks',
+          'McAllen',
+          'Kodiak',
+          'Worcester']
+ ```
+         
+The extreme_mews input parameters can be used to only generate files from the solutions rather than running the lengthy optimization process again.
+
+Inside "MEWS/examples/examplecd _data" are folders for each city and inside these folders you can find the solution files in "results" and "mews_epw_results" folder for EnergyPlus epw files. 
 
 Contact 
 --------
