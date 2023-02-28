@@ -389,7 +389,7 @@ def write_readable_python_dict(filepath,dictionary,overwrite=True):
         inarray = False
         newstr = ""
         indent_level = 0
-        for char in str(dictionary).replace("array","np.array"):
+        for char in str(dictionary).replace("array","np.array").replace("int64","int"):
             if char == "," and not inquote and not inarray:
                 newstr = newstr + char + "\n" + indent_level * " "
             elif char == "{" and not inquote:
