@@ -87,6 +87,5 @@ setup(name=DISTNAME,
       scripts=[],
       include_package_data=True,
       include_dirs = [np.get_include()],
-      keywords = ["Building Energy Modeling","Infrastructure","Extreme Weather","Markov","Resilience","Energy Plus","DOE2","DOE-2"],
-      long_description_content_type='text/markdown')
+      keywords = ["Building Energy Modeling","Infrastructure","Extreme Weather","Markov","Resilience","Energy Plus","DOE2","DOE-2"])
 
