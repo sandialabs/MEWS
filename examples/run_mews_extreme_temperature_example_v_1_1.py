@@ -105,7 +105,7 @@ if profile:
     ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
     ps.print_stats()
     
-    with open('extreme_temperature_profile.txt', 'w+') as f:
+    with open('extreme_temperature_profile_3.txt', 'w+') as f:
         f.write(s.getvalue())
 
 # this saves your results as a pickle so that you can see what went wrong if
@@ -113,4 +113,4 @@ if profile:
 
 end_time = time()
 results['run_time in seconds'] = end_time - start_time
-pkl.dump([results], open(example_dir,"example_data","study_results.pkl",'wb'))
+pkl.dump([results], open(os.path.join(example_dir,"example_data","study_results.pkl"),'wb'))

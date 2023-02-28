@@ -19,7 +19,7 @@ must be replicated in any derivative works that use the source code.
 """
 
 from scipy.special import erf
-from scipy.optimize import curve_fit, bisect
+from scipy.optimize import curve_fit, bisect, root_scalar
 from scipy.interpolate import splev, splrep
 import numpy as np
 import matplotlib.pyplot as plt
@@ -70,10 +70,59 @@ def offset_cdf_truncnorm(x,mu,sig,a,b,rnd):
         beta = (b - mu)/sig
         erf_alpha = erf(alpha)
         return (erf(xi) - erf_alpha)/(erf(beta) - erf_alpha) - rnd
+
+def offset_cdf_truncnorm_newton(x,mu,sig,a,b,rnd):
+    #https://en.wikipedia.org/wiki/Truncated_normal_distribution
+    if x < a:
+        return 0,0
+    elif x > b:
+        return 1,0
+    else:
+        xi = (x - mu)/sig
+        alpha = (a - mu)/sig
+        beta = (b - mu)/sig
+        erf_alpha = erf(alpha)
+        erf_beta = erf(beta)
+        
+        fprime = (2/np.sqrt(np.pi))*np.exp(-(xi)**2)/(sig *(erf_beta - erf_alpha))
+        
+        return (erf(xi) - erf_alpha)/(erf_beta - erf_alpha) - rnd, fprime 
     
 def trunc_norm_dist(rnd,mu,sig,a,b,minval,maxval):
     # inverse lookup from cdf
+    # get a good guess values
+    
+    # ten_guesses = np.array([offset_cdf_truncnorm(x,mu,sig,a,b,rnd) for x in np.arange(a,b,(b-a)/10)])
+    # x_rough = ten_guesses[np.abs(ten_guesses).argmin()]
+    
+    # #x_rough, r = bisect(offset_cdf_truncnorm, a, b, args=(mu,sig,a,b,rnd),full_output=True,rtol=0.05)
+    # r = root_scalar(offset_cdf_truncnorm_newton, args=(mu,sig,a,b,rnd), method="newton",x0=x_rough,fprime=True)
+    # if r.converged:
+    #     x = r.root
+    # else:
     x, r = bisect(offset_cdf_truncnorm, a, b, args=(mu,sig,a,b,rnd),full_output=True)
+    
+    
+    if r.converged:
+        return inverse_transform_fit(x,maxval,minval)
+    else:
+        raise ValueError("The bisection method failed to converge! Please investigate")
+        
+def trunc_norm_dist_vectorized(rnd,mu,sig,a,b,minval,maxval):
+    # inverse lookup from cdf
+    # get a good guess values
+    
+    #ten_guesses = np.array([offset_cdf_truncnorm(x,mu,sig,a,b,rnd) for x in np.arange(a,b,(b-a)/10)])
+    #best_guess = ten_guesses[np.abs(ten_guesses).argmin()]
+    
+    x_rough, r = bisect(offset_cdf_truncnorm, a, b, args=(mu,sig,a,b,rnd),full_output=True,rtol=0.05)
+    r = root_scalar(offset_cdf_truncnorm_newton, args=(mu,sig,a,b,rnd), method="newton",x0=x_rough,fprime=True)
+    if r.converged:
+        x = r.root
+    else:
+        x, r = bisect(offset_cdf_truncnorm, a, b, args=(mu,sig,a,b,rnd),full_output=True)
+    
+    
     if r.converged:
         return inverse_transform_fit(x,maxval,minval)
     else:

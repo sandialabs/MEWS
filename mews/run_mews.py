@@ -791,7 +791,7 @@ if __name__ == "__main__":
     
     # This runs in several hours and is too long for making into a unit test
     #input_file = os.path.join(os.path.dirname(__file__),"..","examples","mews_input_example.txt")
-    results = extreme_temperature(run_dict,only_generate_files=[ 
+    results = extreme_temperature(run_dict,run_dict_var={"example_dir":example_dir},only_generate_files=[ 
                                                                 'LasVegas',
                                                                 'LosAngeles',
                                                                 'SanFrancisco',
@@ -811,5 +811,5 @@ if __name__ == "__main__":
                                                                                         "Minneapolis",
                                                                                         "Phoenix",
                                                                                         'Miami'])
-    pkl.dump([results], open(example_dir,"example_data","STBE_study_results.pkl",'wb'))
+    pkl.dump([results], open(os.path.join(example_dir,"example_data","STBE_study_results.pkl"),'wb'))
     

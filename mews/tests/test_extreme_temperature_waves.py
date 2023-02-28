@@ -737,12 +737,4 @@ if __name__ == "__main__":
         
     o = unittest.main(Test_ExtremeTemperatureWaves())
     
-    if profile:
 
-        pr.disable()
-        s = io.StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
-        ps.print_stats()
-        
-        with open('extremetemperaturewaves_test_profile.txt', 'w+') as f:
-            f.write(s.getvalue())

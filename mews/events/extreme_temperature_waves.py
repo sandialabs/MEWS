@@ -483,7 +483,7 @@ class ExtremeTemperatureWaves(Extremes):
                        # evaluating the model 8 times to get different actual
                        # shift results.
         
-        
+        cancel_run = False
         fname = filename+"final_solution_{0:d}_{1}_{2}.txt".format(syear,scen,cii)
         if (os.path.exists(fname) and not overwrite):
             return None, None
@@ -526,104 +526,109 @@ class ExtremeTemperatureWaves(Extremes):
                                                         cold_snap_shift=cold_snap_shift,
                                                         solution_file=historic_solution)
         
-        obj2_iter_prev = deepcopy(obj2)
-        # These are an initial guess with positive value to represent stepping forward.
-        month_factors = [1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0,
-                         1.0]
+        if result[syear] is None:
+            cancel_run = True
+            return result,fname,cancel_run
+        else:
         
-        temp_new_solution_name = "iterate_{0}_{1}_{2}.txt".format(str(scen),str(syear),str(cii))
-        
-        error_more_than_1_percent = True
-        max_iter = 5
-        iter_ = 0
+            obj2_iter_prev = deepcopy(obj2)
+            # These are an initial guess with positive value to represent stepping forward.
+            month_factors = [1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0,
+                             1.0]
+            
+            temp_new_solution_name = "iterate_{0}_{1}_{2}.txt".format(str(scen),str(syear),str(cii))
+            
+            error_more_than_1_percent = True
+            max_iter = 5
+            iter_ = 0
+    
+            while error_more_than_1_percent:
+                # historical is just the previous iteration
+                
+                # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
+                # This writes a solution file used by the next create_scenario command
+                # calculate_shift always goes to the historic average
+                _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii,temp_new_solution_name)
+                
+                
+                result = obj2.create_scenario(scenario_name=scen,
+                                                                year=syear,
+                                                                climate_temp_func=scen_dict,
+                                                                num_realization=1,
+                                                                climate_baseyear=2014,
+                                                                increase_factor_ci=cii,
+                                                                cold_snap_shift=cold_snap_shift,
+                                                                solution_file=os.path.join(sol_dir,temp_new_solution_name))
+                
+                # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
+                # variation.
+                new_month_factors = []
+                for month in np.arange(1,13):
+                    # h_thresh is the previous iteration's solution (first time through its the historical solution)
+                    h_thresh = [obj2_iter_prev.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[case+1]['hw']
+                                for case in range(num_cases)]
+                    # next iteration.
+                    f_thresh = [obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
+                                for case in range(num_cases)]
+                    
+                    h_gap = np.array([0.5*((h_thresh[case]['target'][0] - h_thresh[case]['actual'][0]) 
+                                           + (h_thresh[case]['target'][1] - h_thresh[case]['actual'][1]))
+                                      for case in range(num_cases)]).mean()
+                    f_gap = np.array([0.5*((f_thresh[case]['target'][0] - f_thresh[case]['actual'][0]) 
+                                           + (f_thresh[case]['target'][1] - f_thresh[case]['actual'][1]))
+                                      for case in range(num_cases)]).mean()
+                    
+                    new_month_factors.append(month_factors[month-1] * h_gap / (h_gap - f_gap))
+                    
+                max_percent_error = np.abs(100*(np.array(new_month_factors) - np.array(month_factors))/np.array(month_factors)).max()
+                #print("\n\n")
+                #print("max_percent_error: {0:5.2f}".format(max_percent_error))
+                #print("f_gap: {0:5.2f}".format(f_gap))
+    
+                if iter_ > max_iter:
+                    error_more_than_1_percent = False
+                elif max_percent_error < 1.0:
+                    error_more_than_1_percent = False
+                else:
+                    iter_ += 1
+                    
+                month_factors = new_month_factors
+            
+            
+            obj2.write_solution(os.path.join(sol_dir,fname))
+            
+            # remove the temporary file
+            if os.path.exists(os.path.join(sol_dir,temp_new_solution_name)):
+                os.remove(os.path.join(sol_dir,temp_new_solution_name))
+            
+            if 'future' in obj2.solve_options:
+                if 'num_postprocess' in obj2.solve_options['future']:
+                    org_num_postprocess = obj2.solve_options['future']['num_postprocess']
+                if 'plot_results' in obj2.solve_options['future']:
+                    org_plot_results = obj2.solve_options['future']['plot_results']
+            
+            # restore original solve options
+            if 'future' in obj2.solve_options:
+                if 'num_postprocess' in obj2.solve_options['future']:
+                    if "org_num_postprocess" in locals():
+                        obj2.solve_options['future']['num_postprocess'] = org_num_postprocess 
+                if 'plot_results' in obj2.solve_options['future']:
+                    if "org_plot_results" in locals():
+                        obj2.solve_options['future']['plot_results'] = org_plot_results 
 
-        while error_more_than_1_percent:
-            # historical is just the previous iteration
+            obj2._write_results = org_write_results
             
-            # TAKE A CALCULATED SHIFT THAT HAS LINEAR VARIATION
-            # This writes a solution file used by the next create_scenario command
-            # calculate_shift always goes to the historic average
-            _calculate_shift(obj2,historic_solution,month_factors,sol_dir,cii,temp_new_solution_name)
-            
-            
-            result = obj2.create_scenario(scenario_name=scen,
-                                                            year=syear,
-                                                            climate_temp_func=scen_dict,
-                                                            num_realization=1,
-                                                            climate_baseyear=2014,
-                                                            increase_factor_ci=cii,
-                                                            cold_snap_shift=cold_snap_shift,
-                                                            solution_file=os.path.join(sol_dir,temp_new_solution_name))
-            
-            # calculate the sensitivity and then new month factors that will produce an exact solution on the linear
-            # variation.
-            new_month_factors = []
-            for month in np.arange(1,13):
-                # h_thresh is the previous iteration's solution (first time through its the historical solution)
-                h_thresh = [obj2_iter_prev.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[case+1]['hw']
-                            for case in range(num_cases)]
-                # next iteration.
-                f_thresh = [obj2.future_solve_obj[scen][cii][syear][month].obj_solve.thresholds[1]['hw']
-                            for case in range(num_cases)]
-                
-                h_gap = np.array([0.5*((h_thresh[case]['target'][0] - h_thresh[case]['actual'][0]) 
-                                       + (h_thresh[case]['target'][1] - h_thresh[case]['actual'][1]))
-                                  for case in range(num_cases)]).mean()
-                f_gap = np.array([0.5*((f_thresh[case]['target'][0] - f_thresh[case]['actual'][0]) 
-                                       + (f_thresh[case]['target'][1] - f_thresh[case]['actual'][1]))
-                                  for case in range(num_cases)]).mean()
-                
-                new_month_factors.append(month_factors[month-1] * h_gap / (h_gap - f_gap))
-                
-            max_percent_error = np.abs(100*(np.array(new_month_factors) - np.array(month_factors))/np.array(month_factors)).max()
-            #print("\n\n")
-            #print("max_percent_error: {0:5.2f}".format(max_percent_error))
-            #print("f_gap: {0:5.2f}".format(f_gap))
-
-            if iter_ > max_iter:
-                error_more_than_1_percent = False
-            elif max_percent_error < 1.0:
-                error_more_than_1_percent = False
-            else:
-                iter_ += 1
-                
-            month_factors = new_month_factors
-        
-        
-        obj2.write_solution(os.path.join(sol_dir,fname))
-        
-        # remove the temporary file
-        if os.path.exists(os.path.join(sol_dir,temp_new_solution_name)):
-            os.remove(os.path.join(sol_dir,temp_new_solution_name))
-        
-        if 'future' in obj2.solve_options:
-            if 'num_postprocess' in obj2.solve_options['future']:
-                org_num_postprocess = obj2.solve_options['future']['num_postprocess']
-            if 'plot_results' in obj2.solve_options['future']:
-                org_plot_results = obj2.solve_options['future']['plot_results']
-        
-        # restore original solve options
-        if 'future' in obj2.solve_options:
-            if 'num_postprocess' in obj2.solve_options['future']:
-                if "org_num_postprocess" in locals():
-                    obj2.solve_options['future']['num_postprocess'] = org_num_postprocess 
-            if 'plot_results' in obj2.solve_options['future']:
-                if "org_plot_results" in locals():
-                    obj2.solve_options['future']['plot_results'] = org_plot_results 
-
-        obj2._write_results = org_write_results
-        
-        return result,fname
+        return result,fname,cancel_run
         
     
     
@@ -707,6 +712,7 @@ class ExtremeTemperatureWaves(Extremes):
         results = {}
 
         filenames=[]
+        run_canceled = []
         if self._create_scenario_has_been_run:
             raise ValueError("This function cannot be run if create_scenario "+
                              " has overwritten the historic solution on "+
@@ -742,8 +748,9 @@ class ExtremeTemperatureWaves(Extremes):
                         results[syear][scen][cii] = pool.apply_async(self._parallel_create_solution_func,
                                                           args=tup)
                     else:
-                        results[syear][scen][cii],fname = self._parallel_create_solution_func(*tup)
+                        results[syear][scen][cii],fname,cancel_run = self._parallel_create_solution_func(*tup)
                         filenames.append(fname)
+                        run_canceled.append(cancel_run)
                     
         if run_parallel:
             presults = {}
@@ -754,14 +761,16 @@ class ExtremeTemperatureWaves(Extremes):
                     for cii in ci_intervals:
                         poolObj = results[syear][scen][cii]
                         try:
-                            presults[syear][scen][cii],fname = poolObj.get()
+                            presults[syear][scen][cii],fname,cancel_run = poolObj.get()
                             filenames.append(fname)
+                            run_canceled.append(cancel_run)
                         except AttributeError:
                             raise AttributeError("The multiprocessing module will not"
                                                  +" handle lambda functions or any"
                                                  +" other locally defined functions!")
 
-
+        # TODO - add run_canceled to output. Avoiding this for version 1.1 
+        # so that interfaces do not change.
         return results,filenames
         
     def create_scenario(self,scenario_name,year,climate_temp_func,
@@ -894,10 +903,12 @@ class ExtremeTemperatureWaves(Extremes):
 
         # If you are using a solution_file, then self.stats is changed
         # by the function the "delta" and "del" values below will be zero.
+
         (transition_matrix, 
          transition_matrix_delta,
          del_E_dist,
-         del_delTmax_dist) = self._create_transition_matrix_dict(self.stats,
+         del_delTmax_dist,
+         cancel_run) = self._create_transition_matrix_dict(self.stats,
                                                                  climate_temp_func,
                                                                  year,
                                                                  climate_baseyear,
@@ -905,56 +916,61 @@ class ExtremeTemperatureWaves(Extremes):
                                                                  increase_factor_ci, 
                                                                  cold_snap_shift,
                                                                  solution_file)
-
-        if self.use_global == False:
-            base_year = climate_baseyear
+                                                           
+        if cancel_run:
+            results_dict[year] = None
+            ext_obj_dict[year] = None
+            self._verification_data[year] = None
         else:
-            base_year = None
-                                                 
-        # now initiate use of the Extremes class to unfold the process
-        ext_obj_dict[year] = super().__init__(year,
-                 {'func':trunc_norm_dist, 'param':self.stats['heat wave']},
-                 del_delTmax_dist,
-                 {'func':trunc_norm_dist, 'param':self.stats['cold snap']},
-                 None,
-                 transition_matrix,
-                 transition_matrix_delta,
-                 self._weather_files,
-                 num_realizations=num_realization,
-                 num_repeat=1,
-                 use_cython=True,
-                 column='Dry Bulb Temperature',
-                 tzname=None,
-                 write_results=self._write_results,
-                 results_folder=self._results_folder,
-                 results_append_to_name=scenario_name,
-                 run_parallel=self._run_parallel,
-                 min_steps=HOURS_IN_DAY,
-                 test_shape_func=False,
-                 doe2_input=self._doe2_input,
-                 random_seed=self._random_seed,
-                 max_E_dist={'func':trunc_norm_dist,'param':self.stats['heat wave']},
-                 del_max_E_dist=del_E_dist,
-                 min_E_dist={'func':trunc_norm_dist,'param':self.stats['cold snap']},
-                 del_min_E_dist=None,
-                 current_year=int(year),
-                 climate_temp_func=climate_temp_func[scenario_name],
-                 averaging_steps=HOURS_IN_DAY,
-                 use_global=self.use_global,
-                 baseline_year=base_year,
-                 norms_hourly=self.df_norms_hourly,
-                 num_cpu=self._num_cpu,
-                 test_markov=self._test_markov,
-                 confidence_interval=increase_factor_ci)
-        results_dict[year] = self.results
-    
-        self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
-        # this is happening 
-        self._verification_data[year] = self._delTmax_verification_data
             
-            
-        self.extreme_results[scenario_name][increase_factor_ci] = results_dict
+            if self.use_global == False:
+                base_year = climate_baseyear
+            else:
+                base_year = None
+                                                     
+            # now initiate use of the Extremes class to unfold the process
+            ext_obj_dict[year] = super().__init__(year,
+                     {'func':trunc_norm_dist, 'param':self.stats['heat wave']},
+                     del_delTmax_dist,
+                     {'func':trunc_norm_dist, 'param':self.stats['cold snap']},
+                     None,
+                     transition_matrix,
+                     transition_matrix_delta,
+                     self._weather_files,
+                     num_realizations=num_realization,
+                     num_repeat=1,
+                     use_cython=True,
+                     column='Dry Bulb Temperature',
+                     tzname=None,
+                     write_results=self._write_results,
+                     results_folder=self._results_folder,
+                     results_append_to_name=scenario_name,
+                     run_parallel=self._run_parallel,
+                     min_steps=HOURS_IN_DAY,
+                     test_shape_func=False,
+                     doe2_input=self._doe2_input,
+                     random_seed=self._random_seed,
+                     max_E_dist={'func':trunc_norm_dist,'param':self.stats['heat wave']},
+                     del_max_E_dist=del_E_dist,
+                     min_E_dist={'func':trunc_norm_dist,'param':self.stats['cold snap']},
+                     del_min_E_dist=None,
+                     current_year=int(year),
+                     climate_temp_func=climate_temp_func[scenario_name],
+                     averaging_steps=HOURS_IN_DAY,
+                     use_global=self.use_global,
+                     baseline_year=base_year,
+                     norms_hourly=self.df_norms_hourly,
+                     num_cpu=self._num_cpu,
+                     test_markov=self._test_markov,
+                     confidence_interval=increase_factor_ci)
+            results_dict[year] = self.results
         
+            self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
+            # this is happening 
+            self._verification_data[year] = self._delTmax_verification_data
+                
+                
+        self.extreme_results[scenario_name][increase_factor_ci] = results_dict
         self.ext_obj[scenario_name] = ext_obj_dict
         self._create_scenario_has_been_run = True
 
@@ -1298,6 +1314,7 @@ class ExtremeTemperatureWaves(Extremes):
         transition_matrix_delta = {}
         del_E_dist = {}
         del_delTmax_dist = {}
+        cancel_run = False
         
         # This simply allows the user to evaluate a solution 
         # and overrides performing an optimization
@@ -1419,6 +1436,8 @@ class ExtremeTemperatureWaves(Extremes):
                 del_E_dist[month] = obj.del_E_dist
                 del_delTmax_dist[month] = obj.del_delTmax_dist
                 self.ipcc_results['ipcc_fact'][month] = obj.ipcc_fact
+            else:
+                cancel_run = True
                 
             # IMPORTANT! - THIS IS HOW CHANGES ARE TRANSFERRED WHEN USING
             # The solution file!
@@ -1429,7 +1448,8 @@ class ExtremeTemperatureWaves(Extremes):
         return (transition_matrix,
                 transition_matrix_delta,
                 del_E_dist,
-                del_delTmax_dist)
+                del_delTmax_dist,
+                cancel_run)
         
     
     def _read_and_curate_NOAA_data(self,station,year,unit_conversion,norms_unit_conversion,use_local=False):
@@ -2422,7 +2442,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
         except ValueError as excep:
             cancel_run = True
             warn("A value error occured when trying to interpolate the ipcc table.!\n\n Traceback:\n\n" + 
-                 traceback.print_stack() + "\n\n" + str(excep))
+                 str(traceback.print_stack()) + "\n\n" + str(excep))
         except Exception as excep:
             raise excep
         

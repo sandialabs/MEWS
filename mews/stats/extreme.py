@@ -811,16 +811,18 @@ class Extremes():
             if not isinstance(dict_e,dict) and not dict_e is None:
                 incorrect_type += 1
             else:
-                if not dict_e is None:
+                if not dict_e is None and len(dict_e) > 0:
                     dict_found=True
                     if 'func' in dict_e.keys():
                         dict_e2 = dict_e['param']
                     else:
                         dict_e2 = dict_e
                     
-                    if list(dict_e2.keys()) != [1,2,3,4,5,6,7,8,9,10,11,12]:
-                        breakpoint()
-                        raise ValueError("All dictionary inputs must have an entry for every month!")
+                    month_list = [1,2,3,4,5,6,7,8,9,10,11,12]
+                    if list(dict_e2.keys()) != month_list:
+                        raise ValueError("All dictionary inputs must have an entry for every month!" +
+                                         "The following entries must be present:\n\n "+str(month_list) +
+                                         "\n\nThe following are in the dict_e2 variable:\n\n " + str(dict_e2.keys()))
         
         
         if incorrect_type > 0 and incorrect_type != 6:

@@ -86,7 +86,10 @@ def evaluate_temperature(durations, param, del_mu_T, del_sig_T, rng, wave_type):
 
     min_boundary = transform_fit(pval['minval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
     max_boundary = transform_fit(pval['maxval_T'],pval['hist_minval_T'],pval['hist_maxval_T'])
+    
 
+    # TODO - this needs to get vectorized or you need a cython root finder 
+    # to do the heavy lifting on this.
     T_per_durations = np.array([trunc_norm_dist(rand,
                                                 pval['mu_T'] + del_mu_T,
                                                 pval['sig_T'] + del_sig_T,
