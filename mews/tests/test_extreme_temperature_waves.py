@@ -64,7 +64,10 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         erase_me_file_path = os.path.join(
             cls.test_weather_path, "erase_me_file.epw")
         if os.path.exists(erase_me_file_path):
-            os.remove(erase_me_file_path)
+            try:
+                os.remove(erase_me_file_path)
+            except:
+                pass
             
         cls.test_weather_file_path = os.path.join(".",
                                                   cls.test_weather_path,
@@ -106,9 +109,15 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         
         for name in os.listdir(file_dir):
             if "_future_month_" in name or "_historic_month_" in name:
-                os.remove(os.path.join(file_dir,name))
+                try:
+                    os.remove(os.path.join(file_dir,name))
+                except:
+                    pass
             elif ".log" in name or ".csv" in name or ".txt" in name or ".png" in name:
-                os.remove(os.path.join(file_dir,name))
+                try:
+                    os.remove(os.path.join(file_dir,name))
+                except:
+                    pass
                 
                 
         if os.path.exists(os.path.join(".", "mews_results")):
@@ -611,7 +620,9 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
                                           use_local=True, run_parallel=True,use_global=True,
                                           write_results=False,solve_options=solve_options,test_markov=True)
-            
+            if not os.path.exists("temp_out"):
+                os.mkdir("temp_out")
+                
             obj.write_solution(os.path.join("temp_out","test_solution_file.txt"))
             
             new_stats = obj.read_solution(os.path.join("temp_out","test_solution_file.txt"))
@@ -709,7 +720,10 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             
             self.assertTrue(len(filenames)==1)
             self.assertTrue(os.path.exists(os.path.join(os.path.dirname(historical_solution),filenames[0])))
-            os.remove(os.path.join(os.path.dirname(historical_solution),filenames[0]))
+            try:
+                os.remove(os.path.join(os.path.dirname(historical_solution),filenames[0]))
+            except:
+                pass
 
         else:
             warnings.warn("The test_create_solutions unittest was not run because it is turned off!")

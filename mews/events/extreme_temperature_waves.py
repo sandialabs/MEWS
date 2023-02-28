@@ -2227,7 +2227,12 @@ class ExtremeTemperatureWaves(Extremes):
         axl[0].set_title(title_string)
         axl[-1].set_xlabel("Month")
         
-        plt.tight_layout()
+        try:
+            #This can cause a latex error in certain cases if latex cannot install
+            # new packages
+            plt.tight_layout()
+        except:
+            pass
         plt.savefig(title_string+"_monthly_MEWS_parameter_results.png",dpi=1000)
         
     
