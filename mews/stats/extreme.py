@@ -39,6 +39,7 @@ from datetime import datetime
 from mews.utilities.utilities import filter_cpu_count
 from mews.utilities.utilities import find_extreme_intervals
 from copy import deepcopy
+from warnings import warn
 
 
 def _transform_fit_sup(value,maxval,minval):
@@ -1057,6 +1058,8 @@ class Extremes():
                 ctf = climate_temp_func(year - self.baseline_year)
             objA.add_alteration(year,1,1,1,num_step,ctf,np.ones(num_step),
                                 alteration_name="global temperature trend")
+            # added 4/5/2023
+            self._add_to_ground_temperatures(ctf,objA)
                 
                 
         if write_results:
@@ -1086,6 +1089,68 @@ class Extremes():
                               txt2bin_exepath=doe2_in['txt2bin_exepath'])
             self.wfile_names.append(new_wfile_name)
         return objA,objDM_dict
+    
+    
+    def _add_to_ground_temperatures(self, air_temp_change, alter_obj):
+        """
+        
+        See https://bigladdersoftware.com/epx/docs/8-2/auxiliary-programs/energyplus-weather-file-epw-data-dictionary.html
+        
+        for specification of the ground temperatures field
+        
+        There can be several depths of ground temperature measurements.
+        
+        We assume all of them elevate by the rise in average air temperature.
+        
+        This is a broad assumption that could be a function of many issues
+        
+        Including land-coverage changes. Changes to cloud cover etc....
+        
+        
+        """
+        if "epwobj" in dir(alter_obj):
+            # assure case insensitivity
+            capitalized_headers = {header.upper():header for header in alter_obj.epwobj.headers}
+            if "GROUND TEMPERATURES" in capitalized_headers:
+                ground_temps = alter_obj.epwobj.headers[
+                        capitalized_headers["GROUND TEMPERATURES"]]
+
+                new_ground_temps = self._ground_temp_data_dictionary_unfold(ground_temps,air_temp_change)
+
+                alter_obj.epwobj.headers[capitalized_headers["GROUND TEMPERATURES"]] = new_ground_temps
+                
+                msg = ("This epw file's dry bulb and ground temperatures have been altered "+
+                "by the multi-scenario extreme weather simulator https://github.com/sandialabs/MEWS")
+               
+                if "COMMENTS 2" in capitalized_headers:
+                    alter_obj.epwobj.headers[capitalized_headers["COMMENTS 2"]].append(
+                        msg)
+                else:
+                    alter_obj.epwobj.headers["COMMENTS 2"] = msg
+                
+            else:
+                warn("Ground temperatures were not present in the epw headers and have not been changed!")
+        else:
+            raise AttributeError("The Extreme class object does not yet have an epwobj read in!")
+        pass
+    
+    def _ground_temp_data_dictionary_unfold(self,ground_temps,air_temp_change):
+        idl = 0
+
+        new_ground_temps = []
+        new_ground_temps.append(ground_temps[0])
+        for idx, gtemp in enumerate(ground_temps[1:]):
+
+            if idx > 0 and idl > 3:
+                new_ground_temps.append("{0:5.2f}".format(float(gtemp) + air_temp_change))   
+            else:
+                new_ground_temps.append(gtemp)
+            if np.mod(idx+1,16)==0:
+                idl = 0
+            else:
+                idl += 1
+                
+        return new_ground_temps
     
     def _DOE2Alter(self,wfile,year,doe2_in):
         if not isinstance(doe2_in,dict):
