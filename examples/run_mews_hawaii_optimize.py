@@ -27,7 +27,7 @@ example_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 # The "only1file.dict" has the number of files to generate per case reduced to 1
 # use the "mews_run.dict" for a version that generate 200. You can change the input
 # to any value you want depending on how many files are needed.
-run_dict_file_path = os.path.join(os.path.dirname(__file__),"example_data","mews_run_only1file.dict")
+run_dict_file_path = os.path.join(os.path.dirname(__file__),"example_data","mews_run.dict")
 
 # ONLY SET TO TRUE IF YOU WANT TO SEE HOW LONG DIFFERENT FUNCTIONS IN MEWS TAKE
 profile = False
@@ -64,7 +64,9 @@ This is the way to run mews. All the names available are
     'Fairbanks',
     'McAllen',
     'Kodiak',
-    'Worcester'
+    'Worcester',
+    'HuiOHauula',
+    'Honolulu'
 
 Any setting for Chicago applies for every city unless a command is repeated with 
 a new value. Some of the cities have to repeat different variables because of 
@@ -78,7 +80,7 @@ in a matter of hours, then you only need to )
 """
 
 results = extreme_temperature(run_dict=run_dict_file_path,
-                              only_generate_files=[],
+                              only_generate_files=["HuiOHauula"],
                               skip_runs=["Chicago",
                                          "Baltimore",
                                          "Minneapolis",
@@ -97,8 +99,10 @@ results = extreme_temperature(run_dict=run_dict_file_path,
                                          'McAllen',
                                          'Kodiak',
                                          'Worcester',
-                                         'Houston'],num_cpu=1, run_parallel=False,
-                              run_dict_var={"example_dir":example_dir})
+                                         'Houston',
+                                         'Honolulu'],num_cpu=1, run_parallel=False,
+                              run_dict_var={"example_dir":example_dir},
+                              overwrite_existing=False)
 if profile:
 
     pr.disable()

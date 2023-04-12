@@ -337,6 +337,11 @@ class ExtremeTemperatureWaves(Extremes):
         problem that takes significant computational resources so that
         MEWS can implement a solution already computed quickly
         
+    overwrite_existing : bool : optional : Default = True
+       If epw or bin files are being written, designate if existing files
+       will be overwritten. This is useful if MEWS only creates some 
+       of a large number of requested files.
+        
     Returns
     -------
     None
@@ -366,10 +371,12 @@ class ExtremeTemperatureWaves(Extremes):
                  write_results=True,
                  test_markov=False,
                  solve_options=None,
-                 solution_file=""):
+                 solution_file="",
+                 overwrite_existing=True):
         
         self._config_latex()
-
+        self._overwrite_existing = overwrite_existing
+        
         # This does the baseline heat wave analysis on historical data
         # "create_scenario" moves this into the future for a specific scenario
         # and confidence interval factor.
@@ -927,7 +934,11 @@ class ExtremeTemperatureWaves(Extremes):
                 base_year = climate_baseyear
             else:
                 base_year = None
-                                                     
+            
+            if hasattr(self,"_DO_NOT_RERUN_PARALLEL_"):
+                old_run_parallel = self._run_parallel
+                self._run_parallel = False
+                
             # now initiate use of the Extremes class to unfold the process
             ext_obj_dict[year] = super().__init__(year,
                      {'func':trunc_norm_dist, 'param':self.stats['heat wave']},
@@ -962,8 +973,12 @@ class ExtremeTemperatureWaves(Extremes):
                      norms_hourly=self.df_norms_hourly,
                      num_cpu=self._num_cpu,
                      test_markov=self._test_markov,
-                     confidence_interval=increase_factor_ci)
+                     confidence_interval=increase_factor_ci,
+                     overwrite_existing=self._overwrite_existing)
             results_dict[year] = self.results
+            
+            if hasattr(self,"_DO_NOT_RERUN_PARALLEL_"):
+                self._run_parallel = old_run_parallel
         
             self.extreme_delstats[scenario_name][increase_factor_ci][year] = {"E":del_E_dist,"delT":del_delTmax_dist}
             # this is happening 
@@ -1901,6 +1916,15 @@ class ExtremeTemperatureWaves(Extremes):
                 extreme_temp = np.array([(df_wm.iloc[waves_cur[idx],:]["TMAX"]-df_wm.iloc[waves_cur[idx],:]["TAVG_B"]).max() for idx in range(len(waves_cur))])
             else:
                 extreme_temp = np.array([(df_wm.iloc[waves_cur[idx],:]["TMIN"]-df_wm.iloc[waves_cur[idx],:]["TAVG_B"]).min() for idx in range(len(waves_cur))])
+            
+            if np.isnan(extreme_temp.sum()):
+                # No Nan allowed during heat waves! throw error, the data needs to be fixed manually!
+                isna_idx = [idx for idx, bool_ in enumerate(np.isnan(extreme_temp)) if bool_]
+                
+                raise ValueError("The daily summaries has a data gap during an extreme temperature event!\n" +
+                                 "\n" +
+                                 "The following dates are NaN values and must be filled manually for MEWS to work:\n\n"+
+                                 str([df_wm.iloc[waves_cur[idx],:].index for idx in isna_idx]))
             
             # This produces negative energy for cold snaps and positive energy for heat waves.
             wave_energy = np.array([((df_wm.iloc[waves_cur[idx],:]["TMAX"] 

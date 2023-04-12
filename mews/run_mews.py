@@ -29,7 +29,9 @@ from numpy import poly1d
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
 from mews.utilities.utilities import (bin_avg, read_readable_python_dict, 
-                                      create_smirnov_table, write_readable_python_dict)
+                                      create_smirnov_table, 
+                                      write_readable_python_dict,
+                                      create_output_weather_file_name)
 from mews.constants.data_format import (VALID_RUN_MEWS_ENTRIES, 
                                         REQUIRED_STRING, 
                                         TEMPLATE_ID_STRING,
@@ -164,6 +166,10 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
         a dictionary containing keys for climate scenarios with numpy.poly1d
         values that represent a polynomial for the average of the cmip6 ensemble
         specified for the mews run.
+    run_parallel : bool 
+        indicates whether to run parallel
+    num_cpu: int
+        number of cpus to run parallel with
 
     Returns
     -------
@@ -174,36 +180,56 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
     This function creates EnergyPlus files in output_dir
 
     """
-    
+    overwrite_existing = obj._overwrite_existing
     if run_parallel:
+        obj._DO_NOT_RERUN_PARALLEL_ = True
         import multiprocessing as mp
         pool = mp.Pool(num_cpu)
     
     results = {}
     for file in solution_files:
-
+        
+        num_w_file = len(obj._weather_files)
+        wfiles = obj._weather_files
+        
         brstr = file.split(".")[0].split("_")
         
         year = int(brstr[-3])
         scen_name = brstr[-2]
         cii = brstr[-1]
-
-        args = (scen_name,
-                year,
-                scen_dict,
-                num_files_per_solution,
-                2014,
-                cii,
-                None,
-                os.path.join(solution_path,file),
-                random_seed,
-                output_dir)
         
-        if run_parallel:
-            results[file] = pool.apply_async(obj.create_scenario,
-                                             args=args)
-        else:
-            obj.create_scenario(*args)
+        for wfile in wfiles:
+            obj._weather_files = [wfile]
+            
+            final_file_name = create_output_weather_file_name(os.path.basename(wfile),
+                                            scen_name,
+                                            year,
+                                            cii,num_files_per_solution-1)
+
+            if os.path.exists(final_file_name) and not overwrite_existing:
+                continue
+            else:            
+                args = (scen_name,
+                        year,
+                        scen_dict,
+                        num_files_per_solution,
+                        2014,
+                        cii,
+                        None,
+                        os.path.join(solution_path,file),
+                        random_seed,
+                        output_dir)
+            
+            
+            
+                if run_parallel:
+                    results[file] = pool.apply_async(obj.create_scenario,
+                                                     args=args)
+                else:
+
+                    obj.create_scenario(*args)
+        obj._weather_files = wfiles
+            
 
     if run_parallel:
         results_get = {}
@@ -214,6 +240,9 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
                 raise AttributeError("The multiprocessing module will not"
                                      +" handle lambda functions or any"
                                      +" other locally defined functions!")
+            except Exception as e:
+                results_get[tup] = e
+                
         pool.close()
     else:
         results_get = results
@@ -228,15 +257,14 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
 def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1, 
                                  plot_results=True,generate_epw=True,proxy=None,
                                  abs_path_start="",only_generate_files=[],
-                                 skip_runs=[]):
+                                 skip_runs=[],
+                                 overwrite_existing=True):
 
     """
     This function Runs MEWS for a parameter study of daily summary stations
     either defined as a dictionary in python or else placed as text file
     with the dictionary text in it. The input is complex and is thoroughly
     documented below.
-    
-    This function will overwrite any prevous results
     
     Parameters
     ----------
@@ -384,6 +412,11 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
          Any run name in run_dict entered here will be completely skipped.
          This is useful if one run completed but another failed and you do 
          not want to have to reconfigure the input deck.
+         
+    overwrite_existing : bool : Default = True
+        Indicates whether to overwrite existing output from MEWS. This can
+        be useful when set to False to restart a run that stopped midway
+        through writing a large number of files. 
           
     Raises
     ------
@@ -496,7 +529,8 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
                                                   test_markov=False,
                                                   solve_options=solve_options, 
                                                   proxy=proxy,
-                                                  norms_unit_conversion=climate_normals_unit_conversion)
+                                                  norms_unit_conversion=climate_normals_unit_conversion,
+                                                  overwrite_existing=overwrite_existing)
                     
                     obj.write_solution(historic_solution_save_location)
         
@@ -513,6 +547,10 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
                     solution_files = ["final_solution_2020_SSP245_5%.txt","final_solution_2080_SSP245_50%.txt"]
                     alter_results = None       
                 else:
+                    #patch to assure historical scenario is not created as a solution. The 
+                    # polynomial does not apply to the future and will generate incorrect results.
+                    if "historical" in scenarios:
+                        scenarios.remove("historical")
                     alter_results,solution_files = obj.create_solutions(future_years, scenarios, 
                                                                    ci_intervals, 
                                                                    historic_solution_save_location, 
@@ -538,8 +576,10 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
                                               solve_options=solve_options, 
                                               proxy=proxy,
                                               norms_unit_conversion=climate_normals_unit_conversion,
-                                              solution_file=historic_solution_save_location)
-                solution_files = [file for file in os.listdir(sol_dir) if "final_solution_" in file]
+                                              solution_file=historic_solution_save_location,
+                                              overwrite_existing=overwrite_existing)
+                # TODO - fix this so namespace issues do not have lots of potential conflicts.
+                solution_files = [file for file in os.listdir(sol_dir) if "final_solution_" in file and "historical" not in file]
                 
                 smirnov_df = create_smirnov_table(obj, os.path.join(sol_dir,run_name + "_kolmogorov_smirnov_test_statistic.tex" ))
                 

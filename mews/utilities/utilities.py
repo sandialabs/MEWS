@@ -689,3 +689,12 @@ def quantify_event_errors_in_temperature(file_path,base_name,ssp,ci_,years):
     final_df = pd.DataFrame(data_table,index=pd.MultiIndex.from_tuples(multi_index), 
                             columns = pd.MultiIndex.from_tuples(multi_col))
     final_df.T.to_latex("future_temperature_errors.tex")
+
+def create_output_weather_file_name(wfile,scenario_name,year,
+                                    confidence_interval,realization_num):
+    return (os.path.basename(wfile)[:-4] 
+                     + scenario_name 
+                     + "_{0:d}".format(year)
+                     + "_{0}".format(confidence_interval)
+                     + "_r{0:d}".format(realization_num)
+                     + wfile[-4:])

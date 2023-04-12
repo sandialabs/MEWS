@@ -37,3 +37,6 @@ class ExtremesIntegrationError(Exception):
 
 class MEWSInputTemplateError(ValueError):
     pass
+
+class EnergyPlusRunFailed(Exception):
+    pass
