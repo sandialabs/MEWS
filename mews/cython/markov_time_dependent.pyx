@@ -51,7 +51,7 @@ from math import exp
 
 
 
-DTYPE = np.float
+DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
 
 cpdef DTYPE_t exponential_decay(DTYPE_t time_in_state,
