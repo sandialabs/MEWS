@@ -61,7 +61,6 @@ class Test_Run_EnergyPlus(unittest.TestCase):
                              self.out_path,
                              restart = True,
                              run_parallel = False)
-            breakpoint()
             # This should not reconduct the study.
             obj_run_ep = RunEnergyPlusStudy(epws_path,
                              idfs_path,

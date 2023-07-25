@@ -42,6 +42,7 @@ from mews.errors.exceptions import MEWSInputTemplateError
 from mews.utilities.utilities import filter_cpu_count
 import pickle as pkl
 import pandas as pd
+import logging as log
 
 
 def _check_and_arrange_run_dict_inputs(run_dict):
@@ -201,33 +202,33 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
         for wfile in wfiles:
             obj._weather_files = [wfile]
             
-            final_file_name = create_output_weather_file_name(os.path.basename(wfile),
-                                            scen_name,
-                                            year,
-                                            cii,num_files_per_solution-1)
+            # final_file_name = create_output_weather_file_name(os.path.basename(wfile),
+            #                                 scen_name,
+            #                                 year,
+            #                                 cii,num_files_per_solution-1)
 
-            if os.path.exists(final_file_name) and not overwrite_existing:
-                continue
-            else:            
-                args = (scen_name,
-                        year,
-                        scen_dict,
-                        num_files_per_solution,
-                        2014,
-                        cii,
-                        None,
-                        os.path.join(solution_path,file),
-                        random_seed,
-                        output_dir)
-            
-            
-            
-                if run_parallel:
-                    results[file] = pool.apply_async(obj.create_scenario,
-                                                     args=args)
-                else:
+            # if os.path.exists(final_file_name) and not overwrite_existing:
+            #     continue
+            # else:            
+            args = (scen_name,
+                    year,
+                    scen_dict,
+                    num_files_per_solution,
+                    2014,
+                    cii,
+                    None,
+                    os.path.join(solution_path,file),
+                    random_seed,
+                    output_dir)
+        
+        
+        
+            if run_parallel:
+                results[file] = pool.apply_async(obj.create_scenario,
+                                                 args=args)
+            else:
 
-                    obj.create_scenario(*args)
+                obj.create_scenario(*args)
         obj._weather_files = wfiles
             
 
@@ -416,7 +417,9 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
     overwrite_existing : bool : Default = True
         Indicates whether to overwrite existing output from MEWS. This can
         be useful when set to False to restart a run that stopped midway
-        through writing a large number of files. 
+        through writing a large number of files. This only applies to 
+        epw files. Solution files will not be overwritten. The user must
+        delete them manually if a rerun is desired
           
     Raises
     ------
@@ -488,23 +491,27 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
                     tup = pkl.load(open("temp_cs_obj.pickle",'rb'))
                     cs_obj, scen_dict = tup
                 else:
-                    cs_obj = ClimateScenario(use_global=False,
-                                              lat=lat,
-                                              lon=lon,
-                                              end_year=future_years[-1],
-                                              output_folder=clim_scen_out_folder,
-                                              write_graphics_path=clim_scen_out_folder,
-                                              num_cpu=num_cpu,
-                                              run_parallel=run_parallel,
-                                              model_guide=cmip6_model_guide,
-                                              data_folder=cmip6_data_folder,
-                                              align_gcm_to_historical=True,
-                                              polynomial_order=polynomial_order,
-                                              proxy=proxy)
-                    
-                    
-                    scen_dict = cs_obj.calculate_coef(scenarios)
-                    write_readable_python_dict(scen_dict_name_path, scen_dict)
+                    if os.path.exists(scen_dict_name_path):
+                        scen_dict = read_readable_python_dict(scen_dict_name_path)
+                        cs_obj = None
+                    else:
+                        cs_obj = ClimateScenario(use_global=False,
+                                                  lat=lat,
+                                                  lon=lon,
+                                                  end_year=future_years[-1],
+                                                  output_folder=clim_scen_out_folder,
+                                                  write_graphics_path=clim_scen_out_folder,
+                                                  num_cpu=num_cpu,
+                                                  run_parallel=run_parallel,
+                                                  model_guide=cmip6_model_guide,
+                                                  data_folder=cmip6_data_folder,
+                                                  align_gcm_to_historical=True,
+                                                  polynomial_order=polynomial_order,
+                                                  proxy=proxy)
+                        
+                        
+                        scen_dict = cs_obj.calculate_coef(scenarios)
+                        write_readable_python_dict(scen_dict_name_path, scen_dict)
                     
                 """
                 STEP 2 FIT THE HISTORIC DATA. - This takes 6 hours on 60 processors!
@@ -515,7 +522,9 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
                     # For troubleshooting
                     obj = pkl.load(open("obj_pickle.pkl",'rb'))
                 else:
-                    obj = ExtremeTemperatureWaves(daily_and_norms_paths, 
+                    # only run the long historic solution if none exists.
+                    if not os.path.exists(historic_solution_save_location):
+                        obj = ExtremeTemperatureWaves(daily_and_norms_paths, 
                                                   weather_files, 
                                                   unit_conversion=daily_summaries_unit_conversion,
                                                   use_local=True, 
@@ -531,11 +540,26 @@ def extreme_temperature(run_dict, run_dict_var, run_parallel=True, num_cpu=-1,
                                                   proxy=proxy,
                                                   norms_unit_conversion=climate_normals_unit_conversion,
                                                   overwrite_existing=overwrite_existing)
-                    
-                    obj.write_solution(historic_solution_save_location)
-        
-                
-    
+                        obj.write_solution(historic_solution_save_location)
+                    else:
+                        # historic solution exists and you don't want to overwrite it
+                        obj = ExtremeTemperatureWaves(daily_and_norms_paths, 
+                                                      weather_files, 
+                                                      unit_conversion=daily_summaries_unit_conversion,
+                                                      use_local=True, 
+                                                      random_seed=random_seed,
+                                                      include_plots=plot_results,
+                                                      run_parallel=run_parallel, 
+                                                      use_global=False, 
+                                                      delT_ipcc_min_frac=1.0,
+                                                      num_cpu=num_cpu, 
+                                                      write_results=True, 
+                                                      test_markov=False,
+                                                      solve_options=solve_options, 
+                                                      proxy=proxy,
+                                                      norms_unit_conversion=climate_normals_unit_conversion,
+                                                      solution_file=historic_solution_save_location,
+                                                      overwrite_existing=overwrite_existing)
                 
                 smirnov_df = create_smirnov_table(obj, os.path.join(sol_dir,run_name + "_kolmogorov_smirnov_test_statistic.tex" ))
                     

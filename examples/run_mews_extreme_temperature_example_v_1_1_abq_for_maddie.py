@@ -76,6 +76,11 @@ the machines used so far), then do not include a city in neither of "skip_runs" 
 in a matter of hours, then you only need to ) 
 
 """
+
+import logging
+
+logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+
 # only albuquerque will run through the full analysis
 results = extreme_temperature(run_dict=run_dict_file_path,
                               only_generate_files=[],

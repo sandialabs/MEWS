@@ -1650,7 +1650,7 @@ class ExtremeTemperatureWaves(Extremes):
         df_norms = df_temp[1]
         
         # Assure no repeat dates are present. DAte gaps are addressed in _extend_boundary_df_to_daily_range.
-        for df_,dtype in zip([df_daily,df_norms],['daily summaries', 'climater norms']):
+        for df_,dtype in zip([df_daily,df_norms],['daily summaries', 'climate norms']):
         # assure no duplicate datres occur:
             first_duplicate_index = df_.index.duplicated().argmax()
             if first_duplicate_index != 0:

@@ -233,14 +233,14 @@ class RunEnergyPlusStudy(object):
                                                       wfile,
                                                       idf])
                     else:
-                        # Now let's run EP and ReadVarsESO to generate the CSV results  
+                        # Now let's run EP  
                         run_succeeded = self._execute_command([self.energyplus_path,"-d",out_path ,"-w", wfile, idf])
                         if not run_succeeded[0]:
-                            raise EnergyPlusRunFailed(run_succeeded[1])
+                            raise EnergyPlusRunFailed(run_succeeded[1]+" \n\nPath="+out_path)
                     
                 
             except Exception as excep:
-                warnings.warn("Energy plus failed to run successfully!")
+                warnings.warn("Energy plus failed to run successfully! Path="+out_path)
                 return excep
             
             try:
