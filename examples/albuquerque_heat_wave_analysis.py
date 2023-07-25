@@ -477,7 +477,7 @@ class FinalPostProcess(Input):
             row_list = []
             ind_list = []
             # drop timestamp or string columns
-            for name,col in df.iteritems():
+            for name,col in df.items():
                 if not 'float' in str(col.dtype): 
                     df.drop(name,axis=1,inplace=True)
             for var_name, var_df in df.groupby(level=0):

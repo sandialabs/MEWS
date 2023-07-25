@@ -780,7 +780,7 @@ class CMIP_Data(object):
             dataset = self.total_model_data[scenario].year_temp_dict[years[year_index]] - baseline
             mean_dataset = np.mean(dataset)
             delT = dataset + delT_at_baseline
-            lower_proj, upper_proj = st.t.interval(alpha=0.95, df=len(dataset)-1, loc=np.mean(dataset), scale=st.sem(dataset))
+            lower_proj, upper_proj = st.t.interval(confidence=0.95, df=len(dataset)-1, loc=np.mean(dataset), scale=st.sem(dataset))
             CI = upper_proj - mean_dataset
             self.total_model_data[scenario].CI_list[year_index] = CI
             self.total_model_data[scenario].avg_list[year_index] = mean_dataset

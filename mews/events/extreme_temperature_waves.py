@@ -2631,7 +2631,7 @@ class _DeltaTransition_IPCC_FigureSPM6():
         ipcc_val_10 = deepcopy(ipcc_val_10_u)
         ipcc_val_50 = deepcopy(ipcc_val_50_u)
         
-        for lab,val in ipcc_val_10_u.iteritems():
+        for lab,val in ipcc_val_10_u.items():
             if "Intensity" in lab:
                 if self.use_global:
                     ipcc_val_10[lab] = ipcc_val_10_u[lab] - ipcc_num.loc[0,lab]

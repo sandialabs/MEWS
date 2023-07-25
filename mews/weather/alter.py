@@ -133,7 +133,7 @@ class Alter(object):
                 indFeb28 = Feb28.index[-1]
                 sdict = {}
 
-                for name,col in Feb28.iteritems():
+                for name,col in Feb28.items():
                     col.index = np.arange(indFeb28+1,indFeb28+25)
                     sdict[name] = col
 
@@ -141,7 +141,7 @@ class Alter(object):
                 Feb29["Day"] = 29
                 
                 sdict = {}
-                for name,col in df.loc[indFeb28+1:].iteritems():
+                for name,col in df.loc[indFeb28+1:].items():
                     col.index = np.arange(indFeb28+25,
                                           indFeb28+25 + (df.index[-1] - indFeb28))
                     sdict[name] = col

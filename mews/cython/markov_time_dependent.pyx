@@ -190,16 +190,16 @@ cpdef DTYPE_t quadratic_times_exponential_decay_with_cutoff(DTYPE_t time_in_stat
     
 
 cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
-                                    np.int_t func_type,
+                                    np.int64_t func_type,
                                     np.ndarray[DTYPE_t, ndim=2] coef,
-                                    np.int_t idy,
+                                    np.int64_t idy,
                                     DTYPE_t time_in_state):
     
     cdef DTYPE_t one = 1.0
     cdef DTYPE_t func_eval = one
     cdef DTYPE_t P0 = one - cdf0[0]
     cdef np.ndarray[DTYPE_t, ndim=1] cdf1 = np.zeros(len(cdf0))
-    cdef np.int_t idym1 = idy - 1
+    cdef np.int64_t idym1 = idy - 1
     
     if time_in_state <= 0.0:
         return cdf0 # no change to the cdf
@@ -233,11 +233,11 @@ cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
     
     return cdf1
 
-cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_t, ndim=2] cdf, 
+cpdef np.ndarray[np.int64_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_t, ndim=2] cdf, 
                                                np.ndarray[DTYPE_t, ndim=1] rand, 
-                                               np.int_t state0,
+                                               np.int64_t state0,
                                                np.ndarray[DTYPE_t, ndim=2] coef,
-                                               np.ndarray[np.int_t, ndim=1] func_type):
+                                               np.ndarray[np.int64_t, ndim=1] func_type):
     
     """
     This function creates a Markov chain whose 2nd ... num row rows
@@ -312,16 +312,16 @@ cpdef np.ndarray[np.int_t, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_
     """
     # yy is the output sample of states.
     # assign initial values
-    cdef np.int_t num_step = len(rand)
-    cdef np.ndarray[np.int_t,ndim=1] yy = np.zeros(num_step,dtype=np.int)
+    cdef np.int64_t num_step = len(rand)
+    cdef np.ndarray[np.int64_t,ndim=1] yy = np.zeros(num_step,dtype=np.int64)
     
-    cdef np.int_t one = 1
-    cdef np.int_t num_state = cdf.shape[0]
-    cdef np.int_t idx
-    cdef np.int_t idy
-    cdef np.int_t idym1 = idy - one
+    cdef np.int64_t one = 1
+    cdef np.int64_t num_state = cdf.shape[0]
+    cdef np.int64_t idx
+    cdef np.int64_t idy
+    cdef np.int64_t idym1 = idy - one
 
-    cdef np.int_t step_in_cur_state
+    cdef np.int64_t step_in_cur_state
     cdef double[:] cdf_local
     
     # assign first value the initial value.
