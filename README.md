@@ -92,6 +92,8 @@ mews.weather.climate.ClimateScenario
 
 Using MEWS
 --------
+A training video has been made available at: https://drive.google.com/file/d/1B-G5yGu0BFXCqj0BYfu_e8XFliAoeoRi/view?usp=drive_link
+
 MEWS has many classes that have their API's documented in the code. These classes have specialized functions that most users will not want to work with.
 The MEWS function for heat waves is:
 
