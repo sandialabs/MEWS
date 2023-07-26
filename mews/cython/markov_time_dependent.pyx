@@ -233,11 +233,19 @@ cpdef double[:] evaluate_decay_function(np.ndarray[DTYPE_t,ndim=1] cdf0,
     
     return cdf1
 
+# this is a rather challenging function to correctly define w/r to types
+# integer arrays in the inputs should be defined as "long" type
+# float arrays DTYPE_t
+# arrays of integers as output "int"
+# the output array yy must be np.int64_t on the left and np.int64 on the right
+# various combinations of these will work in windows or linux but not both
+# the recipe I have here is working. Previously np.int worked for everything
+# but that got depricated. Hoping to move on from Cython someday!
 cpdef np.ndarray[int, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_t, ndim=2] cdf, 
                                                np.ndarray[DTYPE_t, ndim=1] rand, 
                                                int state0,
                                                np.ndarray[DTYPE_t, ndim=2] coef,
-                                               np.ndarray[int, ndim=1] func_type):
+                                               np.ndarray[long, ndim=1] func_type):
     
     """
     This function creates a Markov chain whose 2nd ... num row rows
@@ -313,7 +321,7 @@ cpdef np.ndarray[int, ndim=1] markov_chain_time_dependent(np.ndarray[DTYPE_t, nd
     # yy is the output sample of states.
     # assign initial values
     cdef int num_step = len(rand)
-    cdef np.ndarray[int,ndim=1] yy = np.zeros(num_step,dtype=int)
+    cdef np.ndarray[np.int64_t,ndim=1] yy = np.zeros(num_step,dtype=np.int64)
     
     cdef int one = 1
     cdef int num_state = cdf.shape[0]

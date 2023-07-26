@@ -26,13 +26,20 @@ cimport numpy as np
 DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
 
-
+# this is a rather challenging function to correctly define.
+# integer arrays in the inputs should be defined as "long" type
+# float arrays DTYPE_t
+# arrays of integers as output "int"
+# the output array yy must be np.int64_t on the left and np.int64 on the right
+# various combinations of these will work in windows or linux but not both
+# the recipe I have here is working. Previously np.int worked for everything
+# but that got depricated. Hoping to move on from Cython someday!
 cpdef np.ndarray[int, ndim=1] markov_chain(np.ndarray[DTYPE_t, ndim=2] cdf, 
                                                np.ndarray[DTYPE_t, ndim=1] rand, 
                                                int state0):
     # assign initial values
     cdef int num_step = len(rand)
-    cdef np.ndarray[int, ndim=1] yy = np.zeros(num_step,dtype=int)
+    cdef np.ndarray[np.int64_t, ndim=1] yy = np.zeros(num_step,dtype=np.int64)
     
     
     cdef int num_state = cdf.shape[0]

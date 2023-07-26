@@ -112,7 +112,8 @@ class Test_Markov(unittest.TestCase):
         coef_2terms = np.array([[0.1,9],[0.1,9]]) # should limit steps in a state to 9
         
         # old constant markov process function - serves as a standard
-        yy_const = markov_chain(cdf, rand_big[0:1000], 0)
+        state0 = 0
+        yy_const = markov_chain(cdf, rand_big[0:1000], state0)
         
         # loop over python verses cython implementations
         for idx, markov_func in enumerate([markov_chain_time_dependent_py, markov_chain_time_dependent_wrapper]):
