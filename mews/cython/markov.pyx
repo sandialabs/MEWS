@@ -27,17 +27,17 @@ DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
 
 
-cpdef np.ndarray[np.int64_t, ndim=1] markov_chain(np.ndarray[DTYPE_t, ndim=2] cdf, 
+cpdef np.ndarray[int, ndim=1] markov_chain(np.ndarray[DTYPE_t, ndim=2] cdf, 
                                                np.ndarray[DTYPE_t, ndim=1] rand, 
-                                               np.int64_t state0):
+                                               int state0):
     # assign initial values
-    cdef np.int64_t num_step = len(rand)
-    cdef np.ndarray[np.int64_t, ndim=1] yy = np.zeros(num_step,dtype=np.int64)
+    cdef int num_step = len(rand)
+    cdef np.ndarray[int, ndim=1] yy = np.zeros(num_step,dtype=int)
     
     
-    cdef np.int64_t num_state = cdf.shape[0]
-    cdef np.int64_t idx
-    cdef np.int64_t idy
+    cdef int num_state = cdf.shape[0]
+    cdef int idx
+    cdef int idy
     
     for idx in range(num_step):
         for idy in range(num_state):

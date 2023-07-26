@@ -274,7 +274,7 @@ class Test_Extreme(unittest.TestCase):
                             num_repeat=num_repeat,write_results=True,
                             run_parallel=False,test_shape_func=False,doe2_input=doe_in,
                             climate_temp_func=temp_func)
-            keyval = ('././data_for_testing/USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw', 0, 2021)
+            keyval = (self.test_weather_file_path, 0, 2021)
             gtemp1 = obj.results[keyval].epwobj.headers["GROUND TEMPERATURES"]
             gtemp2 = obj2.results[keyval].epwobj.headers["GROUND TEMPERATURES"]
             
