@@ -970,19 +970,19 @@
         {1: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.005593122343762767,
-                 'sig': 0.4772360797278888}
+                {'mu': 0.005593123345055066,
+                 'sig': 0.47723608072918106}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.08363121731200861,
-                 'sig': 0.7425004156119787}
+                {'mu': 0.08363123190212822,
+                 'sig': 0.7425004302020982}
             ,
-             'max extreme temp per duration': 1.69867640238542,
-             'min extreme temp per duration': 0.6554008723657492,
+             'max extreme temp per duration': 1.6986764407792914,
+             'min extreme temp per duration': 0.6554008644704117,
              'hist max extreme temp per duration': 1.2328156580236782,
              'hist min extreme temp per duration': 0.8167397462118298,
-             'max energy per duration': 1.5129928031391568,
-             'min energy per duration': 0.33825734431494847,
+             'max energy per duration': 1.5129928062774156,
+             'min energy per duration': 0.33825734318823414,
              'hist max energy per duration': 1.4888783655609286,
              'hist min energy per duration': 0.34691503730987516,
              'energy linear slope': 0.8621548103136382,
@@ -1041,19 +1041,19 @@
          2: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.28871912559103013,
-                 'sig': 0.4103150373236868}
+                {'mu': 0.2887191270702941,
+                 'sig': 0.4103150388029508}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.3983219254205263,
-                 'sig': 0.7954479858475124}
+                {'mu': 0.3983219453506123,
+                 'sig': 0.7954480057775984}
             ,
-             'max extreme temp per duration': 3.0772425517034834,
-             'min extreme temp per duration': -0.02883459212005235,
+             'max extreme temp per duration': 3.0772426317083785,
+             'min extreme temp per duration': -0.028834626642968875,
              'hist max extreme temp per duration': 1.2655309477833467,
              'hist min extreme temp per duration': 0.7597646723703934,
-             'max energy per duration': 1.6014500144053632,
-             'min energy per duration': -0.2530172358040723,
+             'max energy per duration': 1.601450018805005,
+             'min energy per duration': -0.2530172392497547,
              'hist max energy per duration': 1.5026828423617566,
              'hist min energy per duration': -0.17566541345685652,
              'energy linear slope': 1.0074054342990797,
@@ -1111,19 +1111,19 @@
          3: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.19296644520914327,
-                 'sig': 0.42858731894698454}
+                {'mu': 0.19296644586753076,
+                 'sig': 0.428587319605372}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.17087076347672475,
-                 'sig': 0.729245905017073}
+                {'mu': 0.17087077171551995,
+                 'sig': 0.7292459132558682}
             ,
-             'max extreme temp per duration': 2.1463117787470143,
-             'min extreme temp per duration': 0.3534642477973089,
+             'max extreme temp per duration': 2.1463118035570554,
+             'min extreme temp per duration': 0.35346424076644023,
              'hist max extreme temp per duration': 1.3393424577071043,
              'hist min extreme temp per duration': 0.6884116562165272,
-             'max energy per duration': 1.5778763379291165,
-             'min energy per duration': -0.08167792474383007,
+             'max energy per duration': 1.5778763399052758,
+             'min energy per duration': -0.08167792596632067,
              'hist max energy per duration': 1.5270863103274976,
              'hist min energy per duration': -0.050258224942616406,
              'energy linear slope': 0.7863649412672383,
@@ -1193,19 +1193,19 @@
          4: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.19613826120568698,
-                 'sig': 0.3694607752443646}
+                {'mu': 0.19613826188686392,
+                 'sig': 0.3694607759255415}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.3887735984542442,
-                 'sig': 0.5172253855918555}
+                {'mu': 0.38877360559904967,
+                 'sig': 0.517225392736661}
             ,
-             'max extreme temp per duration': 2.2135953004198656,
-             'min extreme temp per duration': -0.19648410713317543,
+             'max extreme temp per duration': 2.213595327083862,
+             'min extreme temp per duration': -0.19648412772684087,
              'hist max extreme temp per duration': 1.4030738569177486,
              'hist min extreme temp per duration': 0.4309591536505738,
-             'max energy per duration': 1.847431498035698,
-             'min energy per duration': -0.40552041725280535,
+             'max energy per duration': 1.8474315003259334,
+             'min energy per duration': -0.4055204188664162,
              'hist max energy per duration': 1.7785626854214631,
              'hist min energy per duration': -0.3569981259033355,
              'energy linear slope': 0.8141457994523492,
@@ -1268,19 +1268,19 @@
          5: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.24104210868338175,
-                 'sig': 0.4731225153966452}
+                {'mu': 0.24104210981642152,
+                 'sig': 0.473122516529685}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.4537698201606562,
-                 'sig': 0.804357117393061}
+                {'mu': 0.4537698330135157,
+                 'sig': 0.8043571302459205}
             ,
-             'max extreme temp per duration': 2.028032646423499,
-             'min extreme temp per duration': 0.260766944699098,
+             'max extreme temp per duration': 2.0280326789181955,
+             'min extreme temp per duration': 0.2607669290744368,
              'hist max extreme temp per duration': 1.2370193073775648,
              'hist min extreme temp per duration': 0.6936530901688259,
-             'max energy per duration': 1.6431543753397966,
-             'min energy per duration': -0.32823727479228587,
+             'max energy per duration': 1.6431543784467912,
+             'min energy per duration': -0.32823727672878444,
              'hist max energy per duration': 1.57784956327762,
              'hist min energy per duration': -0.2875347001508855,
              'energy linear slope': 0.8630673832690238,
@@ -1338,19 +1338,19 @@
          6: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.38054830515642035,
-                 'sig': 0.4173212523264011}
+                {'mu': 0.38054830805593365,
+                 'sig': 0.4173212552259144}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.31190977445516643,
-                 'sig': 0.648552572223811}
+                {'mu': 0.31190981560724595,
+                 'sig': 0.6485526133758905}
             ,
-             'max extreme temp per duration': 3.286845952549031,
-             'min extreme temp per duration': -0.22834238199325685,
+             'max extreme temp per duration': 3.286846150857218,
+             'min extreme temp per duration': -0.22834248041084781,
              'hist max extreme temp per duration': 1.5043489577192304,
              'hist min extreme temp per duration': 0.604205137999308,
-             'max energy per duration': 1.2834555528161768,
-             'min energy per duration': -0.44588700340835874,
+             'max energy per duration': 1.2834555605011928,
+             'min energy per duration': -0.4458870105482203,
              'hist max energy per duration': 1.21413926137238,
              'hist min energy per duration': -0.381487823913209,
              'energy linear slope': 0.9100547965207453,
@@ -1408,19 +1408,19 @@
          7: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.1469340714437209,
-                 'sig': 0.49082039097069874}
+                {'mu': 0.1469340728738714,
+                 'sig': 0.4908203924008493}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.6845931955726368,
-                 'sig': 0.6938989547401846}
+                {'mu': 0.6845932140324111,
+                 'sig': 0.693898973199959}
             ,
-             'max extreme temp per duration': 2.2554609362873803,
-             'min extreme temp per duration': -0.40566925756079564,
+             'max extreme temp per duration': 2.255460991526429,
+             'min extreme temp per duration': -0.4056693117812413,
              'hist max extreme temp per duration': 1.1895999285926375,
              'hist min extreme temp per duration': 0.6316617525026551,
-             'max energy per duration': 1.35393367553698,
-             'min energy per duration': -0.05082918213940069,
+             'max energy per duration': 1.3539336796863557,
+             'min energy per duration': -0.05082918416521364,
              'hist max energy per duration': 1.2737752590355893,
              'hist min energy per duration': -0.011694150472340839,
              'energy linear slope': 0.8424296905135954,
@@ -1481,19 +1481,19 @@
          8: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.002163208353413111,
-                 'sig': 0.4226306242164441}
+                {'mu': 0.002163209882231107,
+                 'sig': 0.4226306257452621}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.5454763205442408,
-                 'sig': 0.81950589269452}
+                {'mu': 0.5454763410431319,
+                 'sig': 0.8195059131934113}
             ,
-             'max extreme temp per duration': 3.688542143595508,
-             'min extreme temp per duration': -0.6893720663333769,
+             'max extreme temp per duration': 3.6885422336358236,
+             'min extreme temp per duration': -0.6893721176403544,
              'hist max extreme temp per duration': 1.3977637251051818,
              'hist min extreme temp per duration': 0.5941774791244162,
-             'max energy per duration': 1.5557733031812002,
-             'min energy per duration': 0.14042133853044186,
+             'max energy per duration': 1.5557733088491446,
+             'min energy per duration': 0.14042133621799294,
              'hist max energy per duration': 1.409378726489824,
              'hist min energy per duration': 0.2001484581997407,
              'energy linear slope': 0.8484676630152514,
@@ -1548,19 +1548,19 @@
          9: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.000695274227632707,
-                 'sig': 0.3408486849226977}
+                {'mu': 0.0006952752796830081,
+                 'sig': 0.340848685974748}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.32779377590612135,
-                 'sig': 0.8015402922822825}
+                {'mu': 0.32779378738844506,
+                 'sig': 0.8015403037646062}
             ,
-             'max extreme temp per duration': 2.6270071170453617,
-             'min extreme temp per duration': 0.16510975773631303,
+             'max extreme temp per duration': 2.6270071546235307,
+             'min extreme temp per duration': 0.16510974431769465,
              'hist max extreme temp per duration': 1.3362951703868327,
              'hist min extreme temp per duration': 0.6919764271687971,
-             'max energy per duration': 2.1849855451870446,
-             'min energy per duration': -0.15578867823495118,
+             'max energy per duration': 2.18498554975476,
+             'min energy per duration': -0.1557886804839411,
              'hist max energy per duration': 2.0452669103622876,
              'hist min energy per duration': -0.08699590875370047,
              'energy linear slope': 0.7739176954628544,
@@ -1613,19 +1613,19 @@
          10: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.09890894344368506,
-                 'sig': 0.4080750093514343}
+                {'mu': 0.09890894467875144,
+                 'sig': 0.40807501058650075}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.6074018700796571,
-                 'sig': 0.5008063624615263}
+                {'mu': 0.6074018849170363,
+                 'sig': 0.5008063772989055}
             ,
-             'max extreme temp per duration': 2.0905484127644205,
-             'min extreme temp per duration': -0.600575482725381,
+             'max extreme temp per duration': 2.090548462552163,
+             'min extreme temp per duration': -0.6005755443938559,
              'hist max extreme temp per duration': 1.2652903352374785,
              'hist min extreme temp per duration': 0.43732874238174313,
-             'max energy per duration': 1.659682398106907,
-             'min energy per duration': 0.11461063298704957,
+             'max energy per duration': 1.6596824022682928,
+             'min energy per duration': 0.11461063079112768,
              'hist max energy per duration': 1.5938960737422474,
              'hist min energy per duration': 0.14932542315295147,
              'energy linear slope': 0.7230052524717167,
@@ -1687,19 +1687,19 @@
          11: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.06137611610858608,
-                 'sig': 0.4419479085173922}
+                {'mu': 0.06137611751581188,
+                 'sig': 0.441947909924618}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.30614436262244277,
-                 'sig': 0.7532771346052393}
+                {'mu': 0.30614437877315154,
+                 'sig': 0.753277150755948}
             ,
-             'max extreme temp per duration': 1.7098076762571064,
-             'min extreme temp per duration': 0.5250189851514925,
+             'max extreme temp per duration': 1.7098077173135935,
+             'min extreme temp per duration': 0.5250189694661411,
              'hist max extreme temp per duration': 1.1635925892046726,
              'hist min extreme temp per duration': 0.7961688597257369,
-             'max energy per duration': 1.663819587511962,
-             'min energy per duration': 0.2696811955640931,
+             'max energy per duration': 1.6638195920733776,
+             'min energy per duration': 0.26968119351749936,
              'hist max energy per duration': 1.6118507376536486,
              'hist min energy per duration': 0.29299832524566105,
              'energy linear slope': 0.7630596135419611,
@@ -1762,19 +1762,19 @@
          12: 
             {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)',
              'energy_normal_param': 
-                {'mu': 0.1529551424455796,
-                 'sig': 0.46397230410009155}
+                {'mu': 0.15295514354403697,
+                 'sig': 0.46397230519854893}
             ,
              'extreme_temp_normal_param': 
-                {'mu': 0.21049617588342356,
-                 'sig': 0.9145881848314459}
+                {'mu': 0.2104961928699952,
+                 'sig': 0.9145882018180175}
             ,
-             'max extreme temp per duration': 2.131634382778754,
-             'min extreme temp per duration': 0.5912231360923614,
+             'max extreme temp per duration': 2.1316344293274976,
+             'min extreme temp per duration': 0.5912231280093794,
              'hist max extreme temp per duration': 1.2127698011923305,
              'hist min extreme temp per duration': 0.8234506937680479,
-             'max energy per duration': 1.4321708427212017,
-             'min energy per duration': 0.16883442403989113,
+             'max energy per duration': 1.4321708459570646,
+             'min energy per duration': 0.16883442233933835,
              'hist max energy per duration': 1.3764069941208803,
              'hist min energy per duration': 0.19814016908233653,
              'energy linear slope': 0.785138200708525,

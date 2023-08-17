@@ -2105,19 +2105,29 @@ class ExtremeTemperatureWaves(Extremes):
             
         if include_plots:
             if is_hw:
-                fig1.savefig("historic_heat_wave_energy.png",dpi=300)
-                fig2.savefig("historic_heat_wave_temperature.png",dpi=300)
-                fig3.savefig("energy_per_duration_heat_wave_histogram",dpi=300)
-                fig4.savefig("maxdelT_per_duration_heat_wave_histogram",dpi=300)
+                self._try_to_savefig(fig1, "historic_heat_wave_energy.png", 300)
+                self._try_to_savefig(fig2, "historic_heat_wave_temperature.png", 300)
+                self._try_to_savefig(fig3, "energy_per_duration_heat_wave_histogram", 300)
+                self._try_to_savefig(fig4, "maxdelT_per_duration_heat_wave_histogram", 300)
             else:
-                fig1.savefig("historic_cold_snap_energy.png",dpi=300)
-                fig2.savefig("historic_cold_snap_temperature.png",dpi=300)
-                fig3.savefig("energy_per_duration_cold_snap_histogram",dpi=300)
-                fig4.savefig("maxdelT_per_duration_cold_snap_histogram",dpi=300)                
+                self._try_to_savefig(fig1, "historic_cold_snap_energy.png", 300)
+                self._try_to_savefig(fig2, "historic_cold_snap_temperature.png", 300)
+                self._try_to_savefig(fig3, "energy_per_duration_cold_snap_histogram", 300)
+                self._try_to_savefig(fig4, "maxdelT_per_duration_cold_snap_histogram", 300)                
                 
             
         return stats
     
+    def _try_to_savefig(self,fig,filename,dpi):
+        try:
+            fig.savefig(filename,dpi=dpi)
+        except Exception as e:
+            try:
+                # give the reason why but do not stop the program since figure
+                # plotting is not essential.
+                raise e
+            except:
+                warn("Failed to save Figure: '{0}'".format(filename), UserWarning)
     
     def _wave_stats(self,df_combined,include_plots=False):
         
@@ -2255,9 +2265,10 @@ class ExtremeTemperatureWaves(Extremes):
             #This can cause a latex error in certain cases if latex cannot install
             # new packages
             plt.tight_layout()
+            self._try_to_savefig(fig,title_string+"_monthly_MEWS_parameter_results.png",1000)
         except:
-            pass
-        plt.savefig(title_string+"_monthly_MEWS_parameter_results.png",dpi=1000)
+            warn("Monthly MEW Parameter Plots failed to save as a figure!", UserWarning)
+        
         
     
     def read_solution(self,solution_file):
