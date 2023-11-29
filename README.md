@@ -137,7 +137,8 @@ Contact
    
 Citing MEWS
 -----------
-You can cite MEWS with one of the following:
+You can cite MEWS with one or more of the following:
+* Daniel L. Villa, Sang Hoon Lee, Carlo Bianchi, Juan Pablo Carvallo, Illya Azaroff, Andrea Mammoli and Tyler Schostek 2023. "Multi-scenario Extreme Weather Simulator Application to Heat Waves: Ko’olauloa Community Resilience Hub," _Science and Technology for the Built Environment_ https://doi.org/10.1080/23744731.2023.2279467
 
 * Villa, Daniel L., Tyler J. Schostek, Krissy Govertsen, and Madeline Macmillan. 2023. "A Stochastic Model of Future Extreme Temperature Events for Infrastructure Analysis." _Environmental Modeling & Software_ https://doi.org/10.1016/j.envsoft.2023.105663.
 
