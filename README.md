@@ -138,11 +138,18 @@ Contact
 Citing MEWS
 -----------
 You can cite MEWS with one or more of the following:
-* Daniel L. Villa, Sang Hoon Lee, Carlo Bianchi, Juan Pablo Carvallo, Illya Azaroff, Andrea Mammoli and Tyler Schostek 2023. "Multi-scenario Extreme Weather Simulator Application to Heat Waves: Ko’olauloa Community Resilience Hub," _Science and Technology for the Built Environment_ https://doi.org/10.1080/23744731.2023.2279467
+* Villa, Daniel L., Sang Hoon Lee, Carlo Bianchi, Juan Pablo Carvallo, Illya Azaroff, Andrea Mammoli and Tyler Schostek 2023. "Multi-scenario Extreme Weather Simulator Application to Heat Waves: Ko’olauloa Community Resilience Hub," _Science and Technology for the Built Environment_ https://doi.org/10.1080/23744731.2023.2279467
 
 * Villa, Daniel L., Tyler J. Schostek, Krissy Govertsen, and Madeline Macmillan. 2023. "A Stochastic Model of Future Extreme Temperature Events for Infrastructure Analysis." _Environmental Modeling & Software_ https://doi.org/10.1016/j.envsoft.2023.105663.
 
 * Villa, Daniel L., Juan Carvallo, Carlo Bianchi, and Sang Hoon Lee. 2022. "Multi-scenario Extreme Weather Simulator Application to Heat Waves." _2022 Building Performance Analysis Conference and SimBuild co-organized by ASHRAE and IBPSA-USA_ https://doi.org/10.26868/25746308.2022.C006
+
+Other Publications
+------------------
+The following manuscripts are related to MEWS but not yet published:
+* Villa, Daniel L., Nathan T. Hahn, John K. Grey, and Frances Pavich. "Futures for electrochromic windows on high performance houses in arid, cold climates." Submitted to _Applied Energy_.
+* Macmillan, Madeline, Alexander Zolan, Morgan Bazilian, and Daniel L. Villa, "Microgrid design and multi-year dispatch optimization under climate-informed load and renewable resource uncertainty." Submitted to _Applied Energy_ preprint at: https://doi.org/10.2139/ssrn.4616304
+* Zeng, Zhaoyun, Ji-Hyun Kim, Haochen Tan, Yuqing Hu, Parag Rastogi, Daniel Villa, Joshua New, Jiali Wang, and Ralph Muehleisen. "A comprehensive guide for working with future weather data in building and energy modeling." Submitted to _Applied Energy_.
 
 
 Sandia Funding Statement
