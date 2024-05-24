@@ -138,8 +138,11 @@ def _check_and_arrange_run_dict_inputs(run_dict):
 
 
 def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
-                       output_dir,random_seed,scen_dict,run_parallel,num_cpu):
+                       output_dir,random_seed,scen_dict,run_parallel,num_cpu,
+                       scenario_hw_input=None):
     """
+    NEW FEATURE UNDER CONSTRUCTION 5/23/2024 - option to only output heat waves
+    with a single heat wave at a specified time.
     
     For a list of solution files, generate EnergyPlus .epw weather files.
     that only have dry-bulb temperature altered per the MEWS algorithm.
@@ -171,6 +174,17 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
         indicates whether to run parallel
     num_cpu: int
         number of cpus to run parallel with
+    UNDER CONSTRUCTION
+    scenario_hw_input: dict : Optional : Default = None
+        If None, the original behavior of producing random heat waves is
+        used. Otherwise, the dictionary must have the following form:
+            {"frequency":[double, double, ...],
+             "start_date":[datetime, datetime, ...],
+             "duration":[double,double, ...]}
+        The list must be the same length so every frequency has a start date.
+        The frequency indicates the number of times per year the event will occur
+           based on shifted distributions.
+        The duration indicates the number of days the heat wave will last
 
     Returns
     -------
@@ -209,26 +223,44 @@ def generate_epw_files(obj,solution_files,solution_path,num_files_per_solution,
 
             # if os.path.exists(final_file_name) and not overwrite_existing:
             #     continue
-            # else:            
-            args = (scen_name,
-                    year,
-                    scen_dict,
-                    num_files_per_solution,
-                    2014,
-                    cii,
-                    None,
-                    os.path.join(solution_path,file),
-                    random_seed,
-                    output_dir)
-        
-        
+            # else:  
+            if scenario_hw_input is None: 
+                args = (scen_name,
+                        year,
+                        scen_dict,
+                        num_files_per_solution,
+                        2014,
+                        cii,
+                        None,
+                        os.path.join(solution_path,file),
+                        random_seed,
+                        output_dir)
+            else:
+                args = (scen_name,
+                        year,
+                        scen_dict,
+                        num_files_per_solution,
+                        2014,
+                        cii,
+                        None,
+                        os.path.join(solution_path,file),
+                        random_seed,
+                        output_dir,
+                        scenario_hw_input)
         
             if run_parallel:
-                results[file] = pool.apply_async(obj.create_scenario,
+                if scenario_hw_input is None:
+                    results[file] = pool.apply_async(obj.create_scenario,
                                                  args=args)
+                else:
+                    results[file] = pool.apply_async(obj.single_heat_wave,args=args)
             else:
-
-                obj.create_scenario(*args)
+                if scenario_hw_input is None:
+                    obj.create_scenario(*args)
+                else:
+                    obj.single_heat_wave(*args)
+                    
+                    
         obj._weather_files = wfiles
             
 
