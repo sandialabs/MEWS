@@ -18,7 +18,7 @@ jobs:
         #with: 
         #  ref: develop 
       - name: Upgrade setuptools
-      - run: pip install --upgrade setuptools
+        run: pip install --upgrade setuptools
       - name: Install Python3
         uses: actions/setup-python@v1
         with:
