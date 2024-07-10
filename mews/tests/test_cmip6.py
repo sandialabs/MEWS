@@ -24,6 +24,7 @@ must be replicated in any derivative works that use the source code.
 import unittest
 from mews.data_requests.CMIP6 import CMIP_Data
 import os
+import numpy as np
 
 class TestCMIP(unittest.TestCase):
     
@@ -68,9 +69,9 @@ class TestCMIP(unittest.TestCase):
                              display_plots = False,
                              run_parallel=True)
         self.assertIsNotNone(test_obj.total_model_data["SSP585"].avg_error)
-        self.assertNotEqual([],test_obj.total_model_data["SSP585"].delT_list)
-        self.assertNotEqual([],test_obj.total_model_data["SSP585"].delT_list_reg)
-        self.assertNotEqual([],test_obj.total_model_data["SSP585"].CI_list)
+        self.assertFalse(np.array_equal(np.array([]),test_obj.total_model_data["SSP585"].delT_list))
+        self.assertFalse(np.array_equal(np.array([]),test_obj.total_model_data["SSP585"].delT_list_reg))
+        self.assertFalse(np.array_equal(np.array([]),test_obj.total_model_data["SSP585"].CI_list))
         
         #Testing plotting
         test_obj.results1(scatter_display=[True,True,True,True,True,True])

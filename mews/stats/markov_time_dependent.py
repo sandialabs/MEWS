@@ -135,8 +135,12 @@ def cython_function_input_checks(cdf,
             
         if ftype > 5:
             raise ValueError("function types of 0 to 5 are allowed! A higher value of {0:d} was given".format(ftype))
+    
+    # must be int32's before going into cython
+    func_type_int32 = np.array([np.int32(ftype) for ftype in func_type])
+
             
-    return state0, func_type
+    return state0, func_type_int32
 
 
 def markov_chain_time_dependent_wrapper(cdf, 
