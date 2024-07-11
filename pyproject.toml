@@ -18,4 +18,4 @@ dependencies = ["numpy", "pandas", "matplotlib","scipy","statsmodels",
                 "xarray[complete]"]
 requires-python = ">= 3.8"
 [project.urls]
-Repository = https://github.com/sandialabs/MEWS.git
+Repository = "https://github.com/sandialabs/MEWS.git"
