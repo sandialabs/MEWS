@@ -22,7 +22,7 @@ Export of this program may require a license from the
 United States Government.
 
 Please refer to the LICENSE.md file for a full description of the license
-terms for MEWS. 
+terms for decay_func_type. 
 
 The license for MEWS is the Modified BSD License and copyright information
 must be replicated in any derivative works that use the source code.
