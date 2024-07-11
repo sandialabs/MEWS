@@ -6,3 +6,8 @@ requires = [
 "pytest",
 "wheel"]
 build-backend = "setuptools.build_meta"
+[project]
+dependencies = ["numpy", "pandas", "matplotlib","scipy","statsmodels",
+                "openpyxl", "cython",
+                "xarray[complete]"]
+requires-python = ">= 3.8"
