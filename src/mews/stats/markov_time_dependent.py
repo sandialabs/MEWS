@@ -224,6 +224,7 @@ def markov_chain_time_dependent_wrapper(cdf,
     if check_inputs:
         state0, func_type = cython_function_input_checks(cdf, rand, state0, coef, func_type)
 
+
     yy = markov_chain_time_dependent(cdf, 
                                     rand, 
                                     state0,

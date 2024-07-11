@@ -159,8 +159,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         if run_test:
             # this test assures MEWS will reject files with a repeated date in them.
      
-            station = {'summaries':os.path.join("data_for_testing", "example_with_repeated_date.csv"),
-                       'norms':os.path.join("data_for_testing", "repeated_date_norms.csv")}
+            station = {'summaries':os.path.join(self.file_dir,"data_for_testing", "example_with_repeated_date.csv"),
+                       'norms':os.path.join(self.file_dir,"data_for_testing", "repeated_date_norms.csv")}
             
     
             # change this to the appropriate unit conversion (5/9, -(5/9)*32) is for F going to C
@@ -175,7 +175,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             run_parallel = False
             num_cpu = 30
     
-            weather_files = [os.path.join(
+            weather_files = [os.path.join(self.file_dir,
                 "data_for_testing", "USA_AK_Kodiak.AP.703500_TMY3.epw")]
             
             with self.assertRaises(ValueError):
@@ -224,8 +224,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         if run_test:
             
             clim_scen = ClimateScenario()
-            station = os.path.join("data_for_testing","USW00023050.csv")
-            weather_files = [os.path.join("data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
+            station = os.path.join(self.file_dir,"data_for_testing","USW00023050.csv")
+            weather_files = [os.path.join(self.file_dir,"data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
     
             num_year = 1
             start_years = [2020,2050]
@@ -398,8 +398,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     
             run_parallel = True
     
-            station = os.path.join("data_for_testing", "USW00023050.csv")
-            weather_files = [os.path.join(
+            station = os.path.join(self.file_dir,"data_for_testing", "USW00023050.csv")
+            weather_files = [os.path.join(self.file_dir,
                 "data_for_testing", "USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
     
             metric_dict, meanval, obj, clim_scen, scen_dict = self._run_verification_study_of_use_global_False(
@@ -675,7 +675,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     def test_create_solutions(self):
         run_test = self.run_all_tests
         if run_test:
-            inp_dir = os.path.join(os.path.dirname(__file__),"data_for_testing")
+            inp_dir = os.path.join(self.file_dir,"data_for_testing")
             """
             INPUT DATA
             
