@@ -8,7 +8,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 [project]
 name = "Multi-scenario extreme weather simulator (MEWS)"
-version = 1.1.2b
+version = "1.1.2b"
 authors = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
 maintainers = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
 description = "Heat wave stochastic generator using CMIP6, NOAA, and IPCC information"
