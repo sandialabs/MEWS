@@ -7,6 +7,7 @@ requires = [
 "wheel"]
 build-backend = "setuptools.build_meta"
 [project]
+dynamic = ["readme"]
 name = "MEWS"
 version = "1.1.2b"
 authors = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
