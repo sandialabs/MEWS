@@ -63,7 +63,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                 rmtree("temp_out")
         except:
             warnings.warn(
-                "The testing could not remove the temporary directory ./mews/tests/mews_results or ./mews/tests/temp_out")
+                "The testing could not remove the temporary directory ./tests/mews_results or ./tests/temp_out")
 
         proxy_location = os.path.join("..", "..", "..", "proxy.txt")
 
@@ -77,7 +77,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             cls.proxy = None
 
         if not os.path.exists("data_for_testing"):
-            os.chdir(os.path.join(".", "mews", "tests"))
+            os.chdir(os.path.join(".", "tests"))
             cls.from_main_dir = True
         else:
             cls.from_main_dir = False
@@ -120,7 +120,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     os.remove(file_name)
                 except:
                     warnings.warn("The testing could not clean up files"
-                                  + " and the ./mews/tests folder has residual "
+                                  + " and the ./tests folder has residual "
                                   + "*.bin, *.epw, *.EXE, or *.DAT files"
                                   + " that need to be removed!")
             
@@ -153,7 +153,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                         pass
                         #warnings.warn("The testing could not clean up files"
                         #              + " and the tests folders have residual "
-                        #              + "*.epw files in ./mews/tests/mews_results"
+                        #              + "*.epw files in ./tests/mews_results"
                         #              + " that need to be removed!")
 
         if hasattr(cls,"from_main_dir"):
