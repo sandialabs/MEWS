@@ -55,7 +55,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         cls.write_results = False
         cls.run_parallel = True
         cls.rng = default_rng()
-
+        cls.file_dir = os.path.join(os.path.dirname(__file__))
         try:
             if os.path.exists("mews_results"):
                 rmtree("mews_results")
@@ -65,7 +65,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             warnings.warn(
                 "The testing could not remove the temporary directory ./tests/mews_results or ./tests/temp_out")
 
-        proxy_location = os.path.join("..", "..", "..", "proxy.txt")
+        proxy_location = os.path.join(cls.file_dir,"..", "..", "..", "proxy.txt")
 
         if os.path.exists(proxy_location):
             with open(proxy_location, 'r') as f:
@@ -76,13 +76,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             #              os.path.abspath(proxy_location) + " for MEWS to download CMIP6 data.")
             cls.proxy = None
 
-        if not os.path.exists("data_for_testing"):
-            os.chdir(os.path.join(".", "tests"))
-            cls.from_main_dir = True
-        else:
-            cls.from_main_dir = False
-
-        cls.test_weather_path = os.path.join(".", "data_for_testing")
+        cls.test_weather_path = os.path.join(cls.file_dir, "data_for_testing")
         erase_me_file_path = os.path.join(
             cls.test_weather_path, "erase_me_file.epw")
         if os.path.exists(erase_me_file_path):
@@ -123,8 +117,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                   + " and the ./tests folder has residual "
                                   + "*.bin, *.epw, *.EXE, or *.DAT files"
                                   + " that need to be removed!")
-            
-        file_dir = os.path.join(os.path.dirname(__file__))
+        file_dir = cls.file_dir    
+        
         
         if os.path.exists(os.path.join(file_dir,"temp_out")):
             rmtree(os.path.join(file_dir,"temp_out"),ignore_errors=False,onerror=None)
@@ -144,11 +138,11 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     pass
                 
                 
-        if os.path.exists(os.path.join(".", "mews_results")):
-            for file_name in os.listdir(os.path.join(".", "mews_results")):
+        if os.path.exists(os.path.join(file_dir, "mews_results")):
+            for file_name in os.listdir(os.path.join(file_dir, "mews_results")):
                 if (".epw" in file_name):
                     try:
-                        rmtree(os.path.join("mews_results", file_name))
+                        rmtree(os.path.join(file_dir,"mews_results", file_name))
                     except:
                         pass
                         #warnings.warn("The testing could not clean up files"
@@ -156,9 +150,6 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                         #              + "*.epw files in ./tests/mews_results"
                         #              + " that need to be removed!")
 
-        if hasattr(cls,"from_main_dir"):
-            if cls.from_main_dir:
-                os.chdir(os.path.join("..", ".."))
 
 
     @pytest.mark.filterwarnings("ignore: The requested cpu count")        

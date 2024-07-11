@@ -66,19 +66,14 @@ class Test_Markov(unittest.TestCase):
         cls.write_results = False
         cls.rng = default_rng()
         
-        
-        if not os.path.exists("data_for_testing"):
-            os.chdir(os.path.join(".","tests"))
-            cls.from_main_dir = True
-        else:
-            cls.from_main_dir = False
+        cls.file_dir = os.path.join(os.path.dirname(__file__))
                
-        cls.test_weather_path = os.path.join(".","data_for_testing")
-        erase_me_file_path = os.path.join(cls.test_weather_path,"erase_me_file.epw")
-        if os.path.exists(erase_me_file_path):
-            os.remove(erase_me_file_path)
+        cls.test_weather_path = os.path.join(cls.file_dir,"data_for_testing")
+        cls.erase_me_file_path = os.path.join(cls.test_weather_path,"erase_me_file.epw")
+        if os.path.exists(cls.erase_me_file_path):
+            os.remove(cls.erase_me_file_path)
 
-        cls.test_weather_file_path = os.path.join(".",
+        cls.test_weather_file_path = os.path.join(cls.file_dir,
                                                   cls.test_weather_path,
                                                   "USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw")
         cls.tran_mat = np.array([[0.1,0.2,0.3,0.4],[0.4,0.3,0.2,0.1],
@@ -90,8 +85,8 @@ class Test_Markov(unittest.TestCase):
     
     @classmethod
     def tearDownClass(cls):
-        pass
-    
+        if os.path.exists(cls.erase_me_file_path):
+            os.remove(cls.erase_me_file_path)
     
     def test_time_dependent(self):
         
