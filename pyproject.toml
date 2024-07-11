@@ -1,7 +1,6 @@
 [build-system]
     requires = ["setuptools","wheel","numpy","Cython"]
     build-backend = "setuptools.build_meta"
-    packages = ["mews"]
 [project]
     dynamic = ["readme","version"]
 

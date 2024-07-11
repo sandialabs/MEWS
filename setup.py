@@ -3,7 +3,6 @@ from setuptools import setup, find_packages, Extension
 import os
 import re
 import numpy as np
-from Cython.Distutils import build_ext
 
 cmdclass = {}
 ext_modules = []
@@ -11,18 +10,12 @@ ext_modules = []
 # include_dirs is needed here for MAC OS systems
 ext_modules += [
     Extension("mews.cython.markov",
-              ["mews/cython/markov.pyx"],
+              ["src/mews/cython/markov.pyx"],
               include_dirs=[np.get_include()]),
     Extension("mews.cython.markov_time_dependent",
-              ["mews/cython/markov_time_dependent.pyx"],
+              ["src/mews/cython/markov_time_dependent.pyx"],
               include_dirs=[np.get_include()])
     ]
-              
-
-cmdclass.update({'build_ext': build_ext})
-
-
-# use README file as the long description
 
 def readme_function():
 
@@ -34,7 +27,7 @@ def readme_function():
 def version_function(): 
     # get version from __init__.py
     file_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(file_dir, 'mews', '__init__.py')) as f:
+    with open(os.path.join(file_dir, 'src', 'mews', '__init__.py')) as f:
         version_file = f.read()
         version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
                                   version_file, re.M)
@@ -48,7 +41,5 @@ def version_function():
 
 setup(version=version_function(),
       ext_modules=ext_modules,
-      long_description=readme_function(),
-
-      )
+      long_description=readme_function())
 

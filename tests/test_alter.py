@@ -40,7 +40,7 @@ class Test_Alter(unittest.TestCase):
         cls.plot_results = False
         
         if not os.path.exists("data_for_testing"):
-            os.chdir(os.path.join(".","mews","tests"))
+            os.chdir(os.path.join(".","tests"))
             cls.from_main_dir = True
         else:
             cls.from_main_dir = False
