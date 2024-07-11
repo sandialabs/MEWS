@@ -47,7 +47,6 @@ from urllib.parse import urlparse
 
 import statsmodels.api as sm
 from warnings import warn
-
 import matplotlib.pyplot as plt
 
 def _calculate_shift(obj2,first_try_solution_location,month_factors,sol_dir,cii,new_solution_name):
@@ -1619,9 +1618,9 @@ class ExtremeTemperatureWaves(Extremes):
                         "HLY-DEWP-10PCTL","HLY-DEWP-NORMAL","HLY-DEWP-90PCTL",
                         "HLY-PRES-10PCTL","HLY-PRES-NORMAL","HLY-PRES-90PCTL"]
                 df = df[keep]
-                df["HLY-RELH-10PCTL"] = df[["HLY-TEMP-10PCTL","HLY-DEWP-10PCTL"]].apply(lambda x: relative_humidity(x[1],x[0]),axis=1)
-                df["HLY-RELH-NORMAL"] = df[["HLY-TEMP-NORMAL","HLY-DEWP-NORMAL"]].apply(lambda x: relative_humidity(x[1],x[0]),axis=1)
-                df["HLY-RELH-90PCTL"] = df[["HLY-TEMP-90PCTL","HLY-DEWP-90PCTL"]].apply(lambda x: relative_humidity(x[1],x[0]),axis=1)
+                df["HLY-RELH-10PCTL"] = df[["HLY-TEMP-10PCTL","HLY-DEWP-10PCTL"]].apply(lambda x: relative_humidity(x.iloc[1],x.iloc[0]),axis=1)
+                df["HLY-RELH-NORMAL"] = df[["HLY-TEMP-NORMAL","HLY-DEWP-NORMAL"]].apply(lambda x: relative_humidity(x.iloc[1],x.iloc[0]),axis=1)
+                df["HLY-RELH-90PCTL"] = df[["HLY-TEMP-90PCTL","HLY-DEWP-90PCTL"]].apply(lambda x: relative_humidity(x.iloc[1],x.iloc[0]),axis=1)
                 
                 # This is needed and goes to the Extremes class so that heat wave stats continue
                 # to be added against the norm rather than the actual weather data.
@@ -2681,7 +2680,12 @@ class _DeltaTransition_IPCC_FigureSPM6():
         #Returns a mapping from probability to fraction of delT ipcc added 
         # to a given probability hw_maxprob maps to 1.0 and hw_minprob maps to
         # delT_ipcc_min_frac which is a user input between 0 and 1
-        return (1.0-self._delT_ipcc_min_frac)/(self._hw_maxprob - self._hw_minprob) * (hw_prob-self._hw_minprob) + self._delT_ipcc_min_frac
+        if self._hw_maxprob == self._hw_minprob:
+            value = np.ones(len(hw_prob))
+        else:
+            value = (1.0-self._delT_ipcc_min_frac)/(self._hw_maxprob - self._hw_minprob) * (hw_prob-self._hw_minprob) + self._delT_ipcc_min_frac
+
+        return value
     
     def _new_analysis(self, hot_param, cold_param, delT_ipcc_frac_month, 
                       ipcc_val_10, ipcc_val_50,

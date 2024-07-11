@@ -107,7 +107,7 @@ def histogram_area(hist):
     bin_ = bin_avg(hist)
     h_ = hist[0]
 
-    return np.trapz(h_, bin_)
+    return np.trapezoid(h_, bin_)
 
 
 def histogram_step_wise_integral(hist, a=None, b=None):
@@ -200,7 +200,7 @@ def histogram_intersection(hist1, hist2):
     minvals = np.min(np.concatenate([interp_vals1.reshape([len(interp_vals1), 1]),
                                      interp_vals2.reshape([len(interp_vals2), 1])], axis=1), axis=1)
 
-    return np.trapz(minvals, intpoint)
+    return np.trapezoid(minvals, intpoint)
 
 
 def histogram_non_overlapping(hist1, hist2, return_min_max=False):
@@ -236,8 +236,8 @@ def histogram_non_overlapping(hist1, hist2, return_min_max=False):
         h_min = h2[elem]
 
     # integrate
-    min_side_area = np.trapz(h_min, intpoint_min)
-    max_side_area = np.trapz(h_max, intpoint_max)
+    min_side_area = np.trapezoid(h_min, intpoint_min)
+    max_side_area = np.trapezoid(h_max, intpoint_max)
 
     if return_min_max:
         return min_side_area, max_side_area
@@ -271,8 +271,8 @@ def histogram_non_intersection(hist1, hist2):
     bin1 = bin_avg(hist1)
     bin2 = bin_avg(hist2)
 
-    area1 = np.trapz(hist1[0], bin1)
-    area2 = np.trapz(hist2[0], bin2)
+    area1 = np.trapezoid(hist1[0], bin1)
+    area2 = np.trapezoid(hist2[0], bin2)
 
     return area1 + area2 - 2 * intersect_area
 

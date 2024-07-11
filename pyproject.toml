@@ -1,22 +1,20 @@
 [build-system]
-requires = [
-"numpy",
-"cython",
-"setuptools",
-"pytest",
-"wheel"]
-build-backend = "setuptools.build_meta"
+    requires = ["setuptools","wheel","numpy","Cython"]
+    build-backend = "setuptools.build_meta"
+    packages = ["mews"]
 [project]
-dynamic = ["readme"]
-name = "MEWS"
-version = "1.1.2b"
-authors = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
-maintainers = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
-description = "Heat wave stochastic generator using CMIP6, NOAA, and IPCC information"
-license = {text = "Revised BSD"}
-dependencies = ["numpy", "pandas", "matplotlib","scipy","statsmodels",
-                "openpyxl", "cython",
-                "xarray[complete]"]
-requires-python = ">= 3.8"
-[project.urls]
-Repository = "https://github.com/sandialabs/MEWS.git"
+    dynamic = ["readme","version"]
+
+    name = "MEWS"
+    authors = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
+    maintainers = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
+    description = "Heat wave stochastic generator using CMIP6, NOAA, and IPCC information"
+    license = {text = "Revised BSD"}
+    dependencies = ["numpy", "pandas", "matplotlib","scipy","statsmodels",
+                    "openpyxl", "cython",
+                    "xarray[complete]"]
+    requires-python = ">= 3.8"
+    keywords = ["Building Energy Modeling","Infrastructure","Extreme Weather","Markov","Resilience","Energy Plus","DOE2","DOE-2"]
+
+    [project.urls]
+        Repository = "https://github.com/sandialabs/MEWS.git"

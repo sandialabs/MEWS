@@ -25,6 +25,7 @@ import unittest
 from mews.data_requests.CMIP6 import CMIP_Data
 import os
 import numpy as np
+import pytest
 
 class TestCMIP(unittest.TestCase):
     
@@ -41,7 +42,9 @@ class TestCMIP(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         os.chdir(cls.cwd)
+    
         
+    @pytest.mark.filterwarnings("ignore:Degrees of freedom <=")
     def test_temperature_data_collection(self):
         #Testing invalid coordinates
         with self.assertRaises(ValueError):

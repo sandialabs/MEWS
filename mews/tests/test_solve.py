@@ -42,11 +42,15 @@ import numpy as np
 import unittest
 import os
 from warnings import warn
+import warnings
+import pytest
 
-
+@pytest.mark.filterwarnings("ignore:Variable x[0]")
+@pytest.mark.filterwarnings("ignore:differential_evolution")
 class Test_SolveDistributionShift(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+
         # clean this up HOW MUCH of this from Test_Alter is needed?
         cls.plot_results = False
         cls.write_results = False
@@ -64,7 +68,7 @@ class Test_SolveDistributionShift(unittest.TestCase):
         if os.path.exists("testing_output"):
             rmtree(("testing_output"),ignore_errors=False,onerror=None)
     
-    
+    @pytest.mark.filterwarnings("ignore:A perfect solution")
     def test_calculated_hist0_stretched(self):
         run_test = self._run_all_tests
         if run_test:
@@ -273,7 +277,8 @@ class Test_SolveDistributionShift(unittest.TestCase):
 
         else:
             warn("\n\nUnit test 'test_decay_func_types' was not run. It has been manually turned off!\n\n")
-
+    
+    @pytest.mark.filterwarnings("ignore:Heat waves of greater than")
     def test_single_known_case(self):
         run_test = self._run_all_tests
         if run_test:
