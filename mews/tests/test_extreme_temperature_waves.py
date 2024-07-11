@@ -640,7 +640,6 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                 os.mkdir("temp_out")
                 
             obj.write_solution(os.path.join("temp_out","test_solution_file.txt"))
-            
             new_stats = obj.read_solution(os.path.join("temp_out","test_solution_file.txt"))
             
             

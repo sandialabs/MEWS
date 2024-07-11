@@ -166,7 +166,7 @@ class Test_Markov(unittest.TestCase):
         # The input checks take up a LOT of time. making the wrapper 2-3 times faster
         # with input checking off, the implementation is about 10x faster.
         tic_c = perf_counter_ns()
-        value = markov_chain_time_dependent_wrapper(cdf, rand_big[0:8760], 0, coef_1term, np.array([0,0]),check_inputs=False)
+        value = markov_chain_time_dependent_wrapper(cdf, rand_big[0:8760], 0, coef_1term, np.array([np.int32(0),np.int32(0)]),check_inputs=False)
         toc_c = perf_counter_ns()
         
         tic_py = perf_counter_ns()
@@ -184,7 +184,7 @@ class Test_Markov(unittest.TestCase):
         
         # TEST 6 - very fast decay only allows up to a single time step in different states
         coef_fast_decay = np.array([[100.0, -999],[100.0,1e7]])  # just checking if different kinds of function types being requested works.
-        values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_fast_decay, np.array([0,2]),check_inputs=False)
+        values = markov_chain_time_dependent_wrapper(cdf, rand_big, 0, coef_fast_decay, np.array([np.int32(0),np.int32(2)]),check_inputs=False)
         # If np.diff(values) is state, the next value will be either 0 or -state and the one after it will be -2
         # such a pattern indicates that only 1 hour events are occuring.
         # and then the next values 0
