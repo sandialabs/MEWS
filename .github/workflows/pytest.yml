@@ -4,9 +4,9 @@ jobs:
   RunMEWSpytest:
     strategy:
       matrix:
-        # run all 3 major platforms  removed: macos-latest, windows-latest, 
-        os: [ubuntu-latest]
-        pyversion: ['3.8', '3.9', '3.10', '3.11']
+        # run all 3 major platforms  removed: macos-latest, ubuntu-latest 
+        os: [windows-latest]
+        pyversion: ['3.9', '3.10', '3.11', '3.12']
   
     runs-on: ${{ matrix.os }}
     steps:
@@ -24,6 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
            python -m pip install --upgrade pip
+           pip install netcdf4
            pip install -e .
            pip install pytest
            pip install pytest-cov
