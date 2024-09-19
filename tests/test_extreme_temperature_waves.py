@@ -413,7 +413,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                 weather_files,
                 station,
                 run_parallel=run_parallel,
-                use_breakpoint=False,
+                use_breakpnt=False,
                 solve_options=solve_options)
 
         
@@ -422,7 +422,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     def _run_verification_study_of_use_global_False(num_realizations, future_year, random_seed, plot_results, scenario,
                                                     model_guide, data_folder, weather_files, station, print_progress=False, run_parallel=True,
                                                     number_cores=20, write_results=False, scen_dict=None, clim_scen=None, obj=None,
-                                                    ci_interval=["5%", "50%", "95%"], use_breakpoint=False, solve_options=None):
+                                                    ci_interval=["5%", "50%", "95%"], use_breakpnt=False, solve_options=None):
 
         # this provides a template for the new use case where use_global = False. # target albuquerque, NM
 
@@ -515,8 +515,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             fig, ax = Graphics.plot_realization(
                 res_dict[ci_interval[0]], "Dry Bulb Temperature", 1)
 
-        if use_breakpoint:
-            breakpoint()
+        if use_breakpnt:
+            breakpnt()
         return metric_dict, mean, obj, clim_scen, scen_dict
 
     @staticmethod

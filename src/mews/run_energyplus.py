@@ -169,7 +169,6 @@ class RunEnergyPlusStudy(object):
                 try:
                     shutil.rmtree(opath)
                 except Exception as excep:
-                    breakpoint()
                     warnings.warn("Failed to remove an output path '"+opath+"'")
                     return excep
                 execute_run = True

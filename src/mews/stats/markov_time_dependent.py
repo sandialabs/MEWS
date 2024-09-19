@@ -504,10 +504,6 @@ def markov_chain_time_dependent_py(cdf,
     
     for idx in range(1, num_step):
         
-        # threshold = 0.005
-        # if rand[idx] < threshold:
-        #     breakpoint()
-        
         for idy in range(num_state):
             
             # for rows other than the first row this will bring 
