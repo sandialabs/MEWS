@@ -39,18 +39,14 @@ class Test_Alter(unittest.TestCase):
     def setUpClass(cls):
         cls.plot_results = False
         
-        if not os.path.exists("data_for_testing"):
-            os.chdir(os.path.join(".","mews","tests"))
-            cls.from_main_dir = True
-        else:
-            cls.from_main_dir = False
+        cls.file_dir = os.path.join(os.path.dirname(__file__))
                
-        cls.test_weather_path = os.path.join(".","data_for_testing")
+        cls.test_weather_path = os.path.join(cls.file_dir,"data_for_testing")
         erase_me_file_path = os.path.join(cls.test_weather_path,"erase_me_file.epw")
         if os.path.exists(erase_me_file_path):
             os.remove(erase_me_file_path)
 
-        cls.test_weather_file_path = os.path.join(".",
+        cls.test_weather_file_path = os.path.join(cls.file_dir,
                                                   cls.test_weather_path,
                                                   "USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw")
         
@@ -69,8 +65,6 @@ class Test_Alter(unittest.TestCase):
         
     @classmethod
     def tearDownClass(cls):
-        if cls.from_main_dir:
-            os.chdir(os.path.join("..",".."))
         if not cls.plot_results:
             plt.close('all')
         

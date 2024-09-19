@@ -379,7 +379,7 @@ class Alter(object):
             else:
                 # heat wave
                 
-                if addseg.max()[0] <= 0:
+                if addseg.max().iloc[0] <= 0:
                     scale = 0.0
                 else:
                     scale = ((addseg.max() - df_diff.max())/addseg.max()).values[0]
@@ -705,7 +705,7 @@ class Alter(object):
                                    df["Day"].values[ind], df["Hour"].values[ind]-1) for ind in [0,-1]]
         df_out = deepcopy(df)
 
-        datind = pd.date_range(begin_end_times[0],begin_end_times[1], freq='H',tz=tzname)
+        datind = pd.date_range(begin_end_times[0],begin_end_times[1], freq='h',tz=tzname)
         df_diff = len(df_out) - len(datind)
         if df_diff == 1: # a lost hour from daylight savings time must be removed from the end
             #TODO - actually find dates of Daylight savings time and verify this is always

@@ -37,11 +37,15 @@ import warnings
 from mews.weather.climate import ClimateScenario
 from mews.events import ExtremeTemperatureWaves
 from mews.graphics.plotting2D import Graphics
+import pytest
 
 
 from copy import deepcopy
 rng = default_rng()
 
+@pytest.mark.filterwarnings("ignore:Variable x[0]")
+@pytest.mark.filterwarnings("ignore:differential_evolution")
+@pytest.mark.filterwarnings("ignore:The mews analysis allows extrapolation")
 class Test_ExtremeTemperatureWaves(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -51,32 +55,28 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         cls.write_results = False
         cls.run_parallel = True
         cls.rng = default_rng()
-
+        cls.file_dir = os.path.join(os.path.dirname(__file__))
         try:
-            os.removedirs("mews_results")
-            os.removedirs("temp_out")
+            if os.path.exists("mews_results"):
+                rmtree("mews_results")
+            if os.path.exists("temp_out"):
+                rmtree("temp_out")
         except:
             warnings.warn(
-                "The testing could not remove the temporary directory ./mews/tests/mews_results or ./mews/tests/temp_out")
+                "The testing could not remove the temporary directory ./tests/mews_results or ./tests/temp_out")
 
-        proxy_location = os.path.join("..", "..", "..", "proxy.txt")
+        proxy_location = os.path.join(cls.file_dir,"..", "..", "..", "proxy.txt")
 
         if os.path.exists(proxy_location):
             with open(proxy_location, 'r') as f:
                 cls.proxy = f.read()
         else:
-            warnings.warn("No proxy settings! If you need for proxy settings to be" +
-                          " active then you need to place the correct proxy server in " +
-                          os.path.abspath(proxy_location) + " for MEWS to download CMIP6 data.")
+            #warnings.warn("No proxy settings! If you need for proxy settings to be" +
+            #              " active then you need to place the correct proxy server in " +
+            #              os.path.abspath(proxy_location) + " for MEWS to download CMIP6 data.")
             cls.proxy = None
 
-        if not os.path.exists("data_for_testing"):
-            os.chdir(os.path.join(".", "mews", "tests"))
-            cls.from_main_dir = True
-        else:
-            cls.from_main_dir = False
-
-        cls.test_weather_path = os.path.join(".", "data_for_testing")
+        cls.test_weather_path = os.path.join(cls.file_dir, "data_for_testing")
         erase_me_file_path = os.path.join(
             cls.test_weather_path, "erase_me_file.epw")
         if os.path.exists(erase_me_file_path):
@@ -114,14 +114,16 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     os.remove(file_name)
                 except:
                     warnings.warn("The testing could not clean up files"
-                                  + " and the ./mews/tests folder has residual "
+                                  + " and the ./tests folder has residual "
                                   + "*.bin, *.epw, *.EXE, or *.DAT files"
                                   + " that need to be removed!")
-            
-        file_dir = os.path.join(os.path.dirname(__file__))
+        file_dir = cls.file_dir    
+        
         
         if os.path.exists(os.path.join(file_dir,"temp_out")):
             rmtree(os.path.join(file_dir,"temp_out"),ignore_errors=False,onerror=None)
+        if os.path.exists(os.path.join(file_dir,"mews_results")):
+            rmtree(os.path.join(file_dir,"mews_results"),ignore_errors=False,onerror=None)
         
         for name in os.listdir(file_dir):
             if "_future_month_" in name or "_historic_month_" in name:
@@ -136,34 +138,29 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                     pass
                 
                 
-        if os.path.exists(os.path.join(".", "mews_results")):
-            for file_name in os.listdir(os.path.join(".", "mews_results")):
+        if os.path.exists(os.path.join(file_dir, "mews_results")):
+            for file_name in os.listdir(os.path.join(file_dir, "mews_results")):
                 if (".epw" in file_name):
                     try:
-                        os.remove(os.path.join("mews_results", file_name))
+                        rmtree(os.path.join(file_dir,"mews_results", file_name))
                     except:
-                        warnings.warn("The testing could not clean up files"
-                                      + " and the tests folders have residual "
-                                      + "*.epw files in ./mews/tests/mews_results"
-                                      + " that need to be removed!")
-        try:
-            os.rmdir("mews_results")
-            os.rmdir("temp_out")
-        except:
-            warnings.warn(
-                "The testing could not remove the temporary directory ./mews/tests/mews_results or ./mews/tests/temp_out")
-        if hasattr(cls,"from_main_dir"):
-            if cls.from_main_dir:
-                os.chdir(os.path.join("..", ".."))
+                        pass
+                        #warnings.warn("The testing could not clean up files"
+                        #              + " and the tests folders have residual "
+                        #              + "*.epw files in ./tests/mews_results"
+                        #              + " that need to be removed!")
 
+
+
+    @pytest.mark.filterwarnings("ignore: The requested cpu count")        
     def test_repeated_date(self):
         run_test = self.run_all_tests
         
         if run_test:
             # this test assures MEWS will reject files with a repeated date in them.
      
-            station = {'summaries':os.path.join("data_for_testing", "example_with_repeated_date.csv"),
-                       'norms':os.path.join("data_for_testing", "repeated_date_norms.csv")}
+            station = {'summaries':os.path.join(self.file_dir,"data_for_testing", "example_with_repeated_date.csv"),
+                       'norms':os.path.join(self.file_dir,"data_for_testing", "repeated_date_norms.csv")}
             
     
             # change this to the appropriate unit conversion (5/9, -(5/9)*32) is for F going to C
@@ -178,7 +175,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             run_parallel = False
             num_cpu = 30
     
-            weather_files = [os.path.join(
+            weather_files = [os.path.join(self.file_dir,
                 "data_for_testing", "USA_AK_Kodiak.AP.703500_TMY3.epw")]
             
             with self.assertRaises(ValueError):
@@ -189,6 +186,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                               run_parallel=run_parallel, use_global=False, delT_ipcc_min_frac=1.0,
                                               num_cpu=num_cpu, write_results=True, test_markov=False,
                                               norms_unit_conversion=unit_conv_norms)
+        else:
+            warnings.warn("run_test has been set to False!")
 
     def test_albuquerque_extreme_waves(self):
         run_test = self.run_all_tests
@@ -205,6 +204,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
             obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
                                           use_local=True, run_parallel=False,use_global=True)
             obj.create_scenario("test", 2020, climate_temp_func)
+        else:
+            warnings.warn("run_test has been set to False!")
 
     def test_ipcc_increases_in_temperature_and_frequency(self):
 
@@ -223,8 +224,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
         if run_test:
             
             clim_scen = ClimateScenario()
-            station = os.path.join("data_for_testing","USW00023050.csv")
-            weather_files = [os.path.join("data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
+            station = os.path.join(self.file_dir,"data_for_testing","USW00023050.csv")
+            weather_files = [os.path.join(self.file_dir,"data_for_testing","USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
     
             num_year = 1
             start_years = [2020,2050]
@@ -236,7 +237,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     
             # subtle difference with scenario names in ClimateScenario!
             scenario = 'SSP585'
-    
+            
             obj = ExtremeTemperatureWaves(station, weather_files, unit_conversion=(1/10,0),
                                               use_local=True,random_seed=random_seed,
                                               include_plots=self.plot_results,
@@ -323,7 +324,14 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                                               use_local=True,random_seed=random_seed,
                                               include_plots=self.plot_results,
                                               run_parallel=True,use_global=True)
-
+        else:
+            warnings.warn("run_test has been set to False!")
+                
+                
+    @pytest.mark.filterwarnings("ignore:Degrees of freedom <=")
+    @pytest.mark.filterwarnings("ignore:A perfect solution for shifting")
+    @pytest.mark.filterwarnings("ignore:The requested cpu count")
+    @pytest.mark.filterwarnings("ignore:numpy.ndarray size changed, may")
     def test_extreme_temperature_waves_local_lat_lon(self):
         """
         This is a very low order convergence check for the new
@@ -352,6 +360,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
 
             
         """
+        
         run_test = self.run_all_tests
         if run_test:
             random_seed = 1455992
@@ -389,8 +398,8 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
     
             run_parallel = True
     
-            station = os.path.join("data_for_testing", "USW00023050.csv")
-            weather_files = [os.path.join(
+            station = os.path.join(self.file_dir,"data_for_testing", "USW00023050.csv")
+            weather_files = [os.path.join(self.file_dir,
                 "data_for_testing", "USA_NM_Albuquerque.Intl.AP.723650_TMY3.epw")]
     
             metric_dict, meanval, obj, clim_scen, scen_dict = self._run_verification_study_of_use_global_False(
@@ -406,6 +415,7 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                 run_parallel=run_parallel,
                 use_breakpoint=False,
                 solve_options=solve_options)
+
         
 
     @staticmethod
@@ -640,7 +650,6 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
                 os.mkdir("temp_out")
                 
             obj.write_solution(os.path.join("temp_out","test_solution_file.txt"))
-            
             new_stats = obj.read_solution(os.path.join("temp_out","test_solution_file.txt"))
             
             
@@ -661,11 +670,12 @@ class Test_ExtremeTemperatureWaves(unittest.TestCase):
 
             obj2.create_scenario('SSP585',2080,scen_dict,1,2014,
                                  solution_file=os.path.join("temp_out","test_solution_file2.txt"))
-            
+    
+    @pytest.mark.filterwarnings("ignore: The requested cpu count")        
     def test_create_solutions(self):
         run_test = self.run_all_tests
         if run_test:
-            inp_dir = os.path.join(os.path.dirname(__file__),"data_for_testing")
+            inp_dir = os.path.join(self.file_dir,"data_for_testing")
             """
             INPUT DATA
             

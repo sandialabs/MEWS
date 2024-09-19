@@ -1220,7 +1220,7 @@ class Extremes():
                 xval = np.array(np.arange(0,duration,duration/(24*100)))
 
                 h_test = Extremes.double_shape_func(xval,Acoef,Bcoef,duration,min_steps)
-                h_test_heat = np.trapz(h_test,xval)
+                h_test_heat = np.trapezoid(h_test,xval)
                 
                 if 100 * (h_test_heat - heat_added)/heat_added > acceptable_error_percent:
                     raise ExtremesIntegrationError("The heat wave increased "

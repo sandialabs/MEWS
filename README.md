@@ -138,7 +138,12 @@ Contact
 Citing MEWS
 -----------
 You can cite MEWS with one or more of the following:
-* Daniel L. Villa, Sang Hoon Lee, Carlo Bianchi, Juan Pablo Carvallo, Illya Azaroff, Andrea Mammoli and Tyler Schostek 2023. "Multi-scenario Extreme Weather Simulator Application to Heat Waves: Ko’olauloa Community Resilience Hub," _Science and Technology for the Built Environment_ https://doi.org/10.1080/23744731.2023.2279467
+
+* Villa, Daniel L., Nathan T. Hahn, John K. Grey, and Frances Pavich. 2024. "Futures for electrochromic windows on high performance houses in arid, cold climates." _Energy and Buildings_ https://doi.org/10.1016/j.enbuild.2024.114293.
+
+* Macmillan, Madeline, Alexander Zolan, Morgan Bazilian and Daniel L. Villa. 2024. "Microgrid design and multi-year dispatch optimization under climate-informed load and renewable resource uncertainty." _Applied Energy_ https://doi.org/10.1016/j.apenergy.2024.123355
+
+* Villa, Daniel L., Sang Hoon Lee, Carlo Bianchi, Juan Pablo Carvallo, Illya Azaroff, Andrea Mammoli and Tyler Schostek 2023. "Multi-scenario Extreme Weather Simulator Application to Heat Waves: Ko’olauloa Community Resilience Hub," _Science and Technology for the Built Environment_ https://doi.org/10.1080/23744731.2023.2279467
 
 * Villa, Daniel L., Tyler J. Schostek, Krissy Govertsen, and Madeline Macmillan. 2023. "A Stochastic Model of Future Extreme Temperature Events for Infrastructure Analysis." _Environmental Modeling & Software_ https://doi.org/10.1016/j.envsoft.2023.105663.
 

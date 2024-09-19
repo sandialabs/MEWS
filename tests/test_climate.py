@@ -32,6 +32,7 @@ from matplotlib import rc
 import warnings
 
 from mews.weather.climate import ClimateScenario
+import pytest
 
 
 rng = default_rng()
@@ -90,6 +91,9 @@ class Test_ClimateScenario(unittest.TestCase):
         
         clim_func = clim_scen.calculate_coef("SSP585")  
 
+    @pytest.mark.filterwarnings("ignore:No proxy settings!")
+    @pytest.mark.filterwarnings("ignore:Degrees pf freedom <=0")
+    @pytest.mark.filterwarnings("ignore:Invalid value encountered")
     def test_climate_scenario_with_specific_lat_lon(self):
         """
         This tests extreme temperature with a specific latitude and longitude

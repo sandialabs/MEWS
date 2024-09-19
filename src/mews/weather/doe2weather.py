@@ -59,7 +59,7 @@ import struct
 
 class DataFormats():
     # changing this will cause significant portions of the code to fail
-    header_dtype = np.dtype([('location_IWDID','a20'),
+    header_dtype = np.dtype([('location_IWDID','S20'),
                                             ('year_IWYR', 'i4'),
                                             ('latitude_WLAT','f4'),
                                             ('longitude_WLONG','f4'),
@@ -295,7 +295,7 @@ class DOE2Weather(object):
                 dat.write('            {0:1.0f}                 {1:1.0f}'.format(iwsz,iftyp))
             with open("WEATHER.FMT",'w') as fmt:
                 # 3 header rows
-    # header_dtype = np.dtype([('location_IWDID','a20'),
+    # header_dtype = np.dtype([('location_IWDID','S20'),
     #                                         ('year_IWYR', 'i4'),
     #                                         ('latitude_WLAT','f4'),
     #                                         ('longitude_WLONG','f4'),
@@ -589,7 +589,7 @@ class DOE2Weather(object):
         headers : list : list of np.array with specialized dtype to capture
             the header for each month of data in the DOE-2 *.BIN file.
             The dtype spec is as follows:
-                np.dtype([('location_IWDID','a20'),
+                np.dtype([('location_IWDID','S20'),
                           ('year_IWYR', 'i4'),
                           ('latitude_WLAT','f4'),
                           ('longitude_WLONG','f4'),
@@ -763,7 +763,7 @@ class DOE2Weather(object):
     @staticmethod
     def _doe2_bin_data_format(bin_content,byte_position,next_record):
         return np.frombuffer(bin_content[byte_position:next_record+1],
-                             np.dtype([('location_IWDID','a20'),
+                             np.dtype([('location_IWDID','S20'),
                                             ('year_IWYR', 'i4'),
                                             ('latitude_WLAT','f4'),
                                             ('longitude_WLONG','f4'),
@@ -808,7 +808,7 @@ class DOE2Weather(object):
             the header for each month of data in the DOE-2 filename.BIN file.
             The dtype spec is as follows:
                 
-                np.dtype([('location_IWDID','a20'),
+                np.dtype([('location_IWDID','S20'),
                           ('year_IWYR', 'i4'),
                           ('latitude_WLAT','f4'),
                           ('longitude_WLONG','f4'),
