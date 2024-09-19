@@ -18,3 +18,8 @@ src/mews/utilities/__pycache__/
 src/mews/weather/__pycache__/
 tests/__pycache__/
 CMIP6_Data_Log.log
+tests/*.png
+tests/*.csv
+tests/mews_results
+tests/*.txt
+tests/temp_out
