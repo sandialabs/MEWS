@@ -16,7 +16,6 @@ import shutil
 class Test_Run_EnergyPlus(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # clean this up HOW MUCH of this from Test_Alter is needed?
         # this test is not usually run unless a valid path to energyplus is 
         # supplied
         energyplus_path = os.path.join("/ascldap","users","dlvilla",

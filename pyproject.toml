@@ -12,8 +12,40 @@
     dependencies = ["numpy", "pandas", "matplotlib","scipy","statsmodels",
                     "openpyxl", "cython",
                     "xarray[complete]"]
-    requires-python = ">= 3.8"
+    requires-python = ">= 3.9"
     keywords = ["Building Energy Modeling","Infrastructure","Extreme Weather","Markov","Resilience","Energy Plus","DOE2","DOE-2"]
 
-    [project.urls]
-        Repository = "https://github.com/sandialabs/MEWS.git"
+[project.urls]
+    Repository = "https://github.com/sandialabs/MEWS.git"
+
+[project.optional-dependencies]
+    test = ["pytest","pytest-cov"]
+    pylint = ["pylint"]
+    docs = ["sphinx"]
+
+[tool.codespell]
+ignore-words-list = "ned,esy,ot"
+# NOTE: ignore words for codespell must be lowercase
+skip = "*.svg"
+
+[tool.pylint.messages_control]
+disable = [
+  "missing-module-docstring",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "too-many-instance-attributes",
+  "too-many-return-statements",
+  "too-few-public-methods",
+  "too-many-branches",
+  "too-many-arguments",
+  "too-many-statements",
+  "too-many-locals",
+  "import-error",
+  "duplicate-code",
+  "no-name-in-module"
+]
+good-names-rgxs = "x,y,e,md,sw"
+logging-format-style = 'old'
+max-line-length = "100"
+
+

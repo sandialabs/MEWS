@@ -1,0 +1,19 @@
+name: Build the documentation
+
+on:
+    release:
+      types: [published]
+    workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ammaraskar/sphinx-action@7.4.2
+      with:
+        docs-folder: "docs/"
+    - uses: actions/upload-artifact@v1
+      with:
+        name: DocumentationHTML
+        path: docs/_build/html/
