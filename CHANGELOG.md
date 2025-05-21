@@ -1,3 +1,10 @@
+# Version 1.1.3
+
+ - IN CONSTRUCTION: Added shift_func(m,column) to mews.weather.alter.Alter which shifts an entire
+   time series mean value by "m" while keeping the timeseries minimum value constant
+ - IN CONSTRUCTION: Added _recalculate_psychrometrics to the "mews.weather.alter.Alter" class so that changes
+   to a psychrometric variable shift other psychrometric variables. 
+
 
 
 # Version 1.1.2
