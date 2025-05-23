@@ -764,7 +764,7 @@ class Extremes():
                         if random_seed is None:
                             rng = default_rng()
                         else: 
-                            rng = default_rng(seed=(random_seed + int(1010 * self.rng.random(1))))
+                            rng = default_rng(seed=(random_seed + int(1010 * self.rng.random(1)[0])))
                         args = (start_year,idx,num_wfile,idy,wfile,column,
                                 tzname,transition_matrix,transition_matrix_delta,
                                 state_name,use_cython,state_int, 

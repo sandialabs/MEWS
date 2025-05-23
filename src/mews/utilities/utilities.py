@@ -24,6 +24,102 @@ import numpy as np
 import pandas as pd
 from numpy import poly1d
 from mews.epw import epw
+from mews.constants.data_format import EPW_PSYCHROMETRIC_DICTIONARY as EPW_PSYCH_DICT
+from mews.constants.data_format import (EPW_PRESSURE_COLUMN_NAME,EPW_DB_TEMP_COLUMN_NAME,
+                                        EPW_DP_TEMP_COLUMN_NAME, EPW_RH_COLUMN_NAME,
+                                        EPW_PSYCH_NAMES)
+
+from CoolProp.HumidAirProp import HAPropsSI
+
+def calculate_psychrometrics(epw_df,in_columns,out_cool_prop_name=""):
+    f"""
+    This function takes 3 input psychrometric
+    variables in the CoolProp HAPropsSI function and calculates a 
+    psychrometric output variable in an EPW file. You can see which variables are input/output
+    or strictly output in the "Table of inputs/outputs to HAPropsSI" at the bottom 
+    of http://www.coolprop.org/fluid_properties/HumidAir.html#id9
+
+    For EPW files the 4 psychrometric variables are:
+    1) Pressure (input)
+    2) Dry Bulb Temperature (input/output)
+    3) Dew Point Temperature (input/output)
+    4) Relative Humidity (input/output)
+
+    Pressure must be an input since the other variables cannot determine it.
+    Two other variables are needed so one variable must be recalculated if a change is 
+    made to any one of these four. Up to three can be changed and then the fourth 
+    recalculated.
+
+    Many other variables can be output if they are needed.
+
+    Inputs
+    ======
+
+    epw_df : pandas.Dataframe :
+        this must be a dataframe that has been read from an EPW file using an object 
+        instantiated from obj = mews.epw.epw() and obj.read(epw_weather_path) obj.epwobj.dataframe
+
+    in_columns : list : len(list) == 2 or 3, all elements in list in {EPW_PSYCH_NAMES}
+        always includes '{EPW_PRESSURE_COLUMN_NAME}' if len(list) == 3, each entry
+        must be unique (no repeated names).
+
+    out_cool_prop_name : str (optional)
+        Give a correct name in http://www.coolprop.org/fluid_properties/HumidAir.html#id9 to
+        output something in CoolProp units other than the outputs needed by EPW weather files.
+
+    Returns
+    =======
+    Whatever column name in {EPW_PSYCH_NAMES} is not in in_columns (+Pressure) is output
+    as a timeseries and the epw_df is updated with these new values
+
+    Raises
+    ======
+    TypeError, ValueError - data validation does not allow invalid inputs.
+        
+    """
+    in_columns = ValidationPsychCalcs._in_column_validation(in_columns)
+    ValidationPsychCalcs._epw_df_validation(epw_df,in_columns)
+
+    var_out = [column for column in EPW_PSYCH_NAMES if column not in in_columns][0]
+    var_out_symbol = EPW_PSYCH_DICT[var_out]['cool_prop']['symbol']
+    var_in_symbols = [EPW_PSYCH_DICT[column]['cool_prop']['symbol'] for column in in_columns]
+    convert = [EPW_PSYCH_DICT[column]['cool_prop']['convert_units'] for column in in_columns]
+    unconvert = EPW_PSYCH_DICT[var_out]['cool_prop']['unconvert_units']
+        
+    if len(out_cool_prop_name) != 0:
+        # this is a shortcircuit that can cause an error.
+        var_out_symbol = out_cool_prop_name
+
+    # NOT SURE WHICH VERSION IS FASTER! THIS IS SLOW THOUGH
+    # MOST LIKELY ITS BECAUSE COOLPROPS takes some time!
+    # def psych_func(row): 
+    #     return unconvert(HAPropsSI(
+    #                         var_out_symbol,
+    #                         var_in_symbols[0],
+    #                         float(convert[0](row[in_columns[0]])),
+    #                         var_in_symbols[1],
+    #                         float(convert[1](row[in_columns[1]])),
+    #                         var_in_symbols[2],
+    #                         float(convert[2](row[in_columns[2]]))))
+    #new_values = epw_df.apply(psych_func,axis=1)
+    var_in = [epw_df[in_columns[0]].values,
+              epw_df[in_columns[1]].values,
+              epw_df[in_columns[2]].values]
+    
+    new_values = unconvert(HAPropsSI(
+                            var_out_symbol,
+                            var_in_symbols[0],
+                            convert[0](var_in[0]),
+                            var_in_symbols[1],
+                            convert[1](var_in[1]),
+                            var_in_symbols[2],
+                            convert[2](var_in[2])))
+
+    epw_df[var_out] = new_values
+    return new_values
+
+
+
 
 
 def dict_key_equal(dict_key, dict_check):
@@ -768,3 +864,87 @@ def list_epws_stats(epws_dir,
         df_out.to_csv(os.path.join(epws_dir, "..", out_file))
 
     return df_out
+
+class ValidationPsychCalcs:
+    @staticmethod
+    def _in_column_validation(in_columns):
+        # assure correct type
+        if not isinstance(in_columns,list):
+            raise TypeError(f"The 'in_columns' input must be a list you input: {in_columns}")
+        # assure list of strings
+        non_string_entries = [entry for entry in in_columns if not isinstance(entry, str)]
+        if len(non_string_entries) != 0:
+            raise TypeError(f"The 'in_columns' list must be a list of strings. You input: {in_columns}")
+
+        # assure the right number of entries
+        len_in_columns = len(in_columns)
+        if len_in_columns not in [2,3]:
+            raise ValueError("The 'in_columns' input must be a list of length 2 or 3")
+        # assure correct names:
+        incorrect_column_names = [in_column for in_column in in_columns 
+                                if in_column not in EPW_PSYCH_NAMES]
+        if len(incorrect_column_names) != 0:
+            raise ValueError("The 'in_columns' input has invalid one or more invalid"
+                            +f" entries: {incorrect_column_names}. The only valid "
+                            +f"inputs are: {EPW_PSYCH_NAMES}")
+        # assure unique names
+        in_columns_unique = list(set(in_columns))
+        if len(in_columns_unique) != len_in_columns:
+            raise ValueError("The 'in_columns' input must have unique members. "
+                            +f"You input: {in_columns}.")
+        # assure pressure is included
+        if EPW_PRESSURE_COLUMN_NAME not in in_columns and len(in_columns) == 2:
+            in_columns.append(EPW_PRESSURE_COLUMN_NAME)
+        if EPW_PRESSURE_COLUMN_NAME not in in_columns and len(in_columns) == 3:
+            raise ValueError(f"You must include {EPW_PRESSURE_COLUMN_NAME} when you give 3 entries, you entered: {in_columns}")
+        
+        # assure db and dp or db and rh
+        good_combo1 = (EPW_DB_TEMP_COLUMN_NAME in in_columns) and (EPW_DP_TEMP_COLUMN_NAME in in_columns)
+        good_combo2 = (EPW_DB_TEMP_COLUMN_NAME in in_columns) and (EPW_RH_COLUMN_NAME in in_columns)
+        if not (good_combo1 or good_combo2):
+            raise ValueError("You must have 1 of 2 combinations of inputs for 'in_column': 1 - "
+                             +f"[{EPW_DB_TEMP_COLUMN_NAME},{EPW_DP_TEMP_COLUMN_NAME},{EPW_PRESSURE_COLUMN_NAME}], or 2- ["
+                             +f"[{EPW_DB_TEMP_COLUMN_NAME},{EPW_RH_COLUMN_NAME},{EPW_PRESSURE_COLUMN_NAME}].")
+        return in_columns
+    
+    
+    @staticmethod
+    def _epw_df_validation(epw_df,in_columns):
+        # assure correct type
+        if not isinstance(epw_df, pd.DataFrame):
+            raise TypeError(f"The input 'epw_df' must be a pandas.DataFrame! You input: {epw_df}")
+        
+        # assure columns exist in the DataFrame
+        mismatched_columns = [in_column for in_column in in_columns if in_column not in epw_df]
+        if len(mismatched_columns) != 0:
+            raise ValueError("The following columns do not exist in the 'epw_df' input dataframe:"
+                             +f" {mismatched_columns}. Something is wrong with your EPW file!")
+        
+        # assure columns are numeric
+        is_not_numeric = [in_column for in_column in in_columns 
+                      if not pd.api.types.is_numeric_dtype(epw_df[in_column])]
+        if len(is_not_numeric) != 0:
+            raise ValueError("The 'epw_df' columns must be numeric. The following"
+                             +f" requested columns are not numeric: {is_not_numeric}.")
+        
+        # assure columns have no missing values and are in-bounds to maximum and minimum requirement
+        for in_column in in_columns:
+            missing = EPW_PSYCH_DICT[in_column]['missing']
+            max = EPW_PSYCH_DICT[in_column]['maximum']
+            min = EPW_PSYCH_DICT[in_column]['minimum']
+            if missing is not None:
+                is_missing = epw_df[in_column] == missing
+                if is_missing.sum() > 0:
+                    raise ValueError(f"The '{in_column}' column has missing values equal to {missing}! "
+                                    +"No missing values are allowed. Please fix the weather data being used!")
+            if max is not None:
+                over_max = epw_df[in_column] > max
+                if over_max.sum() > 0:
+                    raise ValueError(f"The maximum value allowed for column '{in_column}' has been exceeded"
+                                     +f" by the following values:{epw_df[in_column][over_max]}")
+                
+            if min is not None:
+                under_min = epw_df[in_column] < min
+                if under_min.sum() > 0:
+                    raise ValueError(f"The maximum value allowed for column '{in_column}' has been exceeded"
+                                     +f" by the following values:{epw_df[in_column][under_min]}")

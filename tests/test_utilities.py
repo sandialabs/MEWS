@@ -21,18 +21,22 @@ The license for MEWS is the Modified BSD License and copyright information
 must be replicated in any derivative works that use the source code.
 
 """
-
-
+from copy import deepcopy
 from mews.utilities.utilities import (histogram_intersection, 
                                       histogram_non_intersection, 
                                       histogram_non_overlapping,
                                       histogram_step_wise_integral,
                                       write_readable_python_dict,
                                       read_readable_python_dict,
-                                      dict_key_equal)
+                                      dict_key_equal,
+                                      calculate_psychrometrics)
+from mews.constants.data_format import (EPW_PRESSURE_COLUMN_NAME,EPW_DB_TEMP_COLUMN_NAME,
+                                        EPW_DP_TEMP_COLUMN_NAME, EPW_RH_COLUMN_NAME)
+from mews.constants.data_format import EPW_PSYCHROMETRIC_DICTIONARY as EPW_PSYCH_DICT
 from numpy.random import default_rng
 from matplotlib import pyplot as plt
-from mews.utilities.utilities import find_extreme_intervals
+import pandas as pd
+from mews.epw import epw
 
 import numpy as np
 import unittest
@@ -45,15 +49,114 @@ class Test_SolveDistributionShift(unittest.TestCase):
         # clean this up HOW MUCH of this from Test_Alter is needed?
         cls.plot_results = True
         cls.write_results = False
+        cls.file_dir = os.path.join(os.path.dirname(__file__))
+        cls.test_weather_path = os.path.join(cls.file_dir,"data_for_testing")
         cls.rng = default_rng(23985)
         plt.close('all')
-        
+        cls.test_weather_file_path = os.path.join(cls.file_dir,
+                                                  cls.test_weather_path,
+                                                  "USA_NM_Santa.Fe.County.Muni.AP.723656_TMY3.epw")
+        cls.epwobj = epw()
+        cls.epwobj.read(cls.test_weather_file_path)
+        cls.epw_df = cls.epwobj.dataframe
         
     
     @classmethod
     def tearDownClass(cls):
         pass
-    
+
+    def test_calculate_psychrometrics(self):
+        data_db20_rh50_1atm = {EPW_DB_TEMP_COLUMN_NAME:20,
+                EPW_RH_COLUMN_NAME:50,
+                EPW_PRESSURE_COLUMN_NAME:101325}
+        # got 9.3 from https://www.calculator.net/dew-point-calculator.html
+        dp_db20_rh50_1atm = 9.3
+        df = pd.DataFrame([data_db20_rh50_1atm])
+        dp_temp_new = calculate_psychrometrics(df,[EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])
+
+        self.assertAlmostEqual(dp_db20_rh50_1atm,dp_temp_new[0],1,
+                               "dew point not within 1 decimal accuracy!")
+        data_db45_dp20_1atm = {EPW_DB_TEMP_COLUMN_NAME:45,
+                EPW_DP_TEMP_COLUMN_NAME:20,
+                EPW_PRESSURE_COLUMN_NAME:101325}
+        rh_db45_dp20_1atm = 24.45 # calculated by AI with question:
+                                  # relative humidity at 45C 20 dew point temperature 1 atm
+
+        df = pd.DataFrame([data_db45_dp20_1atm])
+        rh_new = calculate_psychrometrics(df,[EPW_DB_TEMP_COLUMN_NAME,EPW_DP_TEMP_COLUMN_NAME])
+
+        self.assertAlmostEqual(rh_db45_dp20_1atm,rh_new[0],0,"relative humidity not within 0 decimal accuracy!")
+
+        
+        epw_df = self.epw_df
+        sub = deepcopy(epw_df.iloc[2000:2010,:])
+
+        dp_temp_new10 = calculate_psychrometrics(sub,[EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])
+        rh_new10 = calculate_psychrometrics(sub,[EPW_DB_TEMP_COLUMN_NAME,EPW_DP_TEMP_COLUMN_NAME])
+
+        np.testing.assert_array_almost_equal(dp_temp_new10,np.array([-1.86994844, -1.11126887,  
+                                                                     0.09823071,  1.05216479,  2.16530265,
+                                                                     2.16530265,  2.16530975,  2.16530975,  
+                                                                     2.16530975,  0.09824482]),3)
+        np.testing.assert_array_almost_equal(rh_new10,np.array([27., 27., 28., 30., 27., 27., 
+                                                                         27., 27., 27., 28.]),3)
+        # test incorrect inputs.
+        with self.assertRaises(TypeError):
+            calculate_psychrometrics(sub,"this should be a list")
+
+        # non string list error
+        with self.assertRaises(TypeError):
+            calculate_psychrometrics(sub,[20])
+        # incorrect size of list
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(sub,[EPW_DB_TEMP_COLUMN_NAME])     
+        # wrong name in list
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(sub,[EPW_DB_TEMP_COLUMN_NAME,"incorrect name"])
+        # non-unique names
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(sub,[EPW_DB_TEMP_COLUMN_NAME,EPW_DB_TEMP_COLUMN_NAME])  
+        # assure pressure is included
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(sub,[EPW_DB_TEMP_COLUMN_NAME,
+                                          EPW_DP_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])      
+        # assure dp and db or db and rh
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(sub,[EPW_DP_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])    
+
+        # epw_df input:
+        # assure df
+        with self.assertRaises(TypeError):
+            calculate_psychrometrics("this should be a dataframe",
+                                     [EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME]) 
+        # assure columns exist
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(pd.DataFrame([{'a':[1,2,3],'c':[4,5,6]}]),
+                                     [EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME]) 
+        # assure columns are numeric
+        with self.assertRaises(ValueError):
+            calculate_psychrometrics(pd.DataFrame([{EPW_DB_TEMP_COLUMN_NAME:['a','b','c'],
+                                                    EPW_RH_COLUMN_NAME:[4,5,6]}]),
+                                     [EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])  
+        # assure columns do not have any missing values
+        with self.assertRaises(ValueError):
+            missing = EPW_PSYCH_DICT[EPW_DB_TEMP_COLUMN_NAME]['missing']
+            calculate_psychrometrics(pd.DataFrame([{EPW_DB_TEMP_COLUMN_NAME:[missing,missing,missing],
+                                                    EPW_RH_COLUMN_NAME:[4,5,6]}]),
+                                     [EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])  
+        # assure columns do not have any values beyond the maximum allowed
+        with self.assertRaises(ValueError):
+            max = EPW_PSYCH_DICT[EPW_DB_TEMP_COLUMN_NAME]['maximum'] + 10
+            calculate_psychrometrics(pd.DataFrame([{EPW_DB_TEMP_COLUMN_NAME:[max,max,max],
+                                                    EPW_RH_COLUMN_NAME:[4,5,6]}]),
+                                     [EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])      
+        # assure columns do not have any values below the minimum allowed
+        with self.assertRaises(ValueError):
+            min = EPW_PSYCH_DICT[EPW_DB_TEMP_COLUMN_NAME]['maximum'] - 10
+            calculate_psychrometrics(pd.DataFrame([{EPW_DB_TEMP_COLUMN_NAME:[min,min,min],
+                                                    EPW_RH_COLUMN_NAME:[4,5,6]}]),
+                                     [EPW_DB_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME])     
+ 
     
     def test_read_and_write_of_readable_python_dict(self):
         ex_dict = {'cs': {'help': 'These statistics are already mapped from -1 ... 1 and _inverse_transform_fit is needed to return to actual degC and degC*hr values. If input of actual values is desired use transform_fit(X,max,min)', 'energy_normal_param': {'mu': 0.0038899912491902897, 'sig': 0.4154535225139539}, 'extreme_temp_normal_param': {'mu': 0.061888990278578374, 'sig': 0.690956053333432}, 'max extreme temp per duration': 1.9012564475129312, 'min extreme temp per duration': 0.12866200452373405, 'max energy per duration': 1.3562919483136582, 'min energy per duration': 0.3990299129968476, 'energy linear slope': 0.9768230669124248, 'normalized extreme temp duration fit slope': 0.6946813967764691, 'normalized extreme temp duration fit intercept': 0.46494070822925054, 'normalizing energy': -3775.333333333333, 'normalizing extreme temp': -25.3125, 'normalizing duration': 384, 'historic time interval': 650040.0, 'hourly prob stay in heat wave': 0.9623388098739797, 'hourly prob of heat wave': 0.004296022992350157, 'historical durations (durations0)': (np.array([53, 59, 37, 19,  9,  3,  2,  3,  1,  0,  0,  0,  0,  0,  0,  1]), np.array([ 12.,  36.,  60.,  84., 108., 132., 156., 180., 204., 228., 252.,

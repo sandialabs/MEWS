@@ -32,8 +32,12 @@ from copy import deepcopy
 from mews.epw import epw
 from mews.errors import EPWMissingDataFromFile, EPWFileReadFailure, EPWRepeatDateError
 from mews.weather.doe2weather import DOE2Weather
+from mews.utilities.utilities import calculate_psychrometrics
+from mews.constants.data_format import (EPW_PRESSURE_COLUMN_NAME,EPW_DB_TEMP_COLUMN_NAME,
+                                        EPW_DP_TEMP_COLUMN_NAME, EPW_RH_COLUMN_NAME)
 import warnings
 from copy import deepcopy
+
 
 class Alter(object):
 
@@ -111,13 +115,200 @@ class Alter(object):
         obj = DOE2Weather()
         self.df2bin = obj.df2bin
         self.bin2df = obj.bin2df
+        self._num_shifts = 0
         
         self.read(weather_file_path,replace_year,check_types,True,isdoe2,use_exe,
                   doe2_bin2txt_path,doe2_start_datetime,doe2_tz,
                   doe2_hour_in_file,doe2_dst)
         self._unit_test_data = {} # added to help test heat wave addition validity
                                   # not used outside unit testing "test_extreme_temperature_waves"
+    
+    def _fnew_villa2021_eqn1(self,ts,p0,pm,pt):
+        """
+        See Villa, 2021. "Institutional heat wave analysis by building 
+        energy modeling fleet and meter data." Energy and Buildings 237:110774
+        https://doi.org/10.1016/j.enbuild.2021.110774
+
+        except that a translational term pt has been added.
+
+        Equation 1
+
+        This function shifts and stretches a time series signal 
         
+        """
+        fmax = ts.max()
+        fmin = ts.min()
+        if p0 >= 0 and p0 <= 1.0:
+            fnew = pm * ((1-p0)*ts + fmax * p0) + pt
+        elif p0 < 0 and p0 > -1.0:
+            fdiffmax = fmax - fmin
+            gt = fmax / fdiffmax * ts - fmax * fmin / fdiffmax
+            fnew = pm * (-p0 * gt + (p0 + 1)*ts) + pt
+        else:
+            raise ValueError(f"The input p0 was given a value of {p0} which is outside the valid range of -1 < p0 <= 1")
+        return fnew
+
+    def recalculate_psychrometrics(self, recalculate=EPW_DP_TEMP_COLUMN_NAME):
+        """
+        When changes have been made, either the dew-point temperature or relative humidity have to
+        be recalculated in order for the EPW file to have consistent psychrometrics.
+        
+        This should be done after all alterations because it takes a long time to reculate an
+        entire year.
+
+        """
+        # validate input
+        if not isinstance(recalculate,str):
+            raise TypeError(f"The 'recalculate' input must be string! You input {recalculate}.")
+        valid_inputs = [EPW_DP_TEMP_COLUMN_NAME,EPW_RH_COLUMN_NAME]
+        if recalculate not in valid_inputs:
+            raise ValueError(f"The only valid inputs for 'reclculate' are: {valid_inputs}")
+        if recalculate == EPW_DP_TEMP_COLUMN_NAME:
+            calculate_psychrometrics(self.epwobj.dataframe,
+                                     [EPW_DB_TEMP_COLUMN_NAME,
+                                      EPW_RH_COLUMN_NAME])
+        else:
+            calculate_psychrometrics(self.epwobj.dataframe,
+                                     [EPW_DB_TEMP_COLUMN_NAME,
+                                      EPW_DP_TEMP_COLUMN_NAME])            
+
+        
+
+    def shift_function(self,delta_mean, column, constant_fmin, translate=0):
+        """
+        Shift a time series such that its minimum (constant_fmin=True) or
+        its maximum (constant_fmin=False) (plus the translate term) 
+        stays constant and the mean of the time series changes by delta_mean
+        (This is useful to change the mean of time series such as precipitation
+        where you do not want to simply translate the minimum value)
+
+        Inputs
+        ------
+
+        delta_mean: float: 
+              The amount to shift the mean for the timeseries in "column"
+              by.
+
+        column: str:
+               A column name for self.epwobj.dataframe
+
+        constant_fmin: bool:
+               If True the self.epwobj[column].min() will be held constant
+               If False the self.epwobj[column].max() will be held constant
+
+        translate: float:
+               Shift the entire time series before performing the operation
+               and then shifts back after the operation.
+               this can make positive/negative timeseries all positive or
+               all negative so that the operation can be accomplished
+               HINT - if you want to preserve a maximum,
+
+        Returns
+        -------
+
+        ts_new -- The mean shifted function whose new minimum is fmin + translate
+                Also, the self.epqobj.dataframe[column] is altered such that the 
+                minimum value stays the same and the mean has changed by 
+                delta_mean 
+        
+        """
+        tol = 1e-8
+        _data = self.epwobj.dataframe
+        if column in _data:
+            _ts = _data[column] + translate
+            if (((_ts + translate >= 0).sum() == len(_ts)) or 
+                ((_ts + translate <= 0).sum() == len(_ts))):
+                fbar = _ts.mean()
+                fmin = _ts.min()
+                fmax = _ts.max()
+                m = delta_mean
+                    
+                p0_list =[]
+                pm_list = []
+
+                # # these solutions were derived using sympy as seen below
+                # from sympy.solvers import solve
+                # from sympy import Symbol
+
+                # fmin = Symbol('fmin')
+                # fmax = Symbol('fmax')
+                # fbar = Symbol('fbar')
+                # m = Symbol('m')
+                # pm = Symbol('pm')
+                # p0 = Symbol('p0')
+
+                # # hold fmin constant, shift mean by m
+
+                # eqlist = [pm *((1-p0)*fmin + fmax * p0) - fmin,
+                #         pm *((1-p0)*fbar + fmax * p0) - m - fbar]
+                # sol = solve(eqlist, [pm, p0], dict=True)
+
+                # eqlist2 = [pm * (p0 + 1) * fmin - fmin,
+                #         pm * (-p0 * (fmax/(fmax-fmin) * fbar - fmax * fmin /(fmax-fmin))+(p0 + 1)*fbar) - m - fbar]
+                # sol2 = solve(eqlist2, [pm, p0], dict=True)
+
+                # hold fmax constant, shift mean by m
+
+                # eqlist_max = [pm*((1-p0)*fmax + fmax * p0) - fmax,
+                #             pm*((1-p0)*fbar + fmax * p0) - m - fbar]
+                # sol_max = solve(eqlist_max, [pm,p0], dict=True)
+
+                # eqlist_max2 = [pm * (-p0 * (fmax**2-fmax*fmin)/(fmax-fmin) + (p0 + 1) *fmax) - fmax,
+                #         pm * (-p0 * (fmax/(fmax-fmin) * fbar - fmax * fmin /(fmax-fmin))+(p0 + 1)*fbar) - m - fbar]
+                # sol_max2 = solve(eqlist_max2, [pm,p0], dict=True)
+
+                # print(sol_max2)
+
+                if constant_fmin:
+                    # solution 1
+                    p0_list.append(-fmin*m/(fbar*fmax - fmax*fmin + fmax*m - fmin*m))
+                    pm_list.append((fbar*fmax - fmax*fmin + fmax*m - fmin*m)/(fmax*(fbar - fmin)))
+
+                    # solution 2
+                    p0_list.append(-m*(fmax - fmin)/(fbar*fmax - fmax*fmin + fmax*m - fmin*m))
+                    pm_list.append((fbar*fmax - fmax*fmin + fmax*m - fmin*m)/(fmax*(fbar - fmin)))
+                else:
+                    # solution 1
+                    p0_list.append(-m/(fbar - fmax))
+                    pm_list.append(1.0)
+
+                    # solution 2
+                    p0_list.append(-m*(fmax - fmin)/(fmin*(fbar - fmax)))
+                    pm_list.append(1.0)
+
+                solution_found = False
+                for p0, pm in zip(p0_list, pm_list):
+                    ts_new = self._fnew_villa2021_eqn1(_ts,p0,pm,0.0)
+                    mean_error = np.abs(ts_new.mean() - _ts.mean() - delta_mean)
+                    if constant_fmin:
+                        fextreme_error = np.abs(ts_new.min() - _ts.min())
+                    else:
+                        fextreme_error = np.abs(ts_new.max() - _ts.max())
+                
+                    correct_mean_shift = mean_error < tol
+                    fmin_constant = fextreme_error < tol
+                    if correct_mean_shift and fmin_constant:
+                        solution_found = True
+                        break
+                
+                if not solution_found:
+                    raise ValueError("A solution was not found! This is an unknown error!")
+                    
+            else:
+                raise ValueError("The timeseries (after translation) must be all positive "
+                                 +"or all negative for this function to work!")
+            # complete necessary bookkeeping to allow this change to be able to be
+            # undone by "remove_alteration"
+            addseg = pd.DataFrame(ts_new-_ts,index=range(0,len(_ts)),columns=[column])
+            self.alterations[f"shift_{self._num_shifts}"] = addseg
+            self._num_shifts += 1
+            self.epwobj.dataframe[column] = ts_new - translate
+            return ts_new - translate
+        
+        else:
+
+            raise ValueError("The column requested '{column}' is not in the weather file."
+                             +f" Available column names are: {list(_data.columns)}")
         
     def _leap_year_replacements(self,df,year,isdoe2):
             Feb28 = df[(df["Day"] == 28) & (df["Month"] == 2) & (df["Year"]==year)]
@@ -375,7 +566,6 @@ class Alter(object):
             if addseg.sum().values[0] < 0:
                 # cold snap
                 scale = ((addseg.min() - df_diff.min())/addseg.min()).values[0]
-
             else:
                 # heat wave
                 
@@ -387,9 +577,6 @@ class Alter(object):
                 addsegmod = addseg * scale
             else:
                 addsegmod = addseg * 0.0
-            
-           
-                
         else:
             addsegmod = addseg
         

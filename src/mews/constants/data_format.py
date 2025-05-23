@@ -24,6 +24,7 @@ must be replicated in any derivative works that use the source code.
 import numpy as np
 import os
 from mews.constants.analysis import DEFAULT_SOLVER_NUMBER_STEPS
+from mews.constants.physical import C_2_K_OFFSET
 
 ABREV_WAVE_NAMES = ["cs","hw"]
 WAVE_NAMES = ["cold snap","heat wave"]
@@ -149,3 +150,114 @@ VALID_RUN_MEWS_ENTRIES = {TEMPLATE_ID_STRING:["",str],
             "clim_scen_out_folder" : [REQUIRED_STRING,str],
             "epw_out_folder" :["",str]}
 VALID_RUN_MEWS_ENTRIES_LIST = [val for key,val in VALID_RUN_MEWS_ENTRIES.items()]
+
+# data dictionary obtained from: 
+# https://bigladdersoftware.com/epx/docs/8-3/auxiliary-programs/energyplus-weather-file-epw-data-dictionary.html
+# Actual data does not have a descriptor
+# dlvilla added other fields to help with validation.
+EPW_PRESSURE_COLUMN_NAME = "Atmospheric Station Pressure"
+EPW_DB_TEMP_COLUMN_NAME = "Dry Bulb Temperature"
+EPW_DP_TEMP_COLUMN_NAME = "Dew Point Temperature"
+EPW_RH_COLUMN_NAME = "Relative Humidity"
+
+EPW_PSYCH_NAMES = [EPW_PRESSURE_COLUMN_NAME, EPW_DB_TEMP_COLUMN_NAME, 
+                   EPW_DP_TEMP_COLUMN_NAME, EPW_RH_COLUMN_NAME]
+
+EPW_DATA_DICTIONARY = {
+    "Year":{"column":1,"type":int,"maximum":2200,"minimum":1700,"psychrometric":False, "note":"","units":None},
+    "Month":{"column":2,"type":int,"maximum":12,"minimum":1,"psychrometric":False, "note":"","units":None},
+    "Day":{"column":3,"type":int,"maximum":31,"minimum":1,"psychrometric":False, "note":"","units":None},
+    "Hour":{"column":4,"type":int,"maximum":23,"minimum":0,"psychrometric":False, "note":"","units":None},
+    "Minute":{"column":5,"type":int,"maximum":59,"minimum":0,"psychrometric":False, "note":"","units":None},
+    "Data Source and Uncertainty Flags":{"column":6,"type":str,"note":("Initial day of weather"
+            +" file is checked by EnergyPlus for validity (as shown below)."
+            +" Each field is checked for 'missing' as shown below. Reasonable values, calculated"
+            +" values or the last 'good' value is substituted."),"units":None,"psychrometric":False},
+    EPW_DB_TEMP_COLUMN_NAME:{"column":7,"type":float,"maximum":70,"minimum":-70,
+                             "psychrometric":True, "note":"","missing":99.9,"units":"C",
+                             "cool_prop":{"symbol":"T","convert_units":lambda x: x + C_2_K_OFFSET,
+                                          "unconvert_units":lambda x: x - C_2_K_OFFSET}},
+    EPW_DP_TEMP_COLUMN_NAME:{"column":8,"type":float,"maximum":70,"minimum":-70,
+                             "psychrometric":True, "note":"","missing":99.9,"units":"C",
+                             "cool_prop":{"symbol":"D","convert_units":lambda x: x + C_2_K_OFFSET,
+                                          "unconvert_units":lambda x: x - C_2_K_OFFSET}},
+    EPW_RH_COLUMN_NAME:{"column":9,"type":float,"maximum":110,"minimum":0,
+                             "psychrometric":True, "note":"","missing":999,"units":"%",
+                             "cool_prop":{"symbol":"R","convert_units":lambda x: x/100,
+                                          "unconvert_units":lambda x: 100*x}},
+    EPW_PRESSURE_COLUMN_NAME:{"column":10,"type":float,"maximum":120000,"minimum":31000,
+                             "psychrometric":True, "note":"","missing":999999,"units":"Pa",
+                             "cool_prop":{"symbol":"P","convert_units":lambda x: x,
+                                          "unconvert_units":lambda x: x}},
+    "Extraterrestrial Horizontal Radiation":{"column":11,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"","missing":9999,"units":"Wh/m2"},
+    "Extraterrestrial Direct Normal Radiation":{"column":12,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"","missing":9999,"units":"Wh/m2"},
+    "Horizontal Infrared Radiation Intensity":{"column":13,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"","missing":9999,"units":"Wh/m2"},
+    "Global Horizontal Radiation":{"column":14,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"","missing":9999,"units":"Wh/m2"},
+    "Direct Normal Radiation":{"column":15,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"","missing":9999,"units":"Wh/m2"},
+    "Diffuse Horizontal Radiation":{"column":16,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"","missing":9999,"units":"Wh/m2"},
+    "Global Horizontal Illuminance":{"column":17,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"will be missing if >= 999900",
+                             "missing":999999,"units":"lux"},
+    "Direct Normal Illuminance":{"column":18,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"will be missing if >= 999900",
+                             "missing":999999,"units":"lux"},
+    "Diffuse Horizontal Illuminance":{"column":19,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"will be missing if >= 999900",
+                             "missing":999999,"units":"lux"},
+    "Zenith Luminance":{"column":20,"type":float,"maximum":None,"minimum":0,
+                             "psychrometric":False, "note":"will be missing if >= 9999",
+                             "missing":9999,"units":"Cd/m2"},
+    "Wind Direction":{"column":21,"type":float,"maximum":360,"minimum":0,
+                             "psychrometric":False, "note":"",
+                             "missing":999,"units":"degrees"},
+    "Wind Speed":{"column":22,"type":float,"maximum":40,"minimum":0,
+                             "psychrometric":False, "note":"",
+                             "missing":999,"units":"m/s"},
+    "Total Sky Cover":{"column":23,"type":float,"maximum":10,"minimum":0,
+                             "psychrometric":False, "note":"",
+                             "missing":99,"units":None},
+    "Opaque Sky Cover":{"column":24,"type":float,"maximum":10,"minimum":0,
+                             "psychrometric":False, "note":"used if Horizontal IR Intensity missing",
+                             "missing":99,"units":None},
+    "Visibility":{"column":25,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":9999,"units":"km"},
+    "Ceiling Height":{"column":26,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":99999,"units":"m"},
+    "Present Weather Observation":{"column":27,"type":int,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":None,"units":None},                            
+    "Present Weather Codes":{"column":28,"type":int,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":None,"units":None}, 
+    "Precipitable Water":{"column":29,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":999,"units":"mm"},
+    "Aerosol Optical Depth":{"column":30,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":0.999,"units":"thousandths"},
+    "Snow Depth":{"column":31,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":999,"units":"cm"},
+    "Days Since Last Snowfall":{"column":32,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":99,"units":None},
+    "Albedo":{"column":33,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":999,"units":None},
+    "Liquid Precipitation Depth":{"column":34,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":999,"units":"mm"},
+    "Liquid Precipitation Quantity":{"column":35,"type":float,"maximum":None,"minimum":None,
+                             "psychrometric":False, "note":"",
+                             "missing":99,"units":"hr"}}
+
+EPW_PSYCHROMETRIC_DICTIONARY = {key:val for key,val in EPW_DATA_DICTIONARY.items() 
+                                if val["psychrometric"]}

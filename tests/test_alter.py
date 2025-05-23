@@ -22,6 +22,8 @@ must be replicated in any derivative works that use the source code.
 
 import unittest
 import os
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
 from mews.weather.alter import Alter
@@ -67,6 +69,53 @@ class Test_Alter(unittest.TestCase):
     def tearDownClass(cls):
         if not cls.plot_results:
             plt.close('all')
+
+    def test_shift_function(self):
+        column = "Dry Bulb Temperature"
+        for constant_fmin in [True, False]:
+            trans = 273.15
+            Aobj = Alter(self.test_weather_file_path, 2021, True)
+            db_before = deepcopy(Aobj.epwobj.dataframe[column])
+            db_after = Aobj.shift_function(1.0,column,constant_fmin,trans)
+
+            self.assertTrue((db_before.mean() + 1.0 - .000001 < db_after.mean())
+                        and (db_before.mean() + 1.0 + .000001 > db_after.mean()))
+
+            if constant_fmin:
+                db_after_extreme = db_after.min()
+                db_before_extreme = db_before.min()
+            else:
+                db_after_extreme = db_after.max()
+                db_before_extreme = db_before.max()
+
+            self.assertTrue((db_before_extreme + 0.000001 > db_after_extreme)
+                            and (db_before_extreme - 0.000001 < db_after_extreme))
+            
+            # test a negative shift in the mean
+            db_after2 = Aobj.shift_function(-2.0,column,constant_fmin,trans)
+
+            if constant_fmin:
+                db_after2_extreme = db_after2.min()
+            else:
+                db_after2_extreme = db_after2.max()
+
+            self.assertTrue((db_before.mean() - 1.0 - .000001 < db_after2.mean())
+                        and (db_before.mean() - 1.0 + .000001 > db_after2.mean()))
+
+            self.assertTrue((db_before_extreme + 0.000001 > db_after2_extreme)
+                            and (db_before_extreme - 0.000001 < db_after2_extreme))
+            
+            # verify that alterations can be undone
+            Aobj.remove_alteration("shift_1")
+            Aobj.remove_alteration("shift_0")
+            self.assertTrue((db_before - Aobj.epwobj.dataframe[column]).sum() < 1.0e-8)
+
+          
+        # raise ValueError when not all values are positive or all values negative.
+        with self.assertRaises(ValueError):
+            Aobj.shift_function(0.0,"Dry Bulb Temperature",0.0)
+
+        
         
         
     def test_leapyear(self):
