@@ -7,6 +7,7 @@ Created on Wed Feb 22 14:34:40 2023
 """
 
 from time import time
+
 start_time = time()
 
 
@@ -16,18 +17,20 @@ import numpy as np
 
 from mews.run_mews import extreme_temperature
 
-# You must change example_dir to an absolute path to a copy of the MEWS repository 
-# examples folder if you move this script. 
+# You must change example_dir to an absolute path to a copy of the MEWS repository
+# examples folder if you move this script.
 # any variable you put in the run_dict file location must be defined before calling extreme temperature
 example_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 
-# This must be a path to a valid run python dictionary text file. You can change the values 
+# This must be a path to a valid run python dictionary text file. You can change the values
 # in this long input file (very carefully to not corrupt the dictionary syntax) or you can just copy
 # and paste the dictionary here so that you can edit this input in an IDE.
 # The "only1file.dict" has the number of files to generate per case reduced to 1
 # use the "mews_run.dict" for a version that generate 200. You can change the input
 # to any value you want depending on how many files are needed.
-run_dict_file_path = os.path.join(os.path.dirname(__file__),"example_data","mews_run_abq_2035_2050.dict")
+run_dict_file_path = os.path.join(
+    os.path.dirname(__file__), "example_data", "mews_run_abq_2035_2050.dict"
+)
 
 # ONLY SET TO TRUE IF YOU WANT TO SEE HOW LONG DIFFERENT FUNCTIONS IN MEWS TAKE
 profile = False
@@ -36,11 +39,9 @@ if profile:
     import cProfile
     import pstats
     import io
-    
+
     pr = cProfile.Profile()
     pr.enable()
-    
-
 
 
 """
@@ -79,45 +80,57 @@ in a matter of hours, then you only need to )
 
 import logging
 
-logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    filename="app.log", filemode="w", format="%(name)s - %(levelname)s - %(message)s"
+)
 
 # only albuquerque will run through the full analysis
-results = extreme_temperature(run_dict=run_dict_file_path,
-                              only_generate_files=[],
-                              skip_runs=["Chicago",
-                                         "Baltimore",
-                                         "Minneapolis",
-                                         "Phoenix",
-                                         'Miami',
-                                         'Atlanta', 
-                                         'LasVegas',
-                                         'LosAngeles',
-                                         'SanFrancisco',
-                                         'Seattle', 
-                                         'Denver',
-                                         'Helena', 
-                                         'Duluth',
-                                         'Fairbanks',
-                                         'McAllen',
-                                         'Kodiak',
-                                         'Worcester',
-                                         'Houston',
-                                         "HuiOHauula",
-                                         "Honolulu"],num_cpu=-1, run_parallel=True,
-                              run_dict_var={"example_dir":example_dir},overwrite_existing=True)
+results = extreme_temperature(
+    run_dict=run_dict_file_path,
+    only_generate_files=[],
+    skip_runs=[
+        "Chicago",
+        "Baltimore",
+        "Minneapolis",
+        "Phoenix",
+        "Miami",
+        "Atlanta",
+        "LasVegas",
+        "LosAngeles",
+        "SanFrancisco",
+        "Seattle",
+        "Denver",
+        "Helena",
+        "Duluth",
+        "Fairbanks",
+        "McAllen",
+        "Kodiak",
+        "Worcester",
+        "Houston",
+        "HuiOHauula",
+        "Honolulu",
+    ],
+    num_cpu=-1,
+    run_parallel=True,
+    run_dict_var={"example_dir": example_dir},
+    overwrite_existing=True,
+)
 if profile:
 
     pr.disable()
     s = io.StringIO()
-    ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
+    ps = pstats.Stats(pr, stream=s).sort_stats("tottime")
     ps.print_stats()
-    
-    with open('extreme_temperature_profile_3.txt', 'w+') as f:
+
+    with open("extreme_temperature_profile_3.txt", "w+") as f:
         f.write(s.getvalue())
 
 # this saves your results as a pickle so that you can see what went wrong if
 # you run this script as a batch script.
 
 end_time = time()
-results['run_time in seconds'] = end_time - start_time
-pkl.dump([results], open(os.path.join(example_dir,"example_data","study_results.pkl"),'wb'))
+results["run_time in seconds"] = end_time - start_time
+pkl.dump(
+    [results],
+    open(os.path.join(example_dir, "example_data", "study_results.pkl"), "wb"),
+)

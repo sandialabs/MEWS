@@ -3,19 +3,19 @@
 Copyright Notice
 =================
 
-Copyright 2023 National Technology and Engineering Solutions of Sandia, LLC. 
-Under the terms of Contract DE-NA0003525, there is a non-exclusive license 
-for use of this work by or on behalf of the U.S. Government. 
-Export of this program may require a license from the 
+Copyright 2023 National Technology and Engineering Solutions of Sandia, LLC.
+Under the terms of Contract DE-NA0003525, there is a non-exclusive license
+for use of this work by or on behalf of the U.S. Government.
+Export of this program may require a license from the
 United States Government.
 
 Please refer to the LICENSE.md file for a full description of the license
-terms for MEWS. 
+terms for MEWS.
 
 The license for MEWS is the Modified BSD License and copyright information
 must be replicated in any derivative works that use the source code.
 
-This code comes from a third party open-source library. The license is 
+This code comes from a third party open-source library. The license is
 repeated below per the terms of redistribution.
 
 EPW License
@@ -50,40 +50,38 @@ from mews.epw import epw
 import pandas as pd
 import os
 
+
 class TestEpw(unittest.TestCase):
-    
-# OBJECT CREATION
+
+    # OBJECT CREATION
     @classmethod
     def setUpClass(cls):
         cls.cwd = os.getcwd()
         os.chdir(os.path.dirname(__file__))
-        
+
     @classmethod
     def tearDownClass(cls):
         os.chdir(cls.cwd)
-        
-    
-    def test_epw___init__(self):
-        a=epw()
-        self.assertIsInstance(a,epw)
 
+    def test_epw___init__(self):
+        a = epw()
+        self.assertIsInstance(a, epw)
 
     def test_epw_read(self):
-        a=epw()
-        a.read(r'data_for_testing/new_epw_file.epw')
-        
+        a = epw()
+        a.read(r"data_for_testing/new_epw_file.epw")
 
     def test_modify(self):
-        a=epw()
-        a.read(r'data_for_testing/new_epw_file.epw')
-        
-        a.headers['LOCATION'][0]='New_location'
+        a = epw()
+        a.read(r"data_for_testing/new_epw_file.epw")
 
-        a.dataframe['Dry Bulb Temperature']=a.dataframe['Dry Bulb Temperature']+1.0
-        
-        a.write(r'data_for_testing/new_epw_file_2.epw')
+        a.headers["LOCATION"][0] = "New_location"
 
-if __name__=='__main__':
-    
-    o=unittest.main(TestEpw())  
-    
+        a.dataframe["Dry Bulb Temperature"] = a.dataframe["Dry Bulb Temperature"] + 1.0
+
+        a.write(r"data_for_testing/new_epw_file_2.epw")
+
+
+if __name__ == "__main__":
+
+    o = unittest.main(TestEpw())
