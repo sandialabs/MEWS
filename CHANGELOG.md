@@ -1,11 +1,14 @@
 # Version 1.1.3
 
- - IN CONSTRUCTION: Added shift_func(m,column) to mews.weather.alter.Alter which shifts an entire
+ - Added shift_function to mews.weather.alter.Alter which shifts an entire
    time series mean value by "m" while keeping the timeseries minimum value constant
- - IN CONSTRUCTION: Added _recalculate_psychrometrics to the "mews.weather.alter.Alter" class so that changes
+ - Added recalculate_psychrometrics to the "mews.weather.alter.Alter" class so that changes
    to a psychrometric variable shift other psychrometric variables. 
-
-
+ - Added EPW_DATA_DICTIONARY to mews.constants.data_format and several other 
+   improvements to assure EPW maintain the correct data format.
+ - Added changes to mews.epw.epw focused on assuring that correct EPW files
+   are written so that any other program can read them.
+ - Modernized code for Python 3.13.2
 
 # Version 1.1.2
 
