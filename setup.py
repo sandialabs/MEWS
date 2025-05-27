@@ -22,14 +22,6 @@ ext_modules += [
 ]
 
 
-def readme_function():
-
-    file_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(file_dir, "README.md"), encoding="utf-8") as f:
-        LONG_DESCRIPTION = f.read()
-    return LONG_DESCRIPTION
-
-
 def version_function():
     # get version from __init__.py
     file_dir = os.path.abspath(os.path.dirname(__file__))
@@ -49,5 +41,4 @@ def version_function():
 setup(
     version=version_function(),
     ext_modules=ext_modules,
-    long_description=readme_function(),
 )

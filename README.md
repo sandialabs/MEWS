@@ -3,17 +3,17 @@
 
 ![workflow](https://github.com/sandialabs/mews/actions/workflows/pytest.yml/badge.svg)
 
+# Introduction
+
 The Multi-scenario Extreme Weather Simulator (MEWS) is a Python package designed to change EPW files including adding extreme weather events to existing weather data or projections. **MEWS does not simulate weather** but rather adds variations in weather for the purpose of probabilistic analyses of infrastructure or environmental systems. Currently MEWS works for extreme temperature and for adjusting weather files to approximate local weather conditions. Other enhancements to MEWS are envisioned that provide reasonably realistic selection of hurricane futures (see some preliminary work in /examples/hurricane_analysis...) and Villa and Quiroz, 2023 (https://doi.org/10.1080/23744731.2023.2253087).
 
 So far, the infrastructure focus has been for Building Energy Simulation and MEWS can read/write altered weather files for Energy Plus (https://energyplus.net/) and DOE-2 (https://www.doe2.com/) weather files. DOE-2 has not been tested since the first version though. Both of these tools have a rich library of historic and Typical Meteorological weather inputs around the world. See Crawly and Lawrie's web site for weather files to start from in MEWS: https://climate.onebuilding.org/.  
 
-License
-------------
+# License
 
 See the LICENSE.md file for license details. This package has third party packages that have their own licenses that are appended to the MEWS license.
 
-Organization
-------------
+# Organization
 
 Directories
   * src/mews - Python package
@@ -22,8 +22,8 @@ Directories
   * information - contains some presentation with general information about MEWS. These are older so some of the presentations may be depricated.
   * examples - current working example for extreme temperatures is run_mews_extreme_temperature_example_v_1_1_2.py. All others are deprecated or use older techniques
 
-Installation
-------------
+# Installation
+
   * To install the latest released version:
     
     ```
@@ -41,19 +41,19 @@ Installation
     pip install -e .[test]
     ```
 
-    Then run the following to ensure the code passes unit testing
+  * Then run the following to ensure the code passes unit testing
     
     ```bash
     pytest
     ```
     
-    All tests should pass. Sometimes failures occur if you have tex on your computer.
+  * All tests should pass. Sometimes failures occur if you have tex on your computer.
     
     The API for MEWS is only documented in the code and has many inputs that can be contained in a *.dict file (see /examples/example_data/mews_run.dict). This file is just a python dictionary in text format (yes, as I have learned I now know I should have used yaml or JSON but its too late for now)
     
 
-Other Installation Requirements
--------------------------------
+## Other Installation Requirements
+
   * If your having problems and you are not a developer you may need to add a C Compiler to your computer. MEWS requires Cython which needs a C compiler in place. For windows, this can be the visual studio free Microsoft Visual C++ 14.0 Build Tools that are freely available at https://visualstudio.microsoft.com/visual-cpp-build-tools/. Download the build tools and install them. It is necessary to assure the correct version of the build tools is installed. The stack exchange thread below shows how to verify the correct version is installed.
 
 https://stackoverflow.com/questions/66838238/cython-setup-py-cant-find-installed-visual-c-build-tools
@@ -64,11 +64,9 @@ Download the CMIP6_Data_Files file and then make its local path equal to the "ou
 
 mews.weather.climate.ClimateScenario
 
-Using MEWS
---------
+# Using MEWS
 
-Extreme temperature analyses
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+## Extreme temperature analyses
 
 A training video has been made available at: https://drive.google.com/file/d/1B-G5yGu0BFXCqj0BYfu_e8XFliAoeoRi/view?usp=drive_link. The MEWS function for heat waves is:
 
@@ -104,8 +102,7 @@ The extreme_temperature input parameters can be used to only generate files from
 
 Inside "MEWS/examples/example_data" are folders for each city and inside these folders you can find the solution files in "results" and "mews_epw_results" folder for EnergyPlus epw files. 
 
-Altering EPW weather files however you like
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+## Altering EPW weather files however you like
 
 MEWS can also be used to alter weather files in whatever way you like through the "Alter" class. This functionality is very similar to what Big Ladder Software has provided in its [Elements](https://bigladdersoftware.com/projects/elements/) software. If you want a GUI driven process, it would be the preferred way to go. MEWS' Alter class makes the functionality scriptable across many weather files though.  This class has the capacity to readjust psychrometric variables and shift the average of time series while holding either the maximum or minimum of the time series constant. The script below shows my own application of MEWS to accomplish this through adjusting nearly all of the important weather variables for BEM for a site that did not have weather data. I used surrounding TMYx, TMY3 data and also NASA POWER MERRA-2 gridded EPW files to estimate a local climate for a specific site. 
 
@@ -193,13 +190,12 @@ alter_obj.read(new_wfile)
 ```
 
 
-Contact 
---------
+# Contact 
 
    * Daniel Villa, Sandia National Laboratories (SNL) dlvilla@sandia.gov
    
-Citing MEWS
------------
+# Citing MEWS
+
 You can cite MEWS with one or more of the following:
 
 * Villa, Daniel L., Nathan T. Hahn, John K. Grey, and Frances Pavich. 2024. "Futures for electrochromic windows on high performance houses in arid, cold climates." _Energy and Buildings_ https://doi.org/10.1016/j.enbuild.2024.114293.
@@ -213,7 +209,7 @@ You can cite MEWS with one or more of the following:
 * Villa, Daniel L., Juan Carvallo, Carlo Bianchi, and Sang Hoon Lee. 2022. "Multi-scenario Extreme Weather Simulator Application to Heat Waves." _2022 Building Performance Analysis Conference and SimBuild co-organized by ASHRAE and IBPSA-USA_ https://doi.org/10.26868/25746308.2022.C006
 
 
-Sandia Funding Statement
-------------------------
+# Sandia Funding Statement
+
 Sandia National Laboratories is a multimission laboratory managed and operated by National Technology and Engineering Solutions of Sandia, LLC., a wholly owned subsidiary of Honeywell International, Inc., for the U.S. Department of Energy's National Nuclear Security Administration under contract DE-NA-0003525.
 

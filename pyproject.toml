@@ -2,8 +2,8 @@
     requires = ["setuptools","wheel","numpy","Cython"]
     build-backend = "setuptools.build_meta"
 [project]
-    dynamic = ["readme","version"]
-
+    dynamic = ["version"]
+    readme = "README.md"
     name = "MEWS"
     authors = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
     maintainers = [{name = "Daniel L. Villa", email = "dlvilla@sandia.gov"}]
