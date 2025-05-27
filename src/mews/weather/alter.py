@@ -810,29 +810,24 @@ class Alter(object):
         else:
             try:
                 epwobj.read(weather_file_path)
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as exc:
                 raise EPWFileReadFailure(
-                    "The file '{0}' was not read successfully "
+                    f"The file '{weather_file_path}' was not read successfully "
                     + "by the epw package it is corrupt or "
-                    + "the wrong format!".format(weather_file_path)
-                )
+                    + "the wrong format!"
+                ) from exc
             except FileNotFoundError as fileerror:
                 raise fileerror
-            except:
+            except Exception as exc:
                 raise EPWFileReadFailure(
                     "The file '{0}' was not read successfully "
                     + "by the epw package for an unknown "
                     + "reason!".format(weather_file_path)
-                )
+                ) from exc
             df = epwobj.dataframe
 
         # verify no NaN's
-        if df.isna().sum().sum() != 0:
-            raise EPWMissingDataFromFile(
-                "NaN's are present after reading the "
-                + "weather file. Only fully populated "
-                + "data sets are allowed!"
-            )
+        self._no_nan(df)
 
         self._init_check_inputs(replace_year, check_types)
 
@@ -1063,6 +1058,13 @@ class Alter(object):
                 raise NotADirectoryError(
                     "The folder '{0}' does not".format(base_dir) + " exist"
                 )
+    def _no_nan(self,df):
+        if df.isna().sum().sum() != 0:
+            raise EPWMissingDataFromFile(
+                "NaN's are present after reading the "
+                + "weather file. Only fully populated "
+                + "data sets are allowed!"
+            )
 
     def write(
         self,
@@ -1112,15 +1114,18 @@ class Alter(object):
                     os.remove(out_file_name)
                 else:
                     raise FileExistsError(
-                        "The file '{0}' already ".format(out_file_name) + "exists!"
+                        f"The file '{out_file_name}' already exists!"
                     )
         else:
             if create_dir:
                 os.makedirs(base_dir)
             else:
                 raise NotADirectoryError(
-                    "The folder '{0}' does not".format(base_dir) + " exist"
+                    f"The folder '{base_dir}' does not exist"
                 )
+
+        # verify no NaN
+        self._no_nan(self.epwobj.dataframe)
 
         if self.isdoe2:
             if txt2bin_exepath == r"../third_party_software/TXT2BIN.EXE":

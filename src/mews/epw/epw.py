@@ -33,11 +33,17 @@ SOFTWARE.
 
 Author - Building Energy Research Group (BERG)
 Used in MEWS as allowed by the license.
+
+Revisions have been made to integrate permanently into MEWS 5/27/2025
 """
 
-
+from copy import deepcopy
 import pandas as pd
 import csv
+
+from mews.constants.data_format import EPW_DATA_DICT_URL
+from mews.constants.data_format import EPW_DATA_DICTIONARY
+from mews.utilities.utilities import is_numeric
 
 
 class epw:
@@ -88,6 +94,14 @@ class epw:
                     break
                 else:
                     d[row[0]] = row[1:]
+            dcheck = deepcopy(d)
+            key,val = dcheck.popitem()
+            if key != "DATA PERIODS" or len(val) != 6:
+                raise ValueError("The last entry of EPW headers must be 'DATA PERIODS'"
+                                 +" whose value is a list with 6 elements similar to:"
+                                 +" ['1', '1', 'Data', 'Sunday', ' 1/ 1', '12/31']."
+                                +f" Please refer to: {EPW_DATA_DICT_URL} for the"
+                                +" exact EPW data dictionary" )
         return d
 
     def _read_data(self, fp):
@@ -105,44 +119,45 @@ class epw:
             A DataFrame comtaining the climate data
 
         """
-
-        names = [
-            "Year",
-            "Month",
-            "Day",
-            "Hour",
-            "Minute",
-            "Data Source and Uncertainty Flags",
-            "Dry Bulb Temperature",
-            "Dew Point Temperature",
-            "Relative Humidity",
-            "Atmospheric Station Pressure",
-            "Extraterrestrial Horizontal Radiation",
-            "Extraterrestrial Direct Normal Radiation",
-            "Horizontal Infrared Radiation Intensity",
-            "Global Horizontal Radiation",
-            "Direct Normal Radiation",
-            "Diffuse Horizontal Radiation",
-            "Global Horizontal Illuminance",
-            "Direct Normal Illuminance",
-            "Diffuse Horizontal Illuminance",
-            "Zenith Luminance",
-            "Wind Direction",
-            "Wind Speed",
-            "Total Sky Cover",
-            "Opaque Sky Cover (used if Horizontal IR Intensity missing)",
-            "Visibility",
-            "Ceiling Height",
-            "Present Weather Observation",
-            "Present Weather Codes",
-            "Precipitable Water",
-            "Aerosol Optical Depth",
-            "Snow Depth",
-            "Days Since Last Snowfall",
-            "Albedo",
-            "Liquid Precipitation Depth",
-            "Liquid Precipitation Quantity",
-        ]
+        names = list(EPW_DATA_DICTIONARY.keys())
+        
+        # [
+        #     "Year",
+        #     "Month",
+        #     "Day",
+        #     "Hour",
+        #     "Minute",
+        #     "Data Source and Uncertainty Flags",
+        #     "Dry Bulb Temperature",
+        #     "Dew Point Temperature",
+        #     "Relative Humidity",
+        #     "Atmospheric Station Pressure",
+        #     "Extraterrestrial Horizontal Radiation",
+        #     "Extraterrestrial Direct Normal Radiation",
+        #     "Horizontal Infrared Radiation Intensity",
+        #     "Global Horizontal Radiation",
+        #     "Direct Normal Radiation",
+        #     "Diffuse Horizontal Radiation",
+        #     "Global Horizontal Illuminance",
+        #     "Direct Normal Illuminance",
+        #     "Diffuse Horizontal Illuminance",
+        #     "Zenith Luminance",
+        #     "Wind Direction",
+        #     "Wind Speed",
+        #     "Total Sky Cover",
+        #     "Opaque Sky Cover (used if Horizontal IR Intensity missing)",
+        #     "Visibility",
+        #     "Ceiling Height",
+        #     "Present Weather Observation",
+        #     "Present Weather Codes",
+        #     "Precipitable Water",
+        #     "Aerosol Optical Depth",
+        #     "Snow Depth",
+        #     "Days Since Last Snowfall",
+        #     "Albedo",
+        #     "Liquid Precipitation Depth",
+        #     "Liquid Precipitation Quantity",
+        # ]
 
         first_row = self._first_row_with_climate_data(fp)
         df = pd.read_csv(fp, skiprows=first_row, header=None, names=names)

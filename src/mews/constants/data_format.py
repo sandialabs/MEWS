@@ -26,6 +26,12 @@ import os
 from mews.constants.analysis import DEFAULT_SOLVER_NUMBER_STEPS
 from mews.constants.physical import C_2_K_OFFSET
 
+SMALL_VALUE = np.finfo(np.float64).tiny
+
+EPW_DATA_DICT_URL = ("https://bigladdersoftware.com/epx/docs/8-3/"
+                     +"auxiliary-programs/energyplus-weather-file-"
+                     +"epw-data-dictionary.html")
+
 ABREV_WAVE_NAMES = ["cs", "hw"]
 WAVE_NAMES = ["cold snap", "heat wave"]
 
@@ -196,6 +202,39 @@ EPW_PSYCH_NAMES = [
     EPW_DP_TEMP_COLUMN_NAME,
     EPW_RH_COLUMN_NAME,
 ]
+#The Location header record duplicates the information required for the 
+# Location Object. When only a Run Period object is used (i.e. a weather file), 
+# then the Location Object Is not needed. When a Run Period and Design Day objects
+# are entered, then the Location on the weather file (as described previously) is
+#  used and overrides any Location Object entry.
+# THIS IS INCOMPLETE! TODO - complete this and provide more thorough checks in the EPW 
+# package read/write functions
+EPW_HEADER_DICTIONARY = {"LOCATION":[{"type":str,"description":"City","notes":""},
+                                     {"type":str,"description":"State Province Region",
+                                      "notes":""},
+                                     {"type":str,"description":"Country","notes":""},
+                                     {"type":str,"description":"Source","notes":""},
+                                     {"type":str,"description":"WMO","notes":("World"
+                                                +" Meteorological Organization's Station"
+                                                +" Number. WMO is usually a 6 digit field."
+                                                +" Used as a string in EnergyPlus")},
+                                    {"type":float,"description":"Latitude","units":"degrees",
+                                     "minimum":-90.0,"maximum":90.0,"default":0.0,
+                                     "notes":("+ is North, - is South, degrees minutes"
+                                              +" represented in decimal (i.e. 30 "
+                                              +"minutes is .5)")},
+                                    {"type":float,"description":"Longitude","units":"degrees",
+                                     "minimum":-180.0,"maximum":180.0,"default":0.0,
+                                     "notes":("- is West, + is East, degrees minutes"
+                                              +" represented in decimal (i.e. 30 "
+                                              +"minutes is .5)")},
+                                    {"type":float,"description":"TimeZone","units":"hr",
+                                     "minimum":-12.0,"maximum":12.0,"default":0.0,
+                                     "notes":("Time relative to Greenwich Mean Time (GMT)")},
+                                    {"type":float,"description":"Elevation","units":"m",
+                                     "minimum":-1000.0,"maximum":1000.0,"default":0.0,
+                                     "notes":("")}]}
+
 
 EPW_DATA_DICTIONARY = {
     "Year": {

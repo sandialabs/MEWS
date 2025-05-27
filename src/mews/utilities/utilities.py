@@ -22,7 +22,6 @@ import os
 from warnings import warn
 import numpy as np
 import pandas as pd
-from numpy import poly1d
 from mews.epw import epw
 from mews.constants.data_format import EPW_PSYCHROMETRIC_DICTIONARY as EPW_PSYCH_DICT
 from mews.constants.data_format import (
@@ -35,8 +34,20 @@ from mews.constants.data_format import (
 
 from CoolProp.HumidAirProp import HAPropsSI
 
+def is_numeric(value):
+    """
+    Checks if a value is a numeric type (int, float, or complex).
+
+    Args:
+      value: The value to check.
+
+    Returns:
+      True if the value is numeric, False otherwise.
+    """
+    return np.issubdtype(type(value), np.number)
 
 def calculate_psychrometrics(epw_df, in_columns, out_cool_prop_name=""):
+# pylint: disable=W0104
     f"""
     This function takes 3 input psychrometric
     variables in the CoolProp HAPropsSI function and calculates a 
@@ -82,6 +93,7 @@ def calculate_psychrometrics(epw_df, in_columns, out_cool_prop_name=""):
     TypeError, ValueError - data validation does not allow invalid inputs.
         
     """
+    #pylint: enable=W0104
     in_columns = ValidationPsychCalcs._in_column_validation(in_columns)
     ValidationPsychCalcs._epw_df_validation(epw_df, in_columns)
 
