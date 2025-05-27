@@ -6,7 +6,7 @@ jobs:
       matrix:
         # run all 3 major platforms  removed: macos-latest, ubuntu-latest 
         os: [windows-latest, macos-13, ubuntu-latest]
-        pyversion: ['3.9', '3.10', '3.11', '3.12']
+        pyversion: ['3.9', '3.10', '3.11', '3.12', '3.13']
   
     runs-on: ${{ matrix.os }}
     steps:
