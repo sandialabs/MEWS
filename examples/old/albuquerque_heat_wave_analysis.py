@@ -107,7 +107,8 @@ class Input():
     # The the files can be copied from there in the simulation folders.
     path_mews_files_HW = os.path.join(main_path,'mews_results')
     #give an absolute path here.
-    path_idf_files = [os.path.join(main_path,'example_data',"IECC_OfficeMedium_STD2018_Buffalo_ClimateZone_5A.idf")]
+    path_idf_files = [os.path.join(main_path,'example_data',
+                                   "IECC_OfficeMedium_STD2018_Buffalo_ClimateZone_5A.idf")]
     # Parameters to be set for the plots
     zn = ['CLASSROOM_BOT']
     vn = ['Temperature']

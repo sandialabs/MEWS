@@ -12,7 +12,7 @@ from . import run_energyplus
 from . import run_mews
 
 
-__version__ = '1.1.3b'
+__version__ = "1.1.3"
 
 __copyright__ = """Copyright 2023 National Technology & Engineering 
 Solutions of Sandia, LLC (NTESS). Under the terms of Contract DE-NA0003525 

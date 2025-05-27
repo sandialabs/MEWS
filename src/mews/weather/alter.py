@@ -5,14 +5,14 @@ Created on Tue Apr 20 14:50:39 2021
 Copyright Notice
 =================
 
-Copyright 2023 National Technology and Engineering Solutions of Sandia, LLC. 
-Under the terms of Contract DE-NA0003525, there is a non-exclusive license 
-for use of this work by or on behalf of the U.S. Government. 
-Export of this program may require a license from the 
+Copyright 2023 National Technology and Engineering Solutions of Sandia, LLC.
+Under the terms of Contract DE-NA0003525, there is a non-exclusive license
+for use of this work by or on behalf of the U.S. Government.
+Export of this program may require a license from the
 United States Government.
 
 Please refer to the LICENSE.md file for a full description of the license
-terms for MEWS. 
+terms for MEWS.
 
 The license for MEWS is the Modified BSD License and copyright information
 must be replicated in any derivative works that use the source code.
@@ -32,48 +32,55 @@ from copy import deepcopy
 from mews.epw import epw
 from mews.errors import EPWMissingDataFromFile, EPWFileReadFailure, EPWRepeatDateError
 from mews.weather.doe2weather import DOE2Weather
+from mews.utilities.utilities import calculate_psychrometrics
+from mews.constants.data_format import (
+    EPW_PRESSURE_COLUMN_NAME,
+    EPW_DB_TEMP_COLUMN_NAME,
+    EPW_DP_TEMP_COLUMN_NAME,
+    EPW_RH_COLUMN_NAME,
+)
 import warnings
 from copy import deepcopy
 
-class Alter(object):
 
+class Alter(object):
     """
     Alter energy plus or doe2 weather files - shorter or longer than a year permitted.
-    
+
     >>> obj = Alter(weather_file_path,
                     replace_year,
                     check_types)
-    
+
     This is effectively the "read" function.
-    
-    If replace_year causes new coincidence with leap years, then an 
+
+    If replace_year causes new coincidence with leap years, then an
     extra day is added (Feb 28th if repeated). If a replace_year moves
-    from a leap year to a non-leap year, then Feb 29th is deleted if it 
+    from a leap year to a non-leap year, then Feb 29th is deleted if it
     is present.
-    
+
     Returns the altered object.
-    
+
     Parameters
     ----------
-    weather_file_path : str 
+    weather_file_path : str
         A valid path to an energy plus weather file.
     replace_year : int : optional : Default = None
         If None:
             Leave the year in the energy plus file unaltered.
-        If int: 
+        If int:
             Change the year to the value for all rows.
     check_types : bool : optional : Default = True
         If True:
             Check types in all functions (slow but safe).
-        If False: 
+        If False:
             Do not check types (likely to get less understandable errors
             if something goes wrong)
-    clear_alterations : optional: bool 
+    clear_alterations : optional: bool
         NOT CURRENTLY USED.
-        Remove previous alterations from the current 
+        Remove previous alterations from the current
         object. Reissuing a read command to an Alter object allows a new set
-        of weather to recieve the same alterations a previous set recieved.            
-    
+        of weather to recieve the same alterations a previous set recieved.
+
     isdoe2 : optional: bool : ONLY NEEDED IF DOE2
         Read in a DOE2 weather file instead of an EPW and then
         wrangle that data into an EP format for the self.epwobj database.
@@ -82,7 +89,7 @@ class Alter(object):
         executables (True) or native Python to read BIN files.
     doe2_bin2txt_path : str : optional : ONLY NEEDED IF DOE2
         A valid path to an executable
-        that converts a DOE2 filename.BIN weather file to an ASCII text file. 
+        that converts a DOE2 filename.BIN weather file to an ASCII text file.
         The executable is assumed to be named BIN2TXT.EXE and comes with
         any distribution of DOE2 which can be obtained by forming a license
         agreement with James Hirsch and Associates (www.doe2.com). A folder
@@ -94,79 +101,307 @@ class Alter(object):
     doe2_timezone : str : optional : ONLY NEEDED IF DOE2
         Name of time zone applicable to the doe2 file.
     doe2_dst : optional : ONLY NEEDED IF DOE2
-        List/tuple with 2 entries that are datetimes with begin and 
+        List/tuple with 2 entries that are datetimes with begin and
         end times for day light savings time.
-    
+
     Returns
     ------
     None
-   
+
     """
-    
-    def __init__(self,weather_file_path,replace_year=None,check_types=True,
-                 isdoe2=False,use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
-                 doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
-        
+
+    def __init__(
+        self,
+        weather_file_path,
+        replace_year=None,
+        check_types=True,
+        isdoe2=False,
+        use_exe=False,
+        doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
+        doe2_start_datetime=None,
+        doe2_tz=None,
+        doe2_hour_in_file=8760,
+        doe2_dst=None,
+    ):
 
         obj = DOE2Weather()
         self.df2bin = obj.df2bin
         self.bin2df = obj.bin2df
-        
-        self.read(weather_file_path,replace_year,check_types,True,isdoe2,use_exe,
-                  doe2_bin2txt_path,doe2_start_datetime,doe2_tz,
-                  doe2_hour_in_file,doe2_dst)
-        self._unit_test_data = {} # added to help test heat wave addition validity
-                                  # not used outside unit testing "test_extreme_temperature_waves"
-        
-        
-    def _leap_year_replacements(self,df,year,isdoe2):
-            Feb28 = df[(df["Day"] == 28) & (df["Month"] == 2) & (df["Year"]==year)]
-            Mar1 = df[(df["Month"] == 3) & (df["Day"] == 1) & (df["Year"]==year)]
-            Feb29 = df[(df["Month"] == 2) & (df["Day"] == 29) & (df["Year"]==year)]
-            hasFeb29 = len(Feb29) > 0
-            hasMar1 = len(Mar1) > 0
-            hasFeb28 = len(Feb28) > 0
-            
-            
-            if isleap(year) and (not hasFeb29) and (hasMar1 and hasFeb28):
-                # add Feb29 by replicating Feb28th
-                indFeb28 = Feb28.index[-1]
-                sdict = {}
+        self._num_shifts = 0
 
-                for name,col in Feb28.items():
-                    col.index = np.arange(indFeb28+1,indFeb28+25)
-                    sdict[name] = col
+        self.read(
+            weather_file_path,
+            replace_year,
+            check_types,
+            True,
+            isdoe2,
+            use_exe,
+            doe2_bin2txt_path,
+            doe2_start_datetime,
+            doe2_tz,
+            doe2_hour_in_file,
+            doe2_dst,
+        )
+        self._unit_test_data = {}  # added to help test heat wave addition validity
+        # not used outside unit testing "test_extreme_temperature_waves"
 
-                Feb29 = pd.DataFrame(sdict)
-                Feb29["Day"] = 29
-                
-                sdict = {}
-                for name,col in df.loc[indFeb28+1:].items():
-                    col.index = np.arange(indFeb28+25,
-                                          indFeb28+25 + (df.index[-1] - indFeb28))
-                    sdict[name] = col
-                    
-                restOfYear = pd.DataFrame(sdict)
-                df_new = pd.concat([df.loc[0:indFeb28],Feb29,restOfYear])
-            elif not isleap(year) and hasFeb29:
-                df_new = df.drop(Feb29.index)
+    def _fnew_villa2021_eqn1(self, ts, p0, pm, pt):
+        """
+        See Villa, 2021. "Institutional heat wave analysis by building
+        energy modeling fleet and meter data." Energy and Buildings 237:110774
+        https://doi.org/10.1016/j.enbuild.2021.110774
+
+        except that a translational term pt has been added.
+
+        Equation 1
+
+        This function shifts and stretches a time series signal
+
+        """
+        fmax = ts.max()
+        fmin = ts.min()
+        if p0 >= 0 and p0 <= 1.0:
+            fnew = pm * ((1 - p0) * ts + fmax * p0) + pt
+        elif p0 < 0 and p0 > -1.0:
+            fdiffmax = fmax - fmin
+            gt = fmax / fdiffmax * ts - fmax * fmin / fdiffmax
+            fnew = pm * (-p0 * gt + (p0 + 1) * ts) + pt
+        else:
+            raise ValueError(
+                f"The input p0 was given a value of {p0} which is outside the valid range of -1 < p0 <= 1"
+            )
+        return fnew
+
+    def recalculate_psychrometrics(self, recalculate=EPW_DP_TEMP_COLUMN_NAME):
+        """
+        When changes have been made, either the dew-point temperature or relative humidity have to
+        be recalculated in order for the EPW file to have consistent psychrometrics.
+
+        This should be done after all alterations because it takes a long time to reculate an
+        entire year.
+
+        """
+        # validate input
+        if not isinstance(recalculate, str):
+            raise TypeError(
+                f"The 'recalculate' input must be string! You input {recalculate}."
+            )
+        valid_inputs = [EPW_DP_TEMP_COLUMN_NAME, EPW_RH_COLUMN_NAME]
+        if recalculate not in valid_inputs:
+            raise ValueError(
+                f"The only valid inputs for 'reclculate' are: {valid_inputs}"
+            )
+        if recalculate == EPW_DP_TEMP_COLUMN_NAME:
+            calculate_psychrometrics(
+                self.epwobj.dataframe, [EPW_DB_TEMP_COLUMN_NAME, EPW_RH_COLUMN_NAME]
+            )
+        else:
+            calculate_psychrometrics(
+                self.epwobj.dataframe,
+                [EPW_DB_TEMP_COLUMN_NAME, EPW_DP_TEMP_COLUMN_NAME],
+            )
+
+    def shift_function(self, delta_mean, column, constant_fmin, translate=0):
+        """
+        Shift a time series such that its minimum (constant_fmin=True) or
+        its maximum (constant_fmin=False) (plus the translate term)
+        stays constant and the mean of the time series changes by delta_mean
+        (This is useful to change the mean of time series such as precipitation
+        where you do not want to simply translate the minimum value)
+
+        Inputs
+        ------
+
+        delta_mean: float:
+              The amount to shift the mean for the timeseries in "column"
+              by.
+
+        column: str:
+               A column name for self.epwobj.dataframe
+
+        constant_fmin: bool:
+               If True the self.epwobj[column].min() will be held constant
+               If False the self.epwobj[column].max() will be held constant
+
+        translate: float:
+               Shift the entire time series before performing the operation
+               and then shifts back after the operation.
+               this can make positive/negative timeseries all positive or
+               all negative so that the operation can be accomplished
+               HINT - if you want to preserve a maximum,
+
+        Returns
+        -------
+
+        ts_new -- The mean shifted function whose new minimum is fmin + translate
+                Also, the self.epqobj.dataframe[column] is altered such that the
+                minimum value stays the same and the mean has changed by
+                delta_mean
+
+        """
+        tol = 1e-8
+        _data = self.epwobj.dataframe
+        if column in _data:
+            _ts = _data[column] + translate
+            if ((_ts + translate >= 0).sum() == len(_ts)) or (
+                (_ts + translate <= 0).sum() == len(_ts)
+            ):
+                fbar = _ts.mean()
+                fmin = _ts.min()
+                fmax = _ts.max()
+                m = delta_mean
+
+                p0_list = []
+                pm_list = []
+
+                # # these solutions were derived using sympy as seen below
+                # from sympy.solvers import solve
+                # from sympy import Symbol
+
+                # fmin = Symbol('fmin')
+                # fmax = Symbol('fmax')
+                # fbar = Symbol('fbar')
+                # m = Symbol('m')
+                # pm = Symbol('pm')
+                # p0 = Symbol('p0')
+
+                # # hold fmin constant, shift mean by m
+
+                # eqlist = [pm *((1-p0)*fmin + fmax * p0) - fmin,
+                #         pm *((1-p0)*fbar + fmax * p0) - m - fbar]
+                # sol = solve(eqlist, [pm, p0], dict=True)
+
+                # eqlist2 = [pm * (p0 + 1) * fmin - fmin,
+                #         pm * (-p0 * (fmax/(fmax-fmin) * fbar - fmax * fmin /(fmax-fmin))+(p0 + 1)*fbar) - m - fbar]
+                # sol2 = solve(eqlist2, [pm, p0], dict=True)
+
+                # hold fmax constant, shift mean by m
+
+                # eqlist_max = [pm*((1-p0)*fmax + fmax * p0) - fmax,
+                #             pm*((1-p0)*fbar + fmax * p0) - m - fbar]
+                # sol_max = solve(eqlist_max, [pm,p0], dict=True)
+
+                # eqlist_max2 = [pm * (-p0 * (fmax**2-fmax*fmin)/(fmax-fmin) + (p0 + 1) *fmax) - fmax,
+                #         pm * (-p0 * (fmax/(fmax-fmin) * fbar - fmax * fmin /(fmax-fmin))+(p0 + 1)*fbar) - m - fbar]
+                # sol_max2 = solve(eqlist_max2, [pm,p0], dict=True)
+
+                # print(sol_max2)
+
+                if constant_fmin:
+                    # solution 1
+                    p0_list.append(
+                        -fmin * m / (fbar * fmax - fmax * fmin + fmax * m - fmin * m)
+                    )
+                    pm_list.append(
+                        (fbar * fmax - fmax * fmin + fmax * m - fmin * m)
+                        / (fmax * (fbar - fmin))
+                    )
+
+                    # solution 2
+                    p0_list.append(
+                        -m
+                        * (fmax - fmin)
+                        / (fbar * fmax - fmax * fmin + fmax * m - fmin * m)
+                    )
+                    pm_list.append(
+                        (fbar * fmax - fmax * fmin + fmax * m - fmin * m)
+                        / (fmax * (fbar - fmin))
+                    )
+                else:
+                    # solution 1
+                    p0_list.append(-m / (fbar - fmax))
+                    pm_list.append(1.0)
+
+                    # solution 2
+                    p0_list.append(-m * (fmax - fmin) / (fmin * (fbar - fmax)))
+                    pm_list.append(1.0)
+
+                solution_found = False
+                for p0, pm in zip(p0_list, pm_list):
+                    ts_new = self._fnew_villa2021_eqn1(_ts, p0, pm, 0.0)
+                    mean_error = np.abs(ts_new.mean() - _ts.mean() - delta_mean)
+                    if constant_fmin:
+                        fextreme_error = np.abs(ts_new.min() - _ts.min())
+                    else:
+                        fextreme_error = np.abs(ts_new.max() - _ts.max())
+
+                    correct_mean_shift = mean_error < tol
+                    fmin_constant = fextreme_error < tol
+                    if correct_mean_shift and fmin_constant:
+                        solution_found = True
+                        break
+
+                if not solution_found:
+                    raise ValueError(
+                        "A solution was not found! This is an unknown error!"
+                    )
+
             else:
-                df_new = df
-            
-            if isdoe2:
-                # keep custom attributes like "headers" that were added elsewhere
-                df_new.headers = df.headers
-            
-            
-              
-            return df_new
+                raise ValueError(
+                    "The timeseries (after translation) must be all positive "
+                    + "or all negative for this function to work!"
+                )
+            # complete necessary bookkeeping to allow this change to be able to be
+            # undone by "remove_alteration"
+            addseg = pd.DataFrame(
+                ts_new - _ts, index=range(0, len(_ts)), columns=[column]
+            )
+            self.alterations[f"shift_{self._num_shifts}"] = addseg
+            self._num_shifts += 1
+            self.epwobj.dataframe[column] = ts_new - translate
+            return ts_new - translate
 
-                
-        
-    def _init_check_inputs(self,replace_year,check_types):
-        if not isinstance(check_types,bool):
+        else:
+
+            raise ValueError(
+                "The column requested '{column}' is not in the weather file."
+                + f" Available column names are: {list(_data.columns)}"
+            )
+
+    def _leap_year_replacements(self, df, year, isdoe2):
+        Feb28 = df[(df["Day"] == 28) & (df["Month"] == 2) & (df["Year"] == year)]
+        Mar1 = df[(df["Month"] == 3) & (df["Day"] == 1) & (df["Year"] == year)]
+        Feb29 = df[(df["Month"] == 2) & (df["Day"] == 29) & (df["Year"] == year)]
+        hasFeb29 = len(Feb29) > 0
+        hasMar1 = len(Mar1) > 0
+        hasFeb28 = len(Feb28) > 0
+
+        if isleap(year) and (not hasFeb29) and (hasMar1 and hasFeb28):
+            # add Feb29 by replicating Feb28th
+            indFeb28 = Feb28.index[-1]
+            sdict = {}
+
+            for name, col in Feb28.items():
+                col.index = np.arange(indFeb28 + 1, indFeb28 + 25)
+                sdict[name] = col
+
+            Feb29 = pd.DataFrame(sdict)
+            Feb29["Day"] = 29
+
+            sdict = {}
+            for name, col in df.loc[indFeb28 + 1 :].items():
+                col.index = np.arange(
+                    indFeb28 + 25, indFeb28 + 25 + (df.index[-1] - indFeb28)
+                )
+                sdict[name] = col
+
+            restOfYear = pd.DataFrame(sdict)
+            df_new = pd.concat([df.loc[0:indFeb28], Feb29, restOfYear])
+        elif not isleap(year) and hasFeb29:
+            df_new = df.drop(Feb29.index)
+        else:
+            df_new = df
+
+        if isdoe2:
+            # keep custom attributes like "headers" that were added elsewhere
+            df_new.headers = df.headers
+
+        return df_new
+
+    def _init_check_inputs(self, replace_year, check_types):
+        if not isinstance(check_types, bool):
             raise TypeError("'check_types' input must be a boolean!")
-        if check_types:       
+        if check_types:
             if isinstance(replace_year, int):
                 if replace_year < 0:
                     positive_message = "'replace_year' must be positive"
@@ -176,94 +411,94 @@ class Alter(object):
             else:
                 raise TypeError("'replace_year' must be a positive integer or None")
 
-    
     def __str__(self):
         wfp_str = ""
         alt_str = "None"
-        if hasattr(self,'alterations'):
+        if hasattr(self, "alterations"):
             if len(self.alterations) > 0:
                 alt_str = str(self.alterations)
-        if hasattr(self,'wfp'):
+        if hasattr(self, "wfp"):
             wfp_str = self.wfp
-        return ("mews.weather.alter.Alter: \n\nWeather for: \n\n'{0}'\n\nwith".format(wfp_str)
-                +" alterations:\n\n{0}".format(alt_str))
-    
-    
-    def _get_date_ind(self,year=None,month=None,day=None,hour=None,num=None):
+        return "mews.weather.alter.Alter: \n\nWeather for: \n\n'{0}'\n\nwith".format(
+            wfp_str
+        ) + " alterations:\n\n{0}".format(alt_str)
+
+    def _get_date_ind(self, year=None, month=None, day=None, hour=None, num=None):
         """
         Query for year, month, day, hour. If an input is not provided
                  query for any value of that entry
         """
         df = self.epwobj.dataframe
-        
+
         all_true = df["Year"] == df["Year"]
         if year is None:
             yr_comparison = all_true
         else:
             yr_comparison = df["Year"] == year
-        
+
         if month is None:
             mo_comparison = all_true
         else:
             mo_comparison = df["Month"] == month
-            
+
         if day is None:
             day_comparison = all_true
         else:
             day_comparison = df["Day"] == day
-        
+
         if hour is None:
             hr_comparison = all_true
         else:
             hr_comparison = df["Hour"] == hour
-            
-        
-        ind_list = df[yr_comparison & mo_comparison & day_comparison 
-                 & hr_comparison].index
-        
+
+        ind_list = df[
+            yr_comparison & mo_comparison & day_comparison & hr_comparison
+        ].index
+
         if num is None:
             return ind_list
         else:
             return ind_list[:num]
-        
-        
-    def add_alteration(self,
-                      year,
-                      day,
-                      month,
-                      hour,
-                      duration,
-                      peak_delta,
-                      shape_func=lambda x: np.sin(x*np.pi),
-                      column='Dry Bulb Temperature',
-                      alteration_name=None,
-                      averaging_steps=1):
+
+    def add_alteration(
+        self,
+        year,
+        day,
+        month,
+        hour,
+        duration,
+        peak_delta,
+        shape_func=lambda x: np.sin(x * np.pi),
+        column="Dry Bulb Temperature",
+        alteration_name=None,
+        averaging_steps=1,
+    ):
         """
         add_alteration(year, day, month, hour, duration, peak_delta, shape_func, column)
-        
+
         Alter weather file by adding a shape function and delta to one weather variable.
-        
+
         Internal epwobj is altered use "write" to write the result.
-            
+
         Parameters
         ----------
-        year : int 
+        year : int
             Year of start date.
-        day : int 
-            Day of month on which the heat wave starts.     
-        month : int 
+        day : int
+            Day of month on which the heat wave starts.
+        month : int
             Month of year on which the heat wave starts.
-        hour : int 
+        hour : int
             Hour of day on which the heat wave starts (1-24).
-        Duration : int 
+        Duration : int
             Number of hours that the heat wave lasts. if = -1
             then the change is applied to the end of the weather file.
-        peak_delta : float 
+        peak_delta : float
             Peak value change from original weather at "shape_func" maximum.
-        shape_func : function|list|tuple|np.array 
-            A function or array whose range interval [0,1] will be mapped to 
-            [0,duration] in hours. The function will be normalized to have a peak 
-            of 1 for its peak value over [0,1]. For example, a sine function could 
+        shape_func : function|list|tuple|np.array
+            A function or array whose range interval [0,1] will be mapped to
+            [0,duration] in hours. The function will be normalized to have a peak
+            of 1 for its peak value over [0,1]. For example, a sine function could
             be lambda x: sin(pi*x). This shape is applied in adding the heat wave.
             from the start time to duration_hours later. If the input is an
             array, it must have 'duration' number of entries.
@@ -274,139 +509,166 @@ class Alter(object):
                 If None:
                     Name is "Alteration X" where X is the current
                     number of alterations + 1.
-                If any other type: 
+                If any other type:
                     Must not be a repeat of previously added alterations.
         averaging_steps : int : optional : Default = 1
              The number of steps to average the weather signal over when
              adding the heat wave. For example, if heat wave statistics
              come from daily data, then additions need to be made w/r to
              the daily average and this should be 24.
-                
+
         Returns
         -------
-        None 
-            
+        None
+
         """
         df = self.epwobj.dataframe
-             
-        
+
         # special handling
         if alteration_name is None:
             num_alterations = len(self.alterations)
             alteration_name = "Alteration {0:d}".format(num_alterations + 1)
         if duration == -1:
-            duration = len(df) - self._get_date_ind(year,month,day,hour)[-1]
-            
+            duration = len(df) - self._get_date_ind(year, month, day, hour)[-1]
+
         ## TYPE CHECKING
         if self.check_types:
             try:
-                start_date = datetime(year,month,day,hour)
+                start_date = datetime(year, month, day, hour)
             except ValueError:
                 raise ValueError("hour must be in 0 .. 23")
             if duration < 0:
-                raise ValueError("The 'duration' input must be positive and less than a year (in hours)")
-                
+                raise ValueError(
+                    "The 'duration' input must be positive and less than a year (in hours)"
+                )
+
             correct_type_found = True
-            if not isinstance(shape_func,(types.FunctionType)):
-                if isinstance(shape_func,list):
+            if not isinstance(shape_func, (types.FunctionType)):
+                if isinstance(shape_func, list):
                     shape_func = np.array(shape_func)
-                if isinstance(shape_func,np.ndarray):
+                if isinstance(shape_func, np.ndarray):
                     num = len(shape_func)
                     if num != duration:
-                        raise ValueError("If the shape_func is provided as a "
-                                         +"list, it must have length of the"
-                                         +" 'duration' input")
+                        raise ValueError(
+                            "If the shape_func is provided as a "
+                            + "list, it must have length of the"
+                            + " 'duration' input"
+                        )
                 else:
                     correct_type_found = False
-                    
+
             if not correct_type_found:
-                raise TypeError("The shape_func must be of type 'function','list', or 'numpy.ndarray'")
+                raise TypeError(
+                    "The shape_func must be of type 'function','list', or 'numpy.ndarray'"
+                )
             if not column in df.columns:
-                raise ValueError("The 'column' input must be within the list:" + str(df.columns))
-            
+                raise ValueError(
+                    "The 'column' input must be within the list:" + str(df.columns)
+                )
+
             if alteration_name in self.alterations:
-                raise ValueError("The 'alteration_name' {} is already taken!".format(alteration_name))
+                raise ValueError(
+                    "The 'alteration_name' {} is already taken!".format(alteration_name)
+                )
         # END TYPE CHECKING
-        
+
         if self.base1:
-            hourin = hour + 1 
+            hourin = hour + 1
         else:
             hourin = hour
-        bind_list = self._get_date_ind(year,month,day,hourin)
+        bind_list = self._get_date_ind(year, month, day, hourin)
         if len(bind_list) > 1:
-            raise EPWRepeatDateError("The date: {0} has a repeat entry!".format(
-                str(datetime(year,month,day,hour))))
+            raise EPWRepeatDateError(
+                "The date: {0} has a repeat entry!".format(
+                    str(datetime(year, month, day, hour))
+                )
+            )
         elif len(bind_list) == 0:
-            raise Exception("The requested alteration dates are outside the"+
-                            " range of weather data in the current data!")
+            raise Exception(
+                "The requested alteration dates are outside the"
+                + " range of weather data in the current data!"
+            )
         else:
             bind = bind_list[0]
-        
-        
+
         eind = bind + duration
-        
-        if eind > len(df)+1:  # remember eind is not included in the range.
-            raise pd.errors.OutOfBoundsTimedelta("The specified start time and"
-                                                 +"duration exceed the bounds"
-                                                 +"of the weather file's data!")
-        if isinstance(shape_func,types.FunctionType):
-            func_values = np.array([shape_func(x/duration) for x in range(duration)])
+
+        if eind > len(df) + 1:  # remember eind is not included in the range.
+            raise pd.errors.OutOfBoundsTimedelta(
+                "The specified start time and"
+                + "duration exceed the bounds"
+                + "of the weather file's data!"
+            )
+        if isinstance(shape_func, types.FunctionType):
+            func_values = np.array([shape_func(x / duration) for x in range(duration)])
         else:
             func_values = shape_func
-        extremum = max(abs(func_values.max()),abs(func_values.min()))
+        extremum = max(abs(func_values.max()), abs(func_values.min()))
         if extremum == 0:
-            raise ZeroDivisionError("The shape_func input has an extremum of"
-                                    +" zero. This can occur for very short"
-                                    +" alterations where the shape function"
-                                    +" begins and ends with zero or by"
-                                    +" passing all zeros to a shape function.")
+            raise ZeroDivisionError(
+                "The shape_func input has an extremum of"
+                + " zero. This can occur for very short"
+                + " alterations where the shape function"
+                + " begins and ends with zero or by"
+                + " passing all zeros to a shape function."
+            )
         else:
             normalized_func_values = peak_delta * np.abs(func_values) / extremum
-        
-        addseg = pd.DataFrame(normalized_func_values,index=range(bind,eind),columns=[column])
+
+        addseg = pd.DataFrame(
+            normalized_func_values, index=range(bind, eind), columns=[column]
+        )
         if averaging_steps > 1:
-            #TODO - this needs to be moved elsewhere. You have a lot of work
+            # TODO - this needs to be moved elsewhere. You have a lot of work
             # to do to add daily average based heat waves correctly.
-            df_avg = df.loc[:,column].rolling(window=averaging_steps).mean()
+            df_avg = df.loc[:, column].rolling(window=averaging_steps).mean()
             # assure first steps have numeric values
-            df_avg.iloc[:averaging_steps] = df.loc[:,column].iloc[:averaging_steps]
-            
-            df_diff = df.loc[bind:eind-1,column] - df_avg.loc[bind:eind-1]
+            df_avg.iloc[:averaging_steps] = df.loc[:, column].iloc[:averaging_steps]
+
+            df_diff = df.loc[bind : eind - 1, column] - df_avg.loc[bind : eind - 1]
             if addseg.sum().values[0] < 0:
                 # cold snap
-                scale = ((addseg.min() - df_diff.min())/addseg.min()).values[0]
-
+                scale = ((addseg.min() - df_diff.min()) / addseg.min()).values[0]
             else:
                 # heat wave
-                
+
                 if addseg.max().iloc[0] <= 0:
                     scale = 0.0
                 else:
-                    scale = ((addseg.max() - df_diff.max())/addseg.max()).values[0]
+                    scale = ((addseg.max() - df_diff.max()) / addseg.max()).values[0]
             if scale > 0:
                 addsegmod = addseg * scale
             else:
                 addsegmod = addseg * 0.0
-            
-           
-                
         else:
             addsegmod = addseg
-        
-        #df_org = deepcopy(df.loc[bind:eind-1,column])
-        df.loc[bind:eind-1,column] = df.loc[bind:eind-1,column] + addsegmod.loc[bind:eind-1,column]
+
+        # df_org = deepcopy(df.loc[bind:eind-1,column])
+        df.loc[bind : eind - 1, column] = (
+            df.loc[bind : eind - 1, column] + addsegmod.loc[bind : eind - 1, column]
+        )
         self.alterations[alteration_name] = addseg
-        
+
         return alteration_name
-        
-    def read(self,weather_file_path,replace_year=None,check_types=True,
-             clear_alterations=False,isdoe2=False,use_exe=False,doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
-             doe2_start_datetime=None,doe2_tz=None,doe2_hour_in_file=8760,doe2_dst=None):
-        
+
+    def read(
+        self,
+        weather_file_path,
+        replace_year=None,
+        check_types=True,
+        clear_alterations=False,
+        isdoe2=False,
+        use_exe=False,
+        doe2_bin2txt_path=r"../third_party_software/BIN2TXT.EXE",
+        doe2_start_datetime=None,
+        doe2_tz=None,
+        doe2_hour_in_file=8760,
+        doe2_dst=None,
+    ):
         """
-        Reads an new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally 
+        Reads an new Energy Plus Weather (epw) file (or doe2 filename.bin) while optionally
         keeping previously added alterations in obj.alterations.
-        
+
         >>> obj.read(weather_file_path,
                      replace_year=None,
                      check_types=True,
@@ -418,7 +680,7 @@ class Alter(object):
                      doe2_tz=None,
                      doe2_hour_in_file=8760,
                      doe2_dst=None)
-        
+
         The input has three valid modes:
             Energy Plus: only input weather_file_path and optionally:
                 replace_year, check_types, and clear_alterations
@@ -427,26 +689,26 @@ class Alter(object):
             DOE2 using exe: All inputs (even optional ones) are REQUIRED
                 except doe2_bin2txt_path, replace_year, check_types, and
                 clear_alterations remain optional.
-                
+
         Once you have used one mode, there is no crossing over to another mode
-        
-        Warning: 
-            This function resets the entire object and is equivalent 
-            to creating a new object except that the previously entered 
+
+        Warning:
+            This function resets the entire object and is equivalent
+            to creating a new object except that the previously entered
             alterations are left intact. This allows for these altertions
             to be applied in proportionately the same positions for a new
             weather history.
-                
-        If replace_year causes new coincidence with leap years, then an 
+
+        If replace_year causes new coincidence with leap years, then an
         extra day is added (Feb 28th if repeated). If a replace_year moves
-        from a leap year to a non-leap year, then Feb 29th is deleted if it 
+        from a leap year to a non-leap year, then Feb 29th is deleted if it
         is present.
-        
+
         obj.epwobj has a new dataset afterwards.
-        
+
         Parameters
         ----------
-        weather_file_path : str 
+        weather_file_path : str
             Avalid path to an energy plus weather file
             or, if isdoe2=True, then to a DOE2 bin weather file. Many additioanl
             inputs are needed for the doe2 option.
@@ -458,146 +720,169 @@ class Alter(object):
             If a tup:
                 First entry is the begin year and second is the hour
                 at which to change to the next year.
-                
+
             This is useful to give TMY or other multi-year compilations a single
-            year within a scenario history. 
+            year within a scenario history.
         check_types : bool : optional : Default = True
-            If True: 
+            If True:
                 Check types in all functions (slower but safer).
             If False:
                 Do not check types (likely to get less understandable errors
                 if something goes wrong).
         clear_alterations : bool : optional : Default = False
-            Remove previous alterations from the current 
+            Remove previous alterations from the current
             object. Reissuing a read command to an Alter object allows a new set
             of weather to recieve the same alterations a previous set recieved.
-        isdoe2 : bool : optional 
+        isdoe2 : bool : optional
             Read in a DOE2 weather file instead of an EPW and then
             wrangle that data into an EP format for the self.epwobj database.
         use_exe : bool : optional
-            If True: 
+            If True:
                 Use BIN2TXT.EXE to read DOE-2 BIN file.
             If False:
                 Use Python to read DOE-2 BIN (PREFERRED).
-        doe2_bin2txt_path : str : optional : 
+        doe2_bin2txt_path : str : optional :
             A valid path to an executable
-            that converts a DOE2 filename.BIN weather file to an ASCII text file. 
+            that converts a DOE2 filename.BIN weather file to an ASCII text file.
             The executable is assumed to be named BIN2TXT.EXE and comes with
             any distribution of DOE2 which can be obtained by forming a license
             agreement with James Hirsch and Associates (www.doe2.com). A folder
             in mews "third_party_software" can be used to put the filename.EXE.
-        doe2_start_datetime : datetime : optional 
-            Input the start time for the weather file. If not entered, then the 
-            value in the BIN file is used. 
+        doe2_start_datetime : datetime : optional
+            Input the start time for the weather file. If not entered, then the
+            value in the BIN file is used.
         doe2_hour_in_file : optional : REQUIRED IF isdoe2=True
-            Must be 8760 or 8784 for leap years. This allows a non-leap year to 
-            be forced into a leap year for consistency. Feb28th is just repeated 
+            Must be 8760 or 8784 for leap years. This allows a non-leap year to
+            be forced into a leap year for consistency. Feb28th is just repeated
             for such cases.
         doe2_timezone : str: optional : REQUIRED IF isdoe2=True
             Name of time zone applicable to the doe2 file.
         doe2_dst : optional : REQUIRED IF isdoe2=True
-            List/tuple with 2 entries that are datetimes with begin and end 
+            List/tuple with 2 entries that are datetimes with begin and end
             times for day light savings time.
-        
+
         Returns
         -------
-        None 
+        None
         """
-        
+
         epwobj = epw()
         self.epwobj = epwobj
         self.isdoe2 = isdoe2
-        
+
         if isdoe2:
             if doe2_bin2txt_path == r"../third_party_software/BIN2TXT.EXE":
-                doe2_bin2txt_path = os.path.join(os.path.dirname(__file__),doe2_bin2txt_path)
-            
-            
-            self._doe2_check_types(check_types,weather_file_path,doe2_start_datetime, doe2_hour_in_file,
-                        doe2_bin2txt_path,doe2_tz,doe2_dst,use_exe)
-            
-            df = self.bin2df(weather_file_path,doe2_start_datetime, doe2_hour_in_file,
-                        doe2_bin2txt_path,doe2_tz,doe2_dst,use_exe)
-            
+                doe2_bin2txt_path = os.path.join(
+                    os.path.dirname(__file__), doe2_bin2txt_path
+                )
+
+            self._doe2_check_types(
+                check_types,
+                weather_file_path,
+                doe2_start_datetime,
+                doe2_hour_in_file,
+                doe2_bin2txt_path,
+                doe2_tz,
+                doe2_dst,
+                use_exe,
+            )
+
+            df = self.bin2df(
+                weather_file_path,
+                doe2_start_datetime,
+                doe2_hour_in_file,
+                doe2_bin2txt_path,
+                doe2_tz,
+                doe2_dst,
+                use_exe,
+            )
+
             # add Year column which is expected by the routine
             df["Year"] = int(replace_year)
             df["Month"] = df["MONTH (1-12)"].astype(int)
             df["Day"] = df["DAY OF MONTH"].astype(int)
             df["Hour"] = df["HOUR OF DAY"].astype(int)
             df["Date"] = df.index
-            df.index = pd.RangeIndex(start=0,stop=len(df.index))            
-            # this must be done now as well as later to keep the code 
+            df.index = pd.RangeIndex(start=0, stop=len(df.index))
+            # this must be done now as well as later to keep the code
             # consistent.
             epwobj.dataframe = df
         else:
             try:
                 epwobj.read(weather_file_path)
-            except UnicodeDecodeError:
-                raise EPWFileReadFailure("The file '{0}' was not read successfully "
-                                         +"by the epw package it is corrupt or "
-                                         +"the wrong format!".format(weather_file_path))
+            except UnicodeDecodeError as exc:
+                raise EPWFileReadFailure(
+                    f"The file '{weather_file_path}' was not read successfully "
+                    + "by the epw package it is corrupt or "
+                    + "the wrong format!"
+                ) from exc
             except FileNotFoundError as fileerror:
                 raise fileerror
-            except:
-                raise EPWFileReadFailure("The file '{0}' was not read successfully "
-                                         +"by the epw package for an unknown "
-                                         +"reason!".format(weather_file_path))        
+            except Exception as exc:
+                raise EPWFileReadFailure(
+                    "The file '{0}' was not read successfully "
+                    + "by the epw package for an unknown "
+                    + "reason!".format(weather_file_path)
+                ) from exc
             df = epwobj.dataframe
-        
-        
+
         # verify no NaN's
-        if df.isna().sum().sum() != 0:
-            raise EPWMissingDataFromFile("NaN's are present after reading the "
-                                         +"weather file. Only fully populated "
-                                         +"data sets are allowed!")
+        self._no_nan(df)
 
         self._init_check_inputs(replace_year, check_types)
-        
+
         if not replace_year is None:
             # Prepare for leap year alterations
-            new_year_ind = self._get_date_ind(month=1,day=1,hour=1)
-            
+            new_year_ind = self._get_date_ind(month=1, day=1, hour=1)
+
             if len(new_year_ind) == 0:
                 df["Year"] = replace_year
                 df = self._leap_year_replacements(df, replace_year, isdoe2)
             else:
-                # ADD A START POINT FOR THE REPLACE YEAR IF THE FILE DOES NOT BEGIN WITH 
+                # ADD A START POINT FOR THE REPLACE YEAR IF THE FILE DOES NOT BEGIN WITH
                 # JAN 1ST
                 if new_year_ind[0] != 0:
-                    new_year_ind = new_year_ind.insert(0,0)
-                # loop over years.    
+                    new_year_ind = new_year_ind.insert(0, 0)
+                # loop over years.
                 for idx, ind in enumerate(new_year_ind):
                     if idx < len(new_year_ind) - 1:
-                        df.loc[ind:new_year_ind[idx+1],"Year"] = replace_year + idx
+                        df.loc[ind : new_year_ind[idx + 1], "Year"] = replace_year + idx
                     else:
-                        df.loc[ind:,"Year"] = replace_year + idx
-                
-                # This has to be done separately or the new_year_ind will be 
+                        df.loc[ind:, "Year"] = replace_year + idx
+
+                # This has to be done separately or the new_year_ind will be
                 # knocked out of place.
                 for idx, ind in enumerate(new_year_ind):
                     df = self._leap_year_replacements(df, replace_year + idx, isdoe2)
-        
+
         epwobj.dataframe = df
         epwobj.original_dataframe = deepcopy(df)
 
         self.check_types = check_types
         self.wfp = weather_file_path
-        if (hasattr(self,'alterations') and clear_alterations) or not hasattr(self,'alterations'):
-            self.alterations = {} # provides a registry of alterations 
-            #TODO -bring WNTR registry class into this tool.
+        if (hasattr(self, "alterations") and clear_alterations) or not hasattr(
+            self, "alterations"
+        ):
+            self.alterations = {}  # provides a registry of alterations
+            # TODO -bring WNTR registry class into this tool.
         else:
-            for name,alteration in self.alterations.items():
+            for name, alteration in self.alterations.items():
                 for col in alteration.columns:
                     common_ind = alteration.index.intersection(df.index)
                     if len(common_ind) == 0:
-                        UserWarning("None of the alteration '{0}' intersects" 
-                                   +" with the newly read-in epw file!")
+                        UserWarning(
+                            "None of the alteration '{0}' intersects"
+                            + " with the newly read-in epw file!"
+                        )
                     else:
                         if len(common_ind) != len(alteration.index):
-                            UserWarning("Only some of the alteration '{0}' intersects"
-                                      + "with the newly read-in epw file!")
-                        df.loc[common_ind,col] = (df.loc[common_ind,col] + 
-                                                  alteration.loc[common_ind,col])
+                            UserWarning(
+                                "Only some of the alteration '{0}' intersects"
+                                + "with the newly read-in epw file!"
+                            )
+                        df.loc[common_ind, col] = (
+                            df.loc[common_ind, col] + alteration.loc[common_ind, col]
+                        )
         first_hour_val = np.unique(self.epwobj.dataframe["Hour"].values)[0]
         if first_hour_val == 1 or first_hour_val == 0:
             self.base1 = bool(first_hour_val)
@@ -605,57 +890,73 @@ class Alter(object):
             # in the rare case that a file does not even have 24 hours assume
             # that it is base 1 (i.e. 1..24 rather than 0..23)
             self.base1 = True
-            
-    def _check_string_path(self,string_path):
-        if isinstance(string_path,str):
+
+    def _check_string_path(self, string_path):
+        if isinstance(string_path, str):
             if not os.path.exists(string_path):
-                raise FileNotFoundError("The path "+string_path+ 
-                                        " does not exist!")
+                raise FileNotFoundError("The path " + string_path + " does not exist!")
         else:
             raise TypeError("The input 'weather_file_path' must be a string!")
 
-    def _doe2_check_types(self,check_types,weather_file_path,doe2_start_datetime, 
-                          doe2_hour_in_file,doe2_bin2txt_path,
-                          doe2_tz,doe2_dst,use_exe):
-        
+    def _doe2_check_types(
+        self,
+        check_types,
+        weather_file_path,
+        doe2_start_datetime,
+        doe2_hour_in_file,
+        doe2_bin2txt_path,
+        doe2_tz,
+        doe2_dst,
+        use_exe,
+    ):
+
         if check_types:
             self._check_string_path(weather_file_path)
-            
-            if isinstance(weather_file_path,str):
+
+            if isinstance(weather_file_path, str):
                 if not os.path.exists(weather_file_path):
-                    raise FileNotFoundError("The path "+weather_file_path+ 
-                                            " does not exist!")
+                    raise FileNotFoundError(
+                        "The path " + weather_file_path + " does not exist!"
+                    )
             else:
                 raise TypeError("The input 'weather_file_path' must be a string!")
-            
-            
+
             if use_exe:
                 self._check_string_path(doe2_bin2txt_path)
-                if not isinstance(doe2_start_datetime,datetime):
-                    raise TypeError("The input 'doe2_start_datetime' must be a datetime object!")
-                
+                if not isinstance(doe2_start_datetime, datetime):
+                    raise TypeError(
+                        "The input 'doe2_start_datetime' must be a datetime object!"
+                    )
+
                 if doe2_hour_in_file != 8760 and doe2_hour_in_file != 8784:
-                    raise ValueError("The input 'doe2_hour_in_file' must be an "+
-                                     "integer of value 8760 for normal years or"+
-                                     " 8784 for leap years")
-                    
-                if not isinstance(doe2_tz,str):
+                    raise ValueError(
+                        "The input 'doe2_hour_in_file' must be an "
+                        + "integer of value 8760 for normal years or"
+                        + " 8784 for leap years"
+                    )
+
+                if not isinstance(doe2_tz, str):
                     raise TypeError("The input 'doe2_tz' must be a string!")
-                    
-                if not isinstance(doe2_dst,(list,tuple)):
-                    raise TypeError("The input 'doe2_dst' must be a list or tuple of 2-elements")
+
+                if not isinstance(doe2_dst, (list, tuple)):
+                    raise TypeError(
+                        "The input 'doe2_dst' must be a list or tuple of 2-elements"
+                    )
                 if len(doe2_dst) != 2:
                     raise ValueError("The input 'doe2_dst' must have 2-elements")
-                if not isinstance(doe2_dst[0],datetime) or not isinstance(doe2_dst[1],datetime):
-                    raise TypeError("The input 'doe2_dst' must have 2-elements that are datetime objects!")
-            
-            
-    def remove_alteration(self,alteration_name):
+                if not isinstance(doe2_dst[0], datetime) or not isinstance(
+                    doe2_dst[1], datetime
+                ):
+                    raise TypeError(
+                        "The input 'doe2_dst' must have 2-elements that are datetime objects!"
+                    )
+
+    def remove_alteration(self, alteration_name):
         """
         Removes an alteration that has already been added.
-        
+
         >>> obj.remove_alteration(alteration_name)
-        
+
         Parameters
         ----------
         alteration_name : str
@@ -668,58 +969,74 @@ class Alter(object):
         """
         if alteration_name in self.alterations:
             df = self.epwobj.dataframe
-            addseg = self.alterations.pop(alteration_name) # pop returns and removes
+            addseg = self.alterations.pop(alteration_name)  # pop returns and removes
             column = addseg.columns[0]
             bind = addseg.index[0]
             eind = addseg.index[-1]
-            df.loc[bind:eind,column] = df.loc[bind:eind,column] - addseg.loc[bind:eind,column]
+            df.loc[bind:eind, column] = (
+                df.loc[bind:eind, column] - addseg.loc[bind:eind, column]
+            )
 
         else:
-            raise ValueError("The alteration {0} does not exist. Valid"
-                             +" alterations names are:\n\n{1}"
-                             .format(alteration_name,str(self.alterations)))
-        
-    def reindex_2_datetime(self,tzname=None,original=False):
+            raise ValueError(
+                "The alteration {0} does not exist. Valid"
+                + " alterations names are:\n\n{1}".format(
+                    alteration_name, str(self.alterations)
+                )
+            )
+
+    def reindex_2_datetime(self, tzname=None, original=False):
         """
         >>> obj.reindex_2_datetime(tzname=None)
-        
+
         Parameters
         ----------
         tzname : str : optional : Default = None
             A valid time zone name. When None, the data is kept in the native
             time zone.
-        
+
         Returns
         -------
         df_out
             Dataframe with a DatetimeIndex index and weather data.
-        
+
         """
-        
+
         if original:
             df = self.epwobj.original_dataframe
         else:
             df = self.epwobj.dataframe
-        
-        begin_end_times = [datetime(df["Year"].values[ind], df["Month"].values[ind],
-                                   df["Day"].values[ind], df["Hour"].values[ind]-1) for ind in [0,-1]]
+
+        begin_end_times = [
+            datetime(
+                df["Year"].values[ind],
+                df["Month"].values[ind],
+                df["Day"].values[ind],
+                df["Hour"].values[ind] - 1,
+            )
+            for ind in [0, -1]
+        ]
         df_out = deepcopy(df)
 
-        datind = pd.date_range(begin_end_times[0],begin_end_times[1], freq='h',tz=tzname)
+        datind = pd.date_range(
+            begin_end_times[0], begin_end_times[1], freq="h", tz=tzname
+        )
         df_diff = len(df_out) - len(datind)
-        if df_diff == 1: # a lost hour from daylight savings time must be removed from the end
-            #TODO - actually find dates of Daylight savings time and verify this is always
+        if (
+            df_diff == 1
+        ):  # a lost hour from daylight savings time must be removed from the end
+            # TODO - actually find dates of Daylight savings time and verify this is always
             #       what is happening so that this does not create a way for other bugs
             #       to pass through.
-            df_out.drop(df_out.index[-1],inplace=True)     
+            df_out.drop(df_out.index[-1], inplace=True)
         elif df_diff != 0:
             raise Exception("There is a datetime error that is unknown!")
 
         df_out.index = datind
 
         return df_out
-    
-    def _write_prep(self,out_file_name=None,overwrite=False,create_dir=False):
+
+    def _write_prep(self, out_file_name=None, overwrite=False, create_dir=False):
         if out_file_name is None:
             out_file_name = self.wfp + "_Altered"
         base_dir = os.path.dirname(out_file_name)
@@ -731,20 +1048,35 @@ class Alter(object):
                 if overwrite:
                     os.remove(out_file_name)
                 else:
-                    raise FileExistsError("The file '{0}' already ".format(out_file_name)
-                                          +"exists!")
+                    raise FileExistsError(
+                        "The file '{0}' already ".format(out_file_name) + "exists!"
+                    )
         else:
             if create_dir:
                 os.makedirs(base_dir)
             else:
-                raise NotADirectoryError("The folder '{0}' does not".format(base_dir)
-                                         +" exist")
-    
-    def write(self,out_file_name=None,overwrite=False,create_dir=False,
-              use_exe=False,txt2bin_exepath=r"../third_party_software/TXT2BIN.EXE"):
+                raise NotADirectoryError(
+                    "The folder '{0}' does not".format(base_dir) + " exist"
+                )
+    def _no_nan(self,df):
+        if df.isna().sum().sum() != 0:
+            raise EPWMissingDataFromFile(
+                "NaN's are present after reading the "
+                + "weather file. Only fully populated "
+                + "data sets are allowed!"
+            )
+
+    def write(
+        self,
+        out_file_name=None,
+        overwrite=False,
+        create_dir=False,
+        use_exe=False,
+        txt2bin_exepath=r"../third_party_software/TXT2BIN.EXE",
+    ):
         """
         Writes to an Energy Plus Weather file with alterations.
-        
+
         >>> obj.write(out_file_name=None,
                       overwrite=False,
                       create_dir=False,
@@ -754,13 +1086,13 @@ class Alter(object):
         Parameters
         ----------
         out_file_name : str : optional : Default = None
-            File name and path to output altered epw weather to. 
+            File name and path to output altered epw weather to.
             If None, then use the original file name with "_Altered" appended to it.
         overwrite : bool : optional : Default = False
-            If True, overwrite an existing file otherwise throw an error if the 
+            If True, overwrite an existing file otherwise throw an error if the
             file exists.
         create_dir : bool : optional : Default = False
-            If True create a new directory, otherwise throw an error if the 
+            If True create a new directory, otherwise throw an error if the
             folder does not exsit.
         txt2bin_exepath : str : optional
             ...
@@ -781,33 +1113,46 @@ class Alter(object):
                 if overwrite:
                     os.remove(out_file_name)
                 else:
-                    raise FileExistsError("The file '{0}' already ".format(out_file_name)
-                                          +"exists!")
+                    raise FileExistsError(
+                        f"The file '{out_file_name}' already exists!"
+                    )
         else:
             if create_dir:
                 os.makedirs(base_dir)
             else:
-                raise NotADirectoryError("The folder '{0}' does not".format(base_dir)
-                                         +" exist")
-        
+                raise NotADirectoryError(
+                    f"The folder '{base_dir}' does not exist"
+                )
+
+        # verify no NaN
+        self._no_nan(self.epwobj.dataframe)
+
         if self.isdoe2:
-            if txt2bin_exepath==r"../third_party_software/TXT2BIN.EXE":
-                txt2bin_exepath = os.path.join(os.path.dirname(__file__),txt2bin_exepath)
+            if txt2bin_exepath == r"../third_party_software/TXT2BIN.EXE":
+                txt2bin_exepath = os.path.join(
+                    os.path.dirname(__file__), txt2bin_exepath
+                )
             if use_exe:
                 self._check_string_path(txt2bin_exepath)
             start_datetime = self.epwobj.dataframe["Date"].iloc[0]
             hour_in_file = len(self.epwobj.dataframe)
-            
-            self.df2bin(self.epwobj.dataframe, out_file_name, use_exe, start_datetime, 
-                   hour_in_file, txt2bin_exepath)
+
+            self.df2bin(
+                self.epwobj.dataframe,
+                out_file_name,
+                use_exe,
+                start_datetime,
+                hour_in_file,
+                txt2bin_exepath,
+            )
         else:
             self.epwobj.write(out_file_name)
-            
+
     def status(self):
         """
-        Indicates if an alteration with total net effect > 0 is occuring 
-        in a series aligned to the weather signal. 
-        
+        Indicates if an alteration with total net effect > 0 is occuring
+        in a series aligned to the weather signal.
+
         1 = sum of alteration event > 0 happening
         0 = no alteration happening
         -1 = sum of alteration event < 0 happening
@@ -815,25 +1160,25 @@ class Alter(object):
         Returns
         -------
         df0 : pd.DataFrame : a data frame of length and index equivalent to the
-              self.epwobj.dataframe weather data that indicates when 
+              self.epwobj.dataframe weather data that indicates when
               alterations are happening and when they are not happening.
-              
-              The exception is any alteration that happens for the entire weather 
+
+              The exception is any alteration that happens for the entire weather
               history. These are not included.
 
         """
-        
-        df0 = pd.DataFrame(np.zeros(len(self.epwobj.dataframe.index)),
-                              index=self.epwobj.dataframe.index,columns=["Status"])
-        
-        for name,alt in self.alterations.items():
+
+        df0 = pd.DataFrame(
+            np.zeros(len(self.epwobj.dataframe.index)),
+            index=self.epwobj.dataframe.index,
+            columns=["Status"],
+        )
+
+        for name, alt in self.alterations.items():
             if len(alt.index) != len(self.epwobj.dataframe.index):
                 if alt.sum().values >= 0:
-                    df0.loc[alt.index,:] = 1
+                    df0.loc[alt.index, :] = 1
                 else:
-                    df0.loc[alt.index,:] = -1
-                
-        return df0
+                    df0.loc[alt.index, :] = -1
 
-            
-        
+        return df0

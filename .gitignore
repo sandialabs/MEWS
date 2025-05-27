@@ -23,3 +23,5 @@ tests/*.csv
 tests/mews_results
 tests/*.txt
 tests/temp_out
+src/mews/cython/markov.cp313-win_amd64.pyd
+src/mews/cython/markov_time_dependent.cp313-win_amd64.pyd
