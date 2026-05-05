@@ -208,6 +208,9 @@ You can cite MEWS with one or more of the following:
 
 * Villa, Daniel L., Juan Carvallo, Carlo Bianchi, and Sang Hoon Lee. 2022. "Multi-scenario Extreme Weather Simulator Application to Heat Waves." _2022 Building Performance Analysis Conference and SimBuild co-organized by ASHRAE and IBPSA-USA_ https://doi.org/10.26868/25746308.2022.C006
 
+# General Review of Future Weather
+
+3.	Z. Zeng, J. Kim, H. Tan, Y. Hu, P. Cameron-Rastogi, D. Villa, J. New, J. Wang, R. Muehleisen. 2025. “A review of future weather data for assessing climate change impacts on buildings and energy systems.” Renewable & Sustainable Energy Reviews 212:115213  https://doi.org/10.1016/j.rser.2024.115213
 
 # Sandia Funding Statement
 
